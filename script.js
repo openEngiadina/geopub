@@ -17,7 +17,6 @@ window.onload = () => {
     var headers = new Headers();
     headers.append('Authorization', 'Basic ' + btoa(user + ":" + password));
 
-
     // Process ActivityStream objects
     function handleObject(object){
         // Ignore if it is not a Create of a Note
@@ -69,13 +68,11 @@ window.onload = () => {
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
-            "published": "2019-04-03T09:48:51.845373Z",
             "object": {
                 "type": "Note",
                 "to": [
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
-                "tag": [],
                 "summary": "A geo-located note",
                 "sensitive": false,
                 "content": content,
@@ -117,12 +114,15 @@ window.onload = () => {
 
     mymap.on('click', (e) => {
         console.log(e.latlng);
-        postNote("Hello from " + e.latlng.lat + "/" + e.latlng.lng, e. latlng).then((response) => {
-            console.log("Note posted!");
-            getInbox();
-        }).catch((e) => {
-            console.error(e);
-        });
+        content = prompt("Enter your message", "Hi!");
+        if (content) {
+            postNote(content, e. latlng).then((response) => {
+                console.log("Note posted!");
+                getInbox();
+            }).catch((e) => {
+                console.error(e);
+            });
+        }
     });
 
 
