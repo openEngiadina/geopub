@@ -23,12 +23,28 @@
           <div id="info">
               <h1>GeoPub</h1>
 
+              <p>GeoPub is a small demonstrator to show how the <a href="https://www.w3.org/TR/activitypub/">ActivityPub</a> protocol can be used to decentrally publish structured data with geolocation.</p>
+
+
               <form id="login" style="display:none">
+                  <p> Let's start by logging in to an ActivityPub server.</p>
+
+                  <p>You will need to register on a <a href="https://pleroma.social/">Pleroma</a> instance before logging in. You can find a list of instances <a href="http://distsn.org/pleroma-instances.html">here</a>.</p>
+
                   <input type="text" placeholder="Username" name="user" required>
                   <input type="password" placeholder="Password" name="password" required>
                   <input type="text" placeholder="Instance URL" value="http://localhost:4000" name="url" required>
                   <button type="submit">Login</button>
               </form>
+
+              <div id="logged_in" style="display:none">
+                  <p>On the right hand side of the screen you can see a map. By clicking on the map you can create a new note at the specific location.</p>
+                  <p>Existing notes will be displayed on the map with a marker. Click on a marker to see the message</p>
+                  <p>The notes are stored on the ActivityPub server (the Pleroma instance) and you can also see them from any other interface to Pleroma. You (and anybody who is following you) can even like or comment a note you create here.</p>
+                  <p>Not only your own notes are dispayed on the map. All notes with geolocation in your <a href="https://www.w3.org/TR/activitypub/#inbox">inbox</a> are displayed on the map. Try following another user who is creating notes with geolocation!</p>
+              </div>
+
+              <p>For more information see the <a href="https://github.com/miaEngiadina/geopub">repository</a>.</p>
 
           </div>
           <div id="mapid"></div>

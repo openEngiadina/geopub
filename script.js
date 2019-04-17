@@ -31,9 +31,11 @@ window.onload = () => {
   }).then((response) => {
     if (response.status !== 200) {
       document.getElementById('login').style.display = 'inline'
-      return
+      throw new Error('Could not login')
+    } else {
+      document.getElementById('logged_in').style.display = 'inline'
+      return response.json()
     }
-    return response.json()
   }).then((actor) => {
     console.log(actor)
     return actor
