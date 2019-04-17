@@ -39,7 +39,7 @@ window.onload = () => {
     return actor
   }).then(getInbox)
     .then(setupNoteCreation)
-    .catch((e) => { console.error.log(e) })
+    .catch((e) => { console.error(e) })
 
   // Get user inbox and process
   function getInbox (actor) {
