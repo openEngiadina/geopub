@@ -9,14 +9,57 @@ window.onload = () => {
     maxZoom: 18
   }).addTo(mymap)
 
-  // ActivityPub Client
-  const url = 'http://localhost:4000'
-  const user = 'admin'
-  const password = 'abc123'
+  // Login to ActivityPub Server
+  const location = new URL(window.location.href)
+  const user = location.searchParams.get('user')
+  const password = location.searchParams.get('password')
+  const url = location.searchParams.get('url')
+
+  if (!(user && password && url)) {
+    document.getElementById('login').style.display = 'inline'
+    return
+  }
 
   var headers = new Headers()
   headers.append('Authorization', 'Basic ' + btoa(user + ':' + password))
   headers.append('Content-type', 'application/activity+json')
+
+  // Check who I am
+  fetch(url + '/api/ap/whoami', {
+    method: 'GET',
+    headers: headers
+  }).then((response) => {
+    if (response.status !== 200) {
+      document.getElementById('login').style.display = 'inline'
+      return
+    }
+    return response.json()
+  }).then((actor) => {
+    console.log(actor)
+    return actor
+  }).then(getInbox)
+    .then(setupNoteCreation)
+    .catch((e) => { console.error.log(e) })
+
+  // Get user inbox and process
+  function getInbox (actor) {
+    var inbox = actor.inbox
+
+    // Hack to deal with localhost
+    if (actor.id === 'http://localhost/users/admin') {
+      inbox = 'http://localhost:4000/users/admin/inbox'
+    }
+
+    return fetch(inbox, {
+      method: 'GET',
+      headers: headers
+    }).then((response) => {
+      return response.json()
+    }).then((inbox) => {
+      return inbox.first.orderedItems
+    }).then(R.map(handleObject))
+      .then(() => { return actor })
+  }
 
   // Process ActivityStream objects
   function handleObject (object) {
@@ -45,24 +88,9 @@ window.onload = () => {
     marker.bindPopup(note.content).openPopup()
   }
 
-  // Get user inbox and process
-  function getInbox () {
-    fetch(url + '/users/' + user + '/inbox', {
-      method: 'GET',
-      headers: headers
-    }).then((response) => {
-      return response.json()
-    }).then((inbox) => {
-      return inbox.first.orderedItems
-    }).then(R.map(handleObject))
-  }
-
-  getInbox()
-
   // Create a new Note
-  function postNote (content, latlng) {
+  function postNote (actor, content, latlng) {
     // A simple ActivityStream Event
-    // TODO: remove a lot of hardcoded stuff
     const event = {
       'type': 'Create',
       'to': [
@@ -77,11 +105,11 @@ window.onload = () => {
         'sensitive': false,
         'content': content,
         'cc': [
-          'http://localhost/users/admin/followers'
+          actor.followers
         ],
-        'attributedTo': 'http://localhost/users/admin',
+        'attributedTo': actor.id,
         'attachment': [],
-        'actor': 'http://localhost/users/admin',
+        'actor': actor.id,
         'location': {
           '@type': 'Place',
           'geo': {
@@ -94,9 +122,9 @@ window.onload = () => {
       },
       'directMessage': false,
       'cc': [
-        'http://localhost/users/admin/followers'
+        actor.followers
       ],
-      'actor': 'http://localhost/users/admin',
+      'actor': actor.id,
       '@context': [
         'https://www.w3.org/ns/activitystreams',
         'http://localhost:4000/schemas/litepub-0.1.jsonld'
@@ -110,16 +138,19 @@ window.onload = () => {
     })
   }
 
-  mymap.on('click', (e) => {
-    console.log(e.latlng)
-    const content = prompt('Enter your message', 'Hi!')
-    if (content) {
-      postNote(content, e.latlng).then((response) => {
-        console.log('Note posted!')
-        getInbox()
-      }).catch((e) => {
-        console.error(e)
-      })
-    }
-  })
+  // Hook up clicking on map with posting a note
+  function setupNoteCreation (actor) {
+    mymap.on('click', (e) => {
+      console.log(e.latlng)
+      const content = prompt('Enter your message', 'Hi!')
+      if (content) {
+        postNote(actor, content, e.latlng).then((response) => {
+          console.log('Note posted!')
+          getInbox(actor)
+        }).catch((e) => {
+          console.error(e)
+        })
+      }
+    })
+  }
 }

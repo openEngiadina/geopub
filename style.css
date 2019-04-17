@@ -1,2 +1,17 @@
-#mapid { height: 95vh; }
+body {
+    font-family: sans-serif;
+}
+#container {
+    display: flex;
+}
+#info {
+    height: 98vh;
+    width: 20vw;
+    margin: auto;
+}
+#mapid {
+    height: 98vh;
+    width: 80vw;
+    margin: auto;
+}
 

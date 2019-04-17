@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>title</title>
+    <title>GeoPub - ActivityPub demonstrator</title>
 
     <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"
@@ -19,6 +19,19 @@
     <script src="script.js"></script>
   </head>
   <body>
-      <div id="mapid"></div>
+      <div id="container">
+          <div id="info">
+              <h1>GeoPub</h1>
+
+              <form id="login" style="display:none">
+                  <input type="text" placeholder="Username" name="user" required>
+                  <input type="password" placeholder="Password" name="password" required>
+                  <input type="text" placeholder="Instance URL" value="http://localhost:4000" name="url" required>
+                  <button type="submit">Login</button>
+              </form>
+
+          </div>
+          <div id="mapid"></div>
+      </div>
   </body>
 </html>
