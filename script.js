@@ -103,7 +103,6 @@ window.onload = () => {
         'to': [
           'https://www.w3.org/ns/activitystreams#Public'
         ],
-        'summary': 'A geo-located note',
         'sensitive': false,
         'content': content,
         'cc': [
