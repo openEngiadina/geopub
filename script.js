@@ -87,7 +87,7 @@ window.onload = () => {
 
     var marker = L.marker(coordinates).addTo(mymap)
 
-    marker.bindPopup(note.content).openPopup()
+    marker.bindPopup(note.content + '<hr><a href="' + note.actor + '"><i>' + note.actor + '</i></a>').openPopup()
   }
 
   // Create a new Note
