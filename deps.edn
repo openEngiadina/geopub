@@ -1,0 +1,4 @@
+{:paths ["src" "resources" "target"]
+ :deps {com.bhauman/figwheel-main {:mvn/version "0.2.3"}
+        reagent {:mvn/version "0.8.1"}
+        cljs-http {:mvn/version "0.1.46"}}}
