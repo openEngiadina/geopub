@@ -32,6 +32,10 @@
 (defn http-get [url]
   (http/get url {:with-credentials? false}))
 
+(defn reset-database! []
+  (go
+    (<! (http-get (str server-url "api/dev/reset")))))
+
 (defn get-actor! []
   ;; Get the ActivityPub Actor along with inbox/outbox
   (go
@@ -80,7 +84,7 @@
      [:span.actor (:actor activity)]
      [:span.published (.fromNow (js/moment (:published activity)))]]]
    [object-component (:object activity)]
-   ;; [:details [:code (prn-str (:object activity))]]
+   [:details [:code (prn-str (:object activity))]]
 ])
 
 (defn inbox-component [inbox]
@@ -101,12 +105,14 @@
   (let [note-content (r/atom "")
 
         create-note (fn [content] {:type "Note" :content content})
-        add-location (fn [object] (merge object
-                                         {:location
-                                          {"@type" "Place"
-                                           :geo {"@type" "GeoCoordinates"
-                                                 :latitude (get-in @state [:latlng :lat])
-                                                 :longitude (get-in @state [:latlng :lng])}}}))
+        add-location (fn [object] (if-not (nil? (:latlng @state))
+                                    (merge object
+                                           {:location
+                                            {"@type" "Place"
+                                             :geo {"@type" "GeoCoordinates"
+                                                   :latitude (get-in @state [:latlng :lat])
+                                                   :longitude (get-in @state [:latlng :lng])}}})
+                                    object))
 
         create-activity (fn [to object] {:type "Create" :to to :object object})
 
@@ -171,7 +177,13 @@
 
    [:input {:type "button"
             :value "Refresh"
-            :on-click #(refresh!)}]])
+            :on-click #(refresh!)}]
+
+   [:input {:type "button"
+            :value "Reset Database"
+            :on-click #(reset-database!)}]
+
+   ])
 
 (defn timeline-page []
   [:div#timeline
@@ -184,7 +196,9 @@
         (get-in @state [:public :items]))])
 
 (defn object-location [object]
-  (when (get-in object [:location :geo])
+  (when-not (or (nil? (get-in object [:location :geo]))
+                (nil? (get-in object [:location :geo :latitude]))
+                (nil? (get-in object [:location :geo :longitude])))
     [(get-in object [:location :geo :latitude])
      (get-in object [:location :geo :longitude])]))
 
@@ -227,7 +241,8 @@
      (for [activity (get-in @state [:public :items])]
        (let [id (:id activity)
              location (object-location (:object activity))]
-         (when location
+         (prn location)
+         (when-not (nil? location)
            [Marker {:position location
                     :id id
                     :on-click #(swap! state assoc :selected-activity id)
@@ -243,7 +258,8 @@
             ;;     :radius 10}
             ;;    ])
 
-            ])))
+            ]
+           )))
 
 ]]])
 
