@@ -22,6 +22,7 @@ body {
 
 .activity {
     min-height: 70px;
+    padding: 5px;
 }
 
 .activity .meta {
@@ -31,8 +32,18 @@ body {
     margin: 10px;
 }
 
+.activity details {
+    font-weight: light;
+    font-size: small;
+}
+
+.activity.selected {
+    border-left: 10px solid grey;
+    background-color: #e9d2c0;
+}
+
 .activity:hover {
-    background-color: red;
+    background-color: #e9d2c0;
 }
 
 .activity .meta .published {
@@ -43,11 +54,16 @@ body {
     margin-left: 30px;
 }
 
-#create-note #text-input{
+#create-note .text-input{
     width: 90%;
 }
 
-#create-note #send-button{
+#create-note .latlng {
+    margin-top: 20px;
+    color: grey;
+}
+
+#create-note .send-button{
     margin-top: 5px;
     margin-left: 60%;
     width: 35%;
