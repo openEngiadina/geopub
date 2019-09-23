@@ -71,7 +71,7 @@
      "Note" [:p.note-content (:content object)]
 
      ;; If don't know how to display, show the plain object
-     [:code (prn-str object)])])
+     [:code (:type object)])])
 
 (defn activity-component [activity]
   [:div.activity
@@ -84,7 +84,7 @@
      [:span.actor (:actor activity)]
      [:span.published (.fromNow (js/moment (:published activity)))]]]
    [object-component (:object activity)]
-   [:details [:code (prn-str (:object activity))]]
+   [:details [:code (prn-str activity)]]
 ])
 
 (defn inbox-component [inbox]
@@ -98,7 +98,6 @@
    (map (fn [activity] [activity-component activity]) (:items outbox))])
 
 (defn post-activity! [activity]
-  (println activity)
   (http/post "http://localhost:8080/actors/alice/outbox" {:with-credentials? false :json-params activity}))
 
 (defn note-input [on-save]
@@ -171,13 +170,17 @@
     [:dt "Name"] [:dd (get-in @state [:actor :name])]]
 
    ;; [inbox-component (get-in @state [:actor :inbox])]
-   ;; [outbox-component (get-in @state [:actor :outbox])]
+   [outbox-component (get-in @state [:actor :outbox])]
 
    [:h2 "Actions"]
 
    [:input {:type "button"
             :value "Refresh"
             :on-click #(refresh!)}]
+
+   [:input {:type "button"
+            :value "Import tours"
+            :on-click #(figmacs.ds/post-tours)}]
 
    [:input {:type "button"
             :value "Reset Database"
@@ -241,7 +244,6 @@
      (for [activity (get-in @state [:public :items])]
        (let [id (:id activity)
              location (object-location (:object activity))]
-         (prn location)
          (when-not (nil? location)
            [Marker {:position location
                     :id id
