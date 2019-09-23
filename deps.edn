@@ -1,4 +1,7 @@
 {:paths ["src" "resources" "target"]
  :deps {com.bhauman/figwheel-main {:mvn/version "0.2.3"}
         reagent {:mvn/version "0.8.1"}
-        cljs-http {:mvn/version "0.1.46"}}}
+        cljs-http {:mvn/version "0.1.46"}
+        cljsjs/react-leaflet {:mvn/version "2.4.0-0"}
+        cljsjs/moment {:mvn/version "2.24.0-0"}
+        }}
