@@ -90,7 +90,7 @@
   (let [tour (:object activity)]
     (when (tour? tour)
       [:div.tour
-       [:h2 "Tour"]
+       [:h3 "Tour"]
 
        [tour-image tour]
 

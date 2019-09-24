@@ -113,11 +113,15 @@
   (let [object (:object activity)]
     [:div.object
      (case (:type object)
-       "Note" [:p.note-content (:content object)]
+       "Note" [:div
+               [:h3 "Note"]
+               [:p.note-content (:content object)]]
 
        "discover.swiss/Tour" [tours/tour-component activity]
 
-       "Status" [tours/status-component activity true]
+       "Status" [:div
+                 [:h3 "Status"]
+                 [tours/status-component activity true]]
 
        [:dl
         [:dt "type"]
@@ -361,9 +365,7 @@
                         :on-mouse-over #(set-hovered! state id)
                         :on-mouse-out #(set-hovered! state nil)}
 
-              [Popup [tours/tour-component activity false (partial tours/tour-status (get-public-activities state))]]
-
-              ])))]]]))
+              [Popup [tours/tour-component activity false (partial tours/tour-status (get-public-activities state))]]])))]]]))
 
 (r/render [ap-demo-app]
           (js/document.getElementById "app")
