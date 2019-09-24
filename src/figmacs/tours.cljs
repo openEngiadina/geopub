@@ -2,6 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :refer [<!]]
             [reagent.core :as r]
+            [clojure.string :as str]
             [cljs-http.client :as http]))
 
 (defn post-sample-tours []
@@ -16,6 +17,14 @@
       (doseq [tour tours]
         (http/post "http://localhost:8080/actors/alice/outbox"
                    {:with-credentials? false :json-params (as-activity tour)})))))
+
+(defn tour-line [tour]
+  (let [line-string (get-in tour [:geoShape :line])]
+    (if line-string
+      (map (fn [x] [(second x) (first x)])
+           (map #(str/split % #",")
+                (str/split line-string #" ")))
+      nil)))
 
 (defn tour? [object]
   "Is the object a tour"
@@ -74,34 +83,38 @@
                 :value "Update"
                 :on-click submit}]])))
 
-(defn tour-component [tour submit-status tour-status]
-  (when (tour? tour)
-    [:div.tour
-     [:h2 "Tour"]
+(defn tour-component [activity submit-status tour-status]
+  (let [tour (:object activity)]
+    (when (tour? tour)
+      [:div.tour
+       [:h2 "Tour"]
 
-     [tour-image tour]
+       [tour-image tour]
 
-     [:dl
+       [:dl
 
-      [:dt "ID"]
-      [:dd (tour-id tour)]
+        [:dt "ID"]
+        [:dd (tour-id tour)]
 
-      [:dt "Description"]
-      [:dd (or (get tour :description) "-")]
+        [:dt "Description"]
+        [:dd (or (get tour :description) "-")]
 
-      (when tour-status
-        [:div
-         [:dt "Status"]
-         [:dd
-          [status-component (tour-status tour)]]])]
+        (when tour-status
+          [:div
+           [:dt "Status"]
+           [:dd
+            [status-component (tour-status tour)]]])]
 
-     (when submit-status
-       [status-update-component tour submit-status])]))
+       (when submit-status
+         [status-update-component tour submit-status])])))
 
-(defn tours-component [tours submit-status tour-status]
+(defn tours-component [activities is-selected? set-selected! set-hovered! submit-status tour-status]
   [:div
-   (for [tour (filter tour? tours)]
-     [:div
-      [:div.object
-       [tour-component tour submit-status tour-status]]
+   (for [activity (filter #(tour? (:object %)) activities)]
+     [:div {:class (when (is-selected? activity) "selected")
+            :on-click #(set-selected! (:id activity))
+            :on-mouse-over #(set-hovered! (:id activity))
+            :on-mouse-out #(set-hovered! nil)}
+      [:div.activity
+       [tour-component activity submit-status tour-status]]
       [:hr]])])

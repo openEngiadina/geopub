@@ -16,6 +16,7 @@
 (def TileLayer (r/adapt-react-class react-leaflet/TileLayer))
 (def Marker (r/adapt-react-class react-leaflet/Marker))
 (def Popup (r/adapt-react-class react-leaflet/Popup))
+(def Polyline (r/adapt-react-class react-leaflet/Polyline))
 (def CircleMarker (r/adapt-react-class react-leaflet/CircleMarker))
 
 (def server-url "http://localhost:8080/")
@@ -24,13 +25,49 @@
   ;; Default center of map is Scuol
   [46.8 10.283333])
 
+
+;; =================== State and helpers =====================================
+
+
 (defonce state
   (r/atom {:actor-id (str server-url "actors/alice")
            :actor {}
            :active-page :timeline
-           :selected-activity nil
-           :hover-activity nil
+           :selected nil
+           :hover nil
            :latlng default-center}))
+
+(defn set-selected! [state selected]
+  "Set selected activity/object"
+  (swap! state assoc :selected selected))
+
+(defn is-selected? [state thing]
+  "Is the thing selected?"
+  (or
+   (= (:selected @state) thing)
+   (= (:selected @state) (:id thing))))
+
+(defn set-hovered! [state hovered]
+  "Set the hovered on activity/object"
+  (swap! state assoc :hover hovered))
+
+(defn is-hover? [state thing]
+  "Is the thing selected?"
+  (or
+   (= (:hover @state) thing)
+   (= (:hover @state) (:id thing))))
+
+(defn set-position! [state pos]
+  (swap! state assoc :position pos))
+
+(defn get-position [state]
+  (:position @state))
+
+(defn get-public-activities [state]
+  (get-in @state [:public :items]))
+
+;; ===========================================================================
+
 
 (defn http-get [url]
   (http/get url {:with-credentials? false}))
@@ -68,23 +105,26 @@
 ;; -- Components -----------------------------------------------------------------------------------------------
 
 
-(defn object-component [object]
-  [:div.object
-   (case (:type object)
-     "Note" [:p.note-content (:content object)]
+(defn object-component [activity]
+  (let [object (:object activity)]
+    [:div.object
+     (case (:type object)
+       "Note" [:p.note-content (:content object)]
 
-     "discover.swiss/Tour" [tours/tour-component object]
+       "discover.swiss/Tour" [tours/tour-component activity]
 
-     [:dl
-      [:dt "type"]
-      [:dd (:type object)]])])
+       [:dl
+        [:dt "type"]
+        [:dd (:type object)]])]))
 
 (defn activity-component [activity]
   [:div.activity
-   {:class (if (== (:selected-activity @state) (:id activity))
+   {:class (if (is-selected? state activity)
              ["selected"]
              [])
-    :on-click #(swap! state assoc :selected-activity (:id activity))}
+    :on-click #(set-selected! state (:id activity))
+    :on-mouse-over #(set-hovered! state (:id activity))
+    :on-mouse-out #(set-hovered! state nil)}
 
    [:div.meta
     [:p
@@ -92,7 +132,7 @@
      [:span.type (str (:type activity) ": " (:type (:object activity)))]
      [:span.published (.fromNow (js/moment (:published activity)))]]]
 
-   [object-component (:object activity)]
+   [object-component activity]
 
    [:details [:code (prn-str activity)]]])
 
@@ -118,8 +158,8 @@
                                            {:location
                                             {"@type" "Place"
                                              :geo {"@type" "GeoCoordinates"
-                                                   :latitude (get-in @state [:latlng :lat])
-                                                   :longitude (get-in @state [:latlng :lng])}}})
+                                                   :latitude (first (get-position state))
+                                                   :longitude (second (get-position state))}}})
                                     object))
 
         create-activity (fn [to object] {:type "Create" :to to :object object})
@@ -145,9 +185,7 @@
                                            27 (stop)
                                            nil)}]
        [:p.latlng (str "Position: "
-                       (get-in @state [:latlng :lat])
-                       " / "
-                       (get-in @state [:latlng :lng])
+                       (get-position state)
                        " (Click on map to update)")]
 
        [:input.send-button {:type "button" :value "Create" :on-click save}]])))
@@ -163,7 +201,7 @@
     [:nav
      [:ul
       (nav-element :timeline)
-      (nav-element :events)
+      ;; (nav-element :events)
       (nav-element :tours)
       (nav-element :curated)
       (nav-element :system)]]))
@@ -203,7 +241,7 @@
           [:div
            [activity-component activity]
            [:hr]])
-        (get-in @state [:public :items]))])
+        (get-public-activities state))])
 
 (defn object-location [object]
   (when-not (or (nil? (get-in object [:location :geo]))
@@ -213,65 +251,83 @@
      (get-in object [:location :geo :longitude])]))
 
 (defn ap-demo-app []
-  [:div#container
+  (let
+   [is-selected? (partial is-selected? state)
+    is-hover? (partial is-hover? state)]
+    [:div#container
 
-   [:div#sidebar
-    [:h1 "GeoPub"]
-    [nav-bar (:active-page @state)]
+     [:div#sidebar
+      [:h1 "GeoPub"]
+      [nav-bar (:active-page @state)]
 
-    [:hr]
+      [:hr]
 
-    (case (:active-page @state)
+      (case (:active-page @state)
 
-      :timeline [timeline-page]
+        :timeline [timeline-page]
 
-      :events "TODO"
+        :events "TODO"
 
-      :tours [tours/tours-component
-              (map :object (get-in @state [:public :items]))
-              post-activity!
-              (fn [tour] (tours/tour-status
-                          (get-in @state [:public :items])
-                          tour))]
+        :tours [tours/tours-component
+                (get-public-activities state)
+                is-selected?
+                (partial set-selected! state)
+                (partial set-hovered! state)
+                post-activity!
+                (partial tours/tour-status (get-public-activities state))]
 
-      :curated "TODO"
+        :curated "TODO"
 
-      :system [system-page]
+        :system [system-page]
 
-      "404")]
+        "404")]
 
-   [:div#mapid
-    [Map
-     {:style {:min-height "98vh"}
-      :center default-center
-      :zoom 12
-      :on-click (fn [e]
-                  (let [latlng (js->clj (.-latlng e))]
-                    (swap! state #(assoc % :latlng {:lat (get latlng "lat")
-                                                    :lng (get latlng "lng")}))))}
-     [TileLayer
-      {:url osm-url
-       :attribution copy-osm}]
+     [:div#mapid
+      [Map
+       {:style {:min-height "98vh"}
+        :center default-center
+        :zoom 12
+        :on-click (fn [e]
+                    (let [latlng (js->clj (.-latlng e))]
+                      (set-position! state [(get latlng "lat") (get latlng "lng")])))}
+       [TileLayer
+        {:url osm-url
+         :attribution copy-osm}]
 
-     (for [activity (get-in @state [:public :items])]
-       (let [id (:id activity)
-             location (object-location (:object activity))]
-         (when-not (nil? location)
-           [Marker {:position location
-                    :id id
-                    :on-click #(swap! state assoc :selected-activity id)
-                    :on-mouse-over #(swap! state assoc :hover-activity id)
-                    :on-mouse-out #(swap! state assoc :hover-activity nil)}
+       (for [activity (get-in @state [:public :items])]
 
-            [Popup
-             [object-component (:object activity)]]
+         (let [id (:id activity)
+               location (object-location (:object activity))]
+           (when-not (nil? location)
+             [Marker {:position location
+                      :id id
+                      :on-click #(set-selected! state id)
+                      :on-mouse-over #(set-hovered! state id)
+                      :on-mouse-out #(set-hovered! state nil)}
 
-            ;; (when (== (:selected-activity @state) (:id activity))
-            ;;   [CircleMarker
-            ;;    {:center location
-            ;;     :radius 10}
-            ;;    ])
-])))]]])
+              [Popup
+               [object-component activity]]
+
+              (when (is-selected? state activity)
+                [CircleMarker
+                 {:center location
+                  :radius 10}])])))
+
+       (for [activity (get-public-activities state)]
+         (let
+          [id (:id activity)
+           tour (:object activity)
+           tour-line (tours/tour-line tour)]
+           (when (and (tours/tour? tour)
+                      tour-line)
+             [Polyline {:color (cond
+                                 (is-selected? activity) "red"
+                                 (is-hover? activity) "red"
+                                 :else "blue")
+                        :positions tour-line
+                        :on-click #(set-selected! state id)
+                        :on-mouse-over #(set-hovered! state id)
+                        :on-mouse-out #(set-hovered! state nil)}])))]]]))
 
 (r/render [ap-demo-app]
           (js/document.getElementById "app")

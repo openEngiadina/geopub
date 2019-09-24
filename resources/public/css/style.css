@@ -37,6 +37,7 @@ body {
     font-size: small;
 }
 
+
 .selected {
     border-left: 10px solid grey;
     /* background-color: #e9d2c0; */
@@ -71,7 +72,7 @@ body {
     margin: 30px;
 }
 
-.object .tour-image {
+.tour-image {
     width: 100px;
     order: 0;
 }
