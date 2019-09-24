@@ -47,13 +47,17 @@
                            (reverse (sort-by :published activities)))]
     (first status-updates)))
 
-(defn status-component [activity]
+(defn status-component [activity timeline?]
   (if activity
     [:span {:class ["tour-status" (get-in activity [:object :status])]}
-     (str (get-in activity [:object :status])
-          " (updated " (.fromNow (js/moment (:published activity)))
-          " by " (:actor activity)
-          ")")]
+     (if timeline?
+       (str (get-in activity [:object :target])
+            " set to "
+            (get-in activity [:object :status]))
+       (str (get-in activity [:object :status])
+            " (updated " (.fromNow (js/moment (:published activity)))
+            " by " (:actor activity)
+            ")"))]
     "-"))
 
 (defn status-update-component [tour submit-status]

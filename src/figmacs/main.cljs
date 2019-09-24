@@ -113,6 +113,8 @@
 
        "discover.swiss/Tour" [tours/tour-component activity]
 
+       "Status" [tours/status-component activity true]
+
        [:dl
         [:dt "type"]
         [:dd (:type object)]])]))
