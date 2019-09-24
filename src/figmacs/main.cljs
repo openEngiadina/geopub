@@ -1,3 +1,4 @@
+
 (ns figmacs.main
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [reagent.core :as r]
@@ -358,7 +359,11 @@
                         :positions tour-line
                         :on-click #(set-selected! state id)
                         :on-mouse-over #(set-hovered! state id)
-                        :on-mouse-out #(set-hovered! state nil)}])))]]]))
+                        :on-mouse-out #(set-hovered! state nil)}
+
+              [Popup [tours/tour-component activity false (partial tours/tour-status (get-public-activities state))]]
+
+              ])))]]]))
 
 (r/render [ap-demo-app]
           (js/document.getElementById "app")
