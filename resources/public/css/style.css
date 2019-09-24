@@ -122,3 +122,11 @@ nav li a:hover {
 nav li .active {
     background-color: #e9d2c0;
 }
+
+.actions-list {
+    list-style-type: none;
+}
+
+.actions-list li {
+    margin: 5px;
+}

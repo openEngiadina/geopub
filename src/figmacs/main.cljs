@@ -19,11 +19,16 @@
 (def Polyline (r/adapt-react-class react-leaflet/Polyline))
 (def CircleMarker (r/adapt-react-class react-leaflet/CircleMarker))
 
+;; ====================== Config =============================================
+
 (def server-url "http://localhost:8080/")
 
 (def default-center
   ;; Default center of map is Scuol
   [46.8 10.283333])
+
+
+;; ===========================================================================
 
 
 ;; =================== State and helpers =====================================
@@ -66,6 +71,9 @@
 (defn get-public-activities [state]
   (get-in @state [:public :items]))
 
+(defn get-actor-outbox [state]
+  (get-in @state [:actor :outbox]))
+
 ;; ===========================================================================
 
 
@@ -80,14 +88,10 @@
   ;; Get the ActivityPub Actor along with inbox/outbox
   (go
     (let
-     [actor-profile (:body (<! (http-get (:actor-id @state))))
-      actor-inbox (:body (<! (http-get (:inbox actor-profile))))
-      actor-outbox (:body (<! (http-get (:outbox actor-profile))))]
+     [actor-profile (:body (<! (http-get (:actor-id @state))))]
 
       (swap! state
-             #(assoc % :actor (merge actor-profile
-                                     {:inbox actor-inbox
-                                      :outbox actor-outbox}))))))
+             #(assoc % :actor actor-profile)))))
 
 (defn get-public! []
   ;; Get the public collection
@@ -100,7 +104,6 @@
   ;; Refresh data from server (Actor and public collection)
   (get-actor!)
   (get-public!))
-
 
 ;; -- Components -----------------------------------------------------------------------------------------------
 
@@ -149,7 +152,7 @@
    (map (fn [activity] [activity-component activity]) (:items outbox))])
 
 (defn post-activity! [activity]
-  (http/post "http://localhost:8080/actors/alice/outbox" {:with-credentials? false :json-params activity}))
+  (http/post (get-actor-outbox state) {:with-credentials? false :json-params activity}))
 
 (defn note-input [on-save]
   (let [note-content (r/atom "")
@@ -217,7 +220,9 @@
 
    [:dl
     [:dt "ID"] [:dd (get-in @state [:actor-id])]
-    [:dt "Name"] [:dd (get-in @state [:actor :name])]]
+    [:dt "Name"] [:dd (get-in @state [:actor :name])]
+    [:dt "Inbox"] [:dd (get-in @state [:actor :inbox])]
+    [:dt "Outbox"] [:dd (get-in @state [:actor :outbox])]]
 
    ;; [inbox-component (get-in @state [:actor :inbox])]
    ;; [outbox-component (get-in @state [:actor :outbox])]
@@ -228,13 +233,31 @@
    ;;          :value "Refresh"
    ;;          :on-click #(refresh!)}]
 
-   [:input {:type "button"
-            :value "Import sample tours"
-            :on-click #(tours/post-sample-tours)}]
+   [:ul {:class "actions-list"}
 
-   [:input {:type "button"
-            :value "Reset Database"
-            :on-click #(reset-database!)}]])
+    [:li
+     [:input {:type "button"
+              :value "Login as Alice"
+              :on-click #(do
+                           (swap! state assoc :actor-id (str server-url "actors/alice"))
+                           (refresh!))}]]
+
+    [:li
+     [:input {:type "button"
+              :value "Login as Bob"
+              :on-click #(do
+                           (swap! state assoc :actor-id (str server-url "actors/bob"))
+                           (refresh!))}]]
+
+    [:li
+     [:input {:type "button"
+              :value "Import sample tours"
+              :on-click #(tours/post-sample-tours post-activity!)}]]
+
+    [:li
+     [:input {:type "button"
+              :value "Reset Database"
+              :on-click #(reset-database!)}]]]])
 
 (defn timeline-page [activities]
   [:div#timeline
@@ -244,8 +267,7 @@
            [:hr]])
         (if activities
           activities
-          (get-public-activities state))
-        )])
+          (get-public-activities state)))])
 
 (defn object-location [object]
   (when-not (or (nil? (get-in object [:location :geo]))
@@ -275,8 +297,7 @@
         :notes [:div
                 [note-input post-activity!]
                 [:hr]
-                [timeline-page (filter #(= (get-in % [:object :type]) "Note") (get-public-activities state))]
-                ]
+                [timeline-page (filter #(= (get-in % [:object :type]) "Note") (get-public-activities state))]]
 
         :tours [tours/tours-component
                 (get-public-activities state)
@@ -344,5 +365,5 @@
           refresh!)
 
 (defonce refresher
-  (js/setInterval #(get-public!) 2000))
+  (js/setInterval #(refresh!) 2000))
 

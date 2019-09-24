@@ -5,7 +5,7 @@
             [clojure.string :as str]
             [cljs-http.client :as http]))
 
-(defn post-sample-tours []
+(defn post-sample-tours [post-activity!]
   "Load sample data from discover.swiss and post to ActivityPub public collection"
   (go
     (let
@@ -15,8 +15,7 @@
                                 :to ["https://www.w3.org/ns/activitystreams#Public"]
                                 :object object})]
       (doseq [tour tours]
-        (http/post "http://localhost:8080/actors/alice/outbox"
-                   {:with-credentials? false :json-params (as-activity tour)})))))
+        (post-activity! (as-activity tour))))))
 
 (defn tour-line [tour]
   (let [line-string (get-in tour [:geoShape :line])]
