@@ -204,6 +204,7 @@
      [:ul
       (nav-element :timeline)
       ;; (nav-element :events)
+      (nav-element :notes)
       (nav-element :tours)
       (nav-element :curated)
       (nav-element :system)]]))
@@ -235,15 +236,16 @@
             :value "Reset Database"
             :on-click #(reset-database!)}]])
 
-(defn timeline-page []
+(defn timeline-page [activities]
   [:div#timeline
-   [note-input post-activity!]
-   [:hr]
    (map (fn [activity]
           [:div
            [activity-component activity]
            [:hr]])
-        (get-public-activities state))])
+        (if activities
+          activities
+          (get-public-activities state))
+        )])
 
 (defn object-location [object]
   (when-not (or (nil? (get-in object [:location :geo]))
@@ -269,6 +271,12 @@
         :timeline [timeline-page]
 
         :events "TODO"
+
+        :notes [:div
+                [note-input post-activity!]
+                [:hr]
+                [timeline-page (filter #(= (get-in % [:object :type]) "Note") (get-public-activities state))]
+                ]
 
         :tours [tours/tours-component
                 (get-public-activities state)
