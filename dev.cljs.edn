@@ -1,2 +1,2 @@
 ^{:css-dirs ["resources/public/css"]}
-{:main figmacs.main}
+{:main geopub.core}

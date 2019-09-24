@@ -1,5 +1,4 @@
-
-(ns figmacs.main
+(ns geopub.core
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [reagent.core :as r]
             [cljs.core.async :refer [<!]]
@@ -8,7 +7,7 @@
             [react-leaflet :as react-leaflet]
             [clojure.string :as str]
             [cljsjs.moment]
-            [figmacs.tours :as tours]))
+            [geopub.tours :as tours]))
 
 (def copy-osm "&copy; <a href=\"http://osm.org/copyright\">OpenStreetMap</a> contributors")
 (def osm-url "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
@@ -28,8 +27,6 @@
   ;; Default center of map is Scuol
   [46.8 10.283333])
 
-
-;; ===========================================================================
 
 
 ;; =================== State and helpers =====================================

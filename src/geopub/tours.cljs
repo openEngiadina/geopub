@@ -1,4 +1,4 @@
-(ns figmacs.tours
+(ns geopub.tours
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :refer [<!]]
             [reagent.core :as r]

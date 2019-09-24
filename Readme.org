@@ -1,0 +1,52 @@
+#+TITLE: GeoPub
+
+GeoPub is a small demonstrator showing how ActivityPub can be used for handling [[https://miaengiadina.github.io/openengiadina/][open local knowledge]].
+
+It implements the ActivityPub Client-to-Server Protocol but is currently only compatible with the [[https://github.com/miaEngiadina/minimal-ap][minimal-ap]] experimental ActivityPub server.
+
+* Developer quick start
+
+** Prerequisites
+
+- [[https://clojure.org/][Clojure]] (GeoPub is written in [[https://clojurescript.org/][ClojureScript]])
+
+** Running development server
+
+#+BEGIN_SRC sh
+clj -m figwheel.main -b dev --repl
+#+END_SRC
+
+This will download any required dependencies, start a development server with live-reloading and a REPL.
+
+** Building and deploying to docs folder
+
+#+BEGIN_SRC sh
+clj -m figwheel.main --optimizations advanced -bo dev
+rm -r docs/
+mkdir -p docs/cljs-out/
+cp target/public/cljs-out/dev-main.js docs/cljs-out 
+cp -r resources/public/* docs
+#+END_SRC
+
+* Overview
+
+GeoPub implements the ActivityPub protocol, which allows federated, crowd-sourced creation of semantic data.
+
+[[https://www.w3.org/TR/activitystreams-core/#actors][Actors]] (users, groups, etc.) post [[https://www.w3.org/TR/activitystreams-core/#activities][activities]] that describe the creation/deletion or modification of objects.
+
+** Timeline
+
+The timeline shows a list of all public activities posted by users. Most activities are of type "Create", that is a user created something (e.g. a Note, a Tour, a Status).
+
+** Notes
+
+A list of all notes created and a form for creating a note.
+
+** Tours
+
+A list of tours created by users. The status of a tour can be updated. This creates a new "Status" object. The displayed status on the tour is the status contained in the most recently created "Status" object.
+
+** TODO Curated
+
+
+
