@@ -37,21 +37,43 @@ body {
     font-size: small;
 }
 
-.activity.selected {
+.selected {
     border-left: 10px solid grey;
-    background-color: #e9d2c0;
+    /* background-color: #e9d2c0; */
 }
 
 .activity:hover {
     background-color: #e9d2c0;
 }
 
+.activity .meta .type {
+    margin-left: 10px;
+}
 .activity .meta .published {
     float: right;
 }
 
-.activity .object .note-content {
-    margin-left: 30px;
+.tour-status.open {
+    background-color: lightgreen;
+}
+
+.tour-status.warning {
+    background-color: orange;
+}
+
+.tour-status.closed {
+    background-color: red;
+    color: white;
+}
+
+.object {
+    min-height: 50px;
+    margin: 30px;
+}
+
+.object .tour-image {
+    width: 100px;
+    order: 0;
 }
 
 #create-note .text-input{

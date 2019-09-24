@@ -6,7 +6,8 @@
             [leaflet :as leaflet]
             [react-leaflet :as react-leaflet]
             [clojure.string :as str]
-            [cljsjs.moment]))
+            [cljsjs.moment]
+            [figmacs.tours :as tours]))
 
 (def copy-osm "&copy; <a href=\"http://osm.org/copyright\">OpenStreetMap</a> contributors")
 (def osm-url "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
@@ -27,6 +28,8 @@
   (r/atom {:actor-id (str server-url "actors/alice")
            :actor {}
            :active-page :timeline
+           :selected-activity nil
+           :hover-activity nil
            :latlng default-center}))
 
 (defn http-get [url]
@@ -70,8 +73,11 @@
    (case (:type object)
      "Note" [:p.note-content (:content object)]
 
-     ;; If don't know how to display, show the plain object
-     [:code (:type object)])])
+     "discover.swiss/Tour" [tours/tour-component object]
+
+     [:dl
+      [:dt "type"]
+      [:dd (:type object)]])])
 
 (defn activity-component [activity]
   [:div.activity
@@ -79,13 +85,16 @@
              ["selected"]
              [])
     :on-click #(swap! state assoc :selected-activity (:id activity))}
+
    [:div.meta
     [:p
      [:span.actor (:actor activity)]
+     [:span.type (str (:type activity) ": " (:type (:object activity)))]
      [:span.published (.fromNow (js/moment (:published activity)))]]]
+
    [object-component (:object activity)]
-   [:details [:code (prn-str activity)]]
-])
+
+   [:details [:code (prn-str activity)]]])
 
 (defn inbox-component [inbox]
   [:div
@@ -170,23 +179,21 @@
     [:dt "Name"] [:dd (get-in @state [:actor :name])]]
 
    ;; [inbox-component (get-in @state [:actor :inbox])]
-   [outbox-component (get-in @state [:actor :outbox])]
+   ;; [outbox-component (get-in @state [:actor :outbox])]
 
    [:h2 "Actions"]
 
-   [:input {:type "button"
-            :value "Refresh"
-            :on-click #(refresh!)}]
+   ;; [:input {:type "button"
+   ;;          :value "Refresh"
+   ;;          :on-click #(refresh!)}]
 
    [:input {:type "button"
-            :value "Import tours"
-            :on-click #(figmacs.ds/post-tours)}]
+            :value "Import sample tours"
+            :on-click #(tours/post-sample-tours)}]
 
    [:input {:type "button"
             :value "Reset Database"
-            :on-click #(reset-database!)}]
-
-   ])
+            :on-click #(reset-database!)}]])
 
 (defn timeline-page []
   [:div#timeline
@@ -220,7 +227,12 @@
 
       :events "TODO"
 
-      :tours "TODO"
+      :tours [tours/tours-component
+              (map :object (get-in @state [:public :items]))
+              post-activity!
+              (fn [tour] (tours/tour-status
+                          (get-in @state [:public :items])
+                          tour))]
 
       :curated "TODO"
 
@@ -259,11 +271,7 @@
             ;;    {:center location
             ;;     :radius 10}
             ;;    ])
-
-            ]
-           )))
-
-]]])
+])))]]])
 
 (r/render [ap-demo-app]
           (js/document.getElementById "app")
