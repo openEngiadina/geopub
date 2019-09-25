@@ -56,10 +56,14 @@
 (defn tour-status [status-objects tour]
   "Compute current status of tour from a list of activities (that may include Status targeting the tour)"
   (let
-   [status-updates (filter (fn [status-object] (and (= (:type status-object) "Status")
-                                                    (= (:target status-object) (tour-id tour))))
-                           ;; sort by reverse published date
-                           (reverse (sort-by :date status-objects)))]
+   [status-updates
+    (reverse
+     ;; TODO: This is a hack as I don't seem capable of sorting by date
+     ;; id is monotonically increasing, so this works...hackey
+     (sort-by :id
+              (filter (fn [status-object] (and (= (:type status-object) "Status")
+                                               (= (:target status-object) (tour-id tour))))
+                      status-objects)))]
     (first status-updates)))
 
 (defn status-component [status-object timeline?]
@@ -70,8 +74,7 @@
             " set to "
             (:status status-object)
             " by "
-            (:attributedTo status-object)
-            )
+            (:attributedTo status-object))
 
        (str (:status status-object)
             " (updated " (.fromNow (js/moment (:date status-object)))
@@ -127,7 +130,7 @@
         [:div
          [:dt "Status"]
          [:dd
-          [status-component (tour-status tour)]]])]
+          [status-component tour-status]]])]
 
      (when submit-status
        [status-update-component tour submit-status])]))
@@ -136,5 +139,5 @@
   [:div
    (for [tour (filter #(tour? %) objects)]
      [:div
-      [tour-component tour submit-status tour-status]
+      [tour-component tour submit-status (tour-status tour)]
       [:hr]])])

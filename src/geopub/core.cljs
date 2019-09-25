@@ -190,7 +190,7 @@
     (= (:type activity) "Create")
      [object-component (:object activity) (partial is-liked? state) like-object!])
 
-   ;; [:details [:code (prn-str activity)]]
+   [:details [:code (prn-str activity)]]
 ])
 
 (defn inbox-component [inbox]
@@ -384,7 +384,7 @@
                  (partial tours/tour-status
                           (if (:only-liked-status @state)
                             (get-liked-objects state)
-                            (map :object (get-public-activities state))))]]
+                            (get-public-objects state)))]]
 
         :liked [:div#liked
                 (for [object (get-liked-objects state)]
@@ -431,21 +431,27 @@
          (let
           [id (:id activity)
            tour (:object activity)
+           tour-status (tours/tour-status (if (:only-liked-status @state)
+                                            (get-liked-objects state)
+                                            (map :object (get-public-activities state)))
+                                          tour)
            tour-line (tours/tour-line tour)]
+
            (when (and (tours/tour? tour)
                       tour-line)
-             [Polyline {:color (cond
-                                 (is-selected? activity) "red"
-                                 (is-hover? activity) "red"
-                                 :else "blue")
+             [Polyline {:color (case (:status tour-status)
+                                 "open" "green"
+                                 "warning" "orange"
+                                 "closed" "red"
+                                 "blue")
                         :positions tour-line
                         :on-click #(set-selected! state id)
                         :on-mouse-over #(set-hovered! state id)
                         :on-mouse-out #(set-hovered! state nil)}
 
-              [Popup [tours/tour-component tour false
-                      (partial tours/tour-status
-                               (map :object (get-public-activities state)))]]])))]]]))
+              [Popup [tours/tour-component tour false tour-status]]])))
+
+       ]]]))
 
 (r/render [ap-demo-app]
           (js/document.getElementById "app")
