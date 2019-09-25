@@ -28,6 +28,8 @@ cp target/public/cljs-out/dev-main.js docs/cljs-out
 cp -r resources/public/* docs
 #+END_SRC
 
+#+RESULTS:
+
 * Overview
 
 GeoPub implements the ActivityPub protocol, which allows federated, crowd-sourced creation of semantic data.
