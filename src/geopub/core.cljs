@@ -55,7 +55,9 @@
            :active-page :timeline
            :selected nil
            :hover nil
-           :latlng default-center}))
+           :latlng default-center
+           :only-liked-status false
+           }))
 
 (defn set-selected! [state selected]
   "Set selected activity/object"
@@ -348,18 +350,31 @@
                                       (= (get-in % [:type]) "Create"))
                                 (get-public-activities state))]]
 
-        :tours [tours/tours-component
-                (get-public-activities state)
-                is-selected?
-                (partial set-selected! state)
-                (partial set-hovered! state)
-                post-activity!
-                (partial tours/tour-status (map :object (get-public-activities state)))]
+        :tours [:div#tours
+                [:div
+                 [:input {:type "checkbox"
+                          :name "only-liked-status"
+                          :checked (:only-liked-status @state)
+                          :on-change #(swap! state assoc :only-liked-status (-> % .-target .-checked))
+                          }]
+                 [:label {:for "only-liked-status"} "Only show liked status updates"]
+                 ]
+                [tours/tours-component
+                 (get-public-activities state)
+                 is-selected?
+                 (partial set-selected! state)
+                 (partial set-hovered! state)
+                 post-activity!
+                 (partial tours/tour-status
+                          (if (:only-liked-status @state)
+                            (get-liked-objects state)
+                            (map :object (get-public-activities state))))]]
 
-        :liked (for [object (get-liked-objects state)]
-                 [:div#liked
-                  [object-component object]
-                  [:hr]])
+        :liked [:div#liked
+                (for [object (get-liked-objects state)]
+                  [:div
+                   [object-component object]
+                   [:hr]])]
 
         :system [system-page]
 
