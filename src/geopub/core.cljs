@@ -86,8 +86,19 @@
 (defn get-public-activities [state]
   (get-in @state [:public :items]))
 
+(defn get-liked-objects [state]
+  (get-in @state [:liked :items]))
+
 (defn get-actor-outbox [state]
   (get-in @state [:actor :outbox]))
+
+(defn post-activity! [activity]
+  (http/post (get-actor-outbox state) {:with-credentials? false :json-params activity}))
+
+(defn like-object! [object]
+  (post-activity! {:type "Like"
+                   :to "https://www.w3.org/ns/activitystreams#Public"
+                   :object (or (:id object) object)}))
 
 ;; ===========================================================================
 
@@ -103,10 +114,14 @@
   ;; Get the ActivityPub Actor along with inbox/outbox
   (go
     (let
-     [actor-profile (:body (<! (http-get (:actor-id @state))))]
+        [actor-profile (:body (<! (http-get (:actor-id @state))))
+         liked (:body (<! (http-get (:liked actor-profile))))]
 
       (swap! state
-             #(assoc % :actor actor-profile)))))
+             #(assoc % :actor actor-profile))
+
+      (swap! state
+             #(assoc % :liked liked)))))
 
 (defn get-public! []
   ;; Get the public collection
@@ -123,23 +138,26 @@
 ;; -- Components -----------------------------------------------------------------------------------------------
 
 
-(defn object-component [activity]
-  (let [object (:object activity)]
-    [:div.object
-     (case (:type object)
-       "Note" [:div
-               [:h3 "Note"]
-               [:p.note-content (:content object)]]
+(defn object-component [object like-object!]
+  [:div.object
+   (case (:type object)
+     "Note" [:div
+             [:h3 "Note"]
+             [:p.note-content (:content object)]]
 
-       "discover.swiss/Tour" [tours/tour-component activity]
+     "discover.swiss/Tour" [tours/tour-component object]
 
-       "Status" [:div
-                 [:h3 "Status"]
-                 [tours/status-component activity true]]
+     "Status" [:div
+               [:h3 "Status"]
+               [tours/status-component object true]]
 
-       [:dl
-        [:dt "type"]
-        [:dd (:type object)]])]))
+     [:dl
+      [:dt "type"]
+      [:dd (:type object)]])
+
+   (when like-object!
+     [:button.like {:on-click #(like-object! object)} "♥"])
+   ])
 
 (defn activity-component [activity]
   [:div.activity
@@ -153,12 +171,17 @@
    [:div.meta
     [:p
      [:span.actor (:actor activity)]
-     [:span.type (str (:type activity) ": " (:type (:object activity)))]
+     (case (:type activity)
+       "Create" (str " created a " (:type (:object activity)))
+       "Like" (str " liked " (:id (:object activity))))
      [:span.published (.fromNow (js/moment (:published activity)))]]]
 
-   [object-component activity]
+   (when
+       (= (:type activity) "Create")
+     [object-component (:object activity) like-object!])
 
-   [:details [:code (prn-str activity)]]])
+   ;; [:details [:code (prn-str activity)]]
+   ])
 
 (defn inbox-component [inbox]
   [:div
@@ -169,9 +192,6 @@
   [:div
    [:h2 "Outbox"]
    (map (fn [activity] [activity-component activity]) (:items outbox))])
-
-(defn post-activity! [activity]
-  (http/post (get-actor-outbox state) {:with-credentials? false :json-params activity}))
 
 (defn note-input [on-save]
   (let [note-content (r/atom "")
@@ -228,7 +248,7 @@
       ;; (nav-element :events)
       (nav-element :notes)
       (nav-element :tours)
-      (nav-element :curated)
+      (nav-element :liked)
       (nav-element :system)]]))
 
 (defn system-page []
@@ -311,12 +331,13 @@
 
         :timeline [timeline-page]
 
-        :events "TODO"
-
         :notes [:div
                 [note-input post-activity!]
                 [:hr]
-                [timeline-page (filter #(= (get-in % [:object :type]) "Note") (get-public-activities state))]]
+                [timeline-page (filter
+                                #(and (= (get-in % [:object :type]) "Note")
+                                      (= (get-in % [:type]) "Create"))
+                                (get-public-activities state))]]
 
         :tours [tours/tours-component
                 (get-public-activities state)
@@ -324,9 +345,12 @@
                 (partial set-selected! state)
                 (partial set-hovered! state)
                 post-activity!
-                (partial tours/tour-status (get-public-activities state))]
+                (partial tours/tour-status (map :object (get-public-activities state)))]
 
-        :curated "TODO"
+        :liked (for [object (get-liked-objects state)]
+                 [:div#liked
+                  [object-component object]
+                  [:hr]])
 
         :system [system-page]
 
@@ -379,7 +403,9 @@
                         :on-mouse-over #(set-hovered! state id)
                         :on-mouse-out #(set-hovered! state nil)}
 
-              [Popup [tours/tour-component activity false (partial tours/tour-status (get-public-activities state))]]])))]]]))
+              [Popup [tours/tour-component tour false
+                      (partial tours/tour-status
+                               (map :object (get-public-activities state)))]]])))]]]))
 
 (r/render [ap-demo-app]
           (js/document.getElementById "app")

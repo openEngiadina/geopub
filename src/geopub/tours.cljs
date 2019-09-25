@@ -53,26 +53,30 @@
   (when (get-in tour [:image :contentUrl])
     [:img.tour-image {:src (get-in tour [:image :contentUrl])}]))
 
-(defn tour-status [activities tour]
+(defn tour-status [status-objects tour]
   "Compute current status of tour from a list of activities (that may include Status targeting the tour)"
   (let
-   [status-updates (filter (fn [activity] (and (= (:type activity) "Create")
-                                               (= (get-in activity [:object :type]) "Status")
-                                               (= (get-in activity [:object :target]) (tour-id tour))))
+   [status-updates (filter (fn [status-object] (and (= (:type status-object) "Status")
+                                                    (= (:target status-object) (tour-id tour))))
                            ;; sort by reverse published date
-                           (reverse (sort-by :published activities)))]
+                           (reverse (sort-by :date status-objects)))]
     (first status-updates)))
 
-(defn status-component [activity timeline?]
-  (if activity
-    [:span {:class ["tour-status" (get-in activity [:object :status])]}
+(defn status-component [status-object timeline?]
+  (if status-object
+    [:span {:class ["tour-status" (:status status-object)]}
      (if timeline?
-       (str (get-in activity [:object :target])
+       (str (:target status-object)
             " set to "
-            (get-in activity [:object :status]))
-       (str (get-in activity [:object :status])
-            " (updated " (.fromNow (js/moment (:published activity)))
-            " by " (:actor activity)
+            (:status status-object)
+            " by "
+            (:attributedTo status-object)
+            )
+
+       (str (:status status-object)
+            " (updated " (.fromNow (js/moment (:date status-object)))
+            " by "
+            (:attributedTo status-object)
             ")"))]
     "-"))
 
@@ -80,6 +84,7 @@
   (let
    [status-update-content (r/atom {:status "open"
                                    :type "Status"
+                                   :date (.toJSON (js/moment))
                                    :target (tour-id tour)})
 
     create-activity (fn [object] {:type "Create"
@@ -103,30 +108,29 @@
                 :value "Update"
                 :on-click submit}]])))
 
-(defn tour-component [activity submit-status tour-status]
-  (let [tour (:object activity)]
-    (when (tour? tour)
-      [:div.tour
-       [:h3 "Tour"]
+(defn tour-component [tour submit-status tour-status]
+  (when (tour? tour)
+    [:div.tour
+     [:h3 "Tour"]
 
-       [tour-image tour]
+     [tour-image tour]
 
-       [:dl
+     [:dl
 
-        [:dt "ID"]
-        [:dd (tour-id tour)]
+      [:dt "ID"]
+      [:dd (tour-id tour)]
 
-        [:dt "Description"]
-        [:dd (or (get tour :description) "-")]
+      [:dt "Description"]
+      [:dd (or (get tour :description) "-")]
 
-        (when tour-status
-          [:div
-           [:dt "Status"]
-           [:dd
-            [status-component (tour-status tour)]]])]
+      (when tour-status
+        [:div
+         [:dt "Status"]
+         [:dd
+          [status-component (tour-status tour)]]])]
 
-       (when submit-status
-         [status-update-component tour submit-status])])))
+     (when submit-status
+       [status-update-component tour submit-status])]))
 
 (defn tours-component [activities is-selected? set-selected! set-hovered! submit-status tour-status]
   [:div
@@ -136,5 +140,5 @@
             :on-mouse-over #(set-hovered! (:id activity))
             :on-mouse-out #(set-hovered! nil)}
       [:div.activity
-       [tour-component activity submit-status tour-status]]
+       [tour-component (:object activity) submit-status tour-status]]
       [:hr]])])

@@ -16,6 +16,10 @@ body {
     margin: auto;
 }
 
+#liked hr {
+    color: lightgrey;
+}
+
 #timeline hr {
     color: lightgrey;
 }
@@ -39,12 +43,12 @@ body {
 
 
 .selected {
-    border-left: 10px solid grey;
+    /* border-left: 10px solid grey; */
     /* background-color: #e9d2c0; */
 }
 
 .activity:hover {
-    background-color: #e9d2c0;
+    /* background-color: #e9d2c0; */
 }
 
 .activity .meta .type {
@@ -70,6 +74,10 @@ body {
 .object {
     min-height: 50px;
     margin: 30px;
+}
+
+.object .like {
+    float: right;
 }
 
 .tour-image {
