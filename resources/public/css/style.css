@@ -6,13 +6,13 @@ body {
 }
 #sidebar {
     height: 98vh;
-    width: 35vw;
+    width: 45vw;
     margin: auto;
     overflow-y: scroll;
 }
 #mapid {
     height: 98vh;
-    width: 65vw;
+    width: 55vw;
     margin: auto;
 }
 
@@ -21,6 +21,10 @@ body {
 }
 
 #timeline hr {
+    color: lightgrey;
+}
+
+#tours hr {
     color: lightgrey;
 }
 
@@ -41,6 +45,10 @@ body {
     font-size: small;
 }
 
+.info-text {
+    padding: 7px;
+    margin: 5px 50px 5px 30px;
+}
 
 .selected {
     /* border-left: 10px solid grey; */

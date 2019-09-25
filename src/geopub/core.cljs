@@ -45,7 +45,6 @@
   [46.8 10.283333])
 
 
-
 ;; =================== State and helpers =====================================
 
 
@@ -56,8 +55,7 @@
            :selected nil
            :hover nil
            :latlng default-center
-           :only-liked-status false
-           }))
+           :only-liked-status false}))
 
 (defn set-selected! [state selected]
   "Set selected activity/object"
@@ -88,11 +86,15 @@
 (defn get-public-activities [state]
   (get-in @state [:public :items]))
 
+(defn get-public-objects [state]
+  (distinct
+   (map :object (get-in @state [:public :items]))))
+
 (defn get-liked-objects [state]
   (get-in @state [:liked :items]))
 
 (defn is-liked? [state object]
-(some (fn [id] (= (:id object) id))
+  (some (fn [id] (= (:id object) id))
         (map :id (get-liked-objects state))))
 
 (defn get-actor-outbox [state]
@@ -120,8 +122,8 @@
   ;; Get the ActivityPub Actor along with inbox/outbox
   (go
     (let
-        [actor-profile (:body (<! (http-get (:actor-id @state))))
-         liked (:body (<! (http-get (:liked actor-profile))))]
+     [actor-profile (:body (<! (http-get (:actor-id @state))))
+      liked (:body (<! (http-get (:liked actor-profile))))]
 
       (swap! state
              #(assoc % :actor actor-profile))
@@ -164,9 +166,7 @@
    (when (and is-liked? like-object!)
      (if (is-liked? object)
        [:button.like {:disabled true} "Liked!"]
-       [:button.like {:on-click #(like-object! object)} "♥"])
-     )
-   ])
+       [:button.like {:on-click #(like-object! object)} "♥"]))])
 
 (defn activity-component [activity]
   [:div.activity
@@ -183,16 +183,15 @@
      (case (:type activity)
        "Create" (str " created a " (:type (:object activity)))
        "Like" (str " liked " (:id (:object activity)))
-       (str " " (:type activity) " ")
-       )
+       (str " " (:type activity) " "))
      [:span.published (.fromNow (js/moment (:published activity)))]]]
 
    (when
-       (= (:type activity) "Create")
+    (= (:type activity) "Create")
      [object-component (:object activity) (partial is-liked? state) like-object!])
 
    ;; [:details [:code (prn-str activity)]]
-   ])
+])
 
 (defn inbox-component [inbox]
   [:div
@@ -264,8 +263,6 @@
 
 (defn system-page []
   [:div
-   [:p "System information and technical details."]
-
    [:h2 "Actor"]
 
    [:dl
@@ -334,6 +331,18 @@
 
      [:div#sidebar
       [:h1 "GeoPub"]
+
+      [:p
+       "GeoPub is a demonstrator showing how the "
+       [:a {:href "https://activitypub.rocks/"} "ActivityPub protocol"]
+       " can be used for "
+       [:a {:href "https://miaengiadina.github.io/openengiadina/"} "open local knowledge."]]
+
+       ;; [:p
+       ;;  "GeoPub is free software. The source code is available on "
+       ;;  [:a {:href "https://github.com/miaEngiadina/geopub"} "GitHub"]
+       ;;  "."]
+
       [nav-bar (:active-page @state)]
 
       [:hr]
@@ -342,7 +351,10 @@
 
         :timeline [timeline-page]
 
-        :notes [:div
+        :notes [:div#notes
+                [:div.info-text
+                 [:p "Notes are simple messages. Location information can be attached to notes so that they appear on the map to the right."]
+                 [:p "Similarly one could have an interface to create events or any other structured data."]]
                 [note-input post-activity!]
                 [:hr]
                 [timeline-page (filter
@@ -351,16 +363,20 @@
                                 (get-public-activities state))]]
 
         :tours [:div#tours
-                [:div
-                 [:input {:type "checkbox"
-                          :name "only-liked-status"
-                          :checked (:only-liked-status @state)
-                          :on-change #(swap! state assoc :only-liked-status (-> % .-target .-checked))
-                          }]
-                 [:label {:for "only-liked-status"} "Only show liked status updates"]
-                 ]
+                [:div.info-text
+                 [:p "Here a list of tours is displayed. The tours have been created by users and the creation of the tours can be seen in the timeline."]
+                 [:p "The status of the tour can be updated. This causes a \"Status\" object to be created (that can be also seen on the timeline)."]
+                 [:p "Optionally, only Status updates that have been liked can be considered for the calculation of the current status:"
+                  [:br]
+                  [:input {:type "checkbox"
+                           :name "only-liked-status"
+                           :checked (:only-liked-status @state)
+                           :on-change #(swap! state assoc :only-liked-status (-> % .-target .-checked))}]
+                  [:label {:for "only-liked-status"} "Only show liked status updates"]]
+
+                 [:p "This demonstrates how data can be curated (only data selected in a certain way is used for the final presentation)."]]
                 [tours/tours-component
-                 (get-public-activities state)
+                 (get-public-objects state)
                  is-selected?
                  (partial set-selected! state)
                  (partial set-hovered! state)
@@ -404,7 +420,7 @@
                       :on-mouse-out #(set-hovered! state nil)}
 
               [Popup
-               [object-component activity]]
+               [object-component (:object activity)]]
 
               (when (is-selected? state activity)
                 [CircleMarker

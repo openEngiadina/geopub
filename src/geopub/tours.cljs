@@ -132,13 +132,9 @@
      (when submit-status
        [status-update-component tour submit-status])]))
 
-(defn tours-component [activities is-selected? set-selected! set-hovered! submit-status tour-status]
+(defn tours-component [objects is-selected? set-selected! set-hovered! submit-status tour-status]
   [:div
-   (for [activity (filter #(tour? (:object %)) activities)]
-     [:div {:class (when (is-selected? activity) "selected")
-            :on-click #(set-selected! (:id activity))
-            :on-mouse-over #(set-hovered! (:id activity))
-            :on-mouse-out #(set-hovered! nil)}
-      [:div.activity
-       [tour-component (:object activity) submit-status tour-status]]
+   (for [tour (filter #(tour? %) objects)]
+     [:div
+      [tour-component tour submit-status tour-status]
       [:hr]])])
