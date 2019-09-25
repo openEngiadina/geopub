@@ -73,7 +73,8 @@ body {
 
 .object {
     min-height: 50px;
-    margin: 30px;
+    margin: 10px;
+    padding: 10px;
 }
 
 .object .like {

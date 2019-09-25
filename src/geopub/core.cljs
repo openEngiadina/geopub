@@ -89,6 +89,10 @@
 (defn get-liked-objects [state]
   (get-in @state [:liked :items]))
 
+(defn is-liked? [state object]
+(some (fn [id] (= (:id object) id))
+        (map :id (get-liked-objects state))))
+
 (defn get-actor-outbox [state]
   (get-in @state [:actor :outbox]))
 
@@ -138,7 +142,7 @@
 ;; -- Components -----------------------------------------------------------------------------------------------
 
 
-(defn object-component [object like-object!]
+(defn object-component [object is-liked? like-object!]
   [:div.object
    (case (:type object)
      "Note" [:div
@@ -155,8 +159,11 @@
       [:dt "type"]
       [:dd (:type object)]])
 
-   (when like-object!
-     [:button.like {:on-click #(like-object! object)} "♥"])
+   (when (and is-liked? like-object!)
+     (if (is-liked? object)
+       [:button.like {:disabled true} "Liked!"]
+       [:button.like {:on-click #(like-object! object)} "♥"])
+     )
    ])
 
 (defn activity-component [activity]
@@ -173,12 +180,14 @@
      [:span.actor (:actor activity)]
      (case (:type activity)
        "Create" (str " created a " (:type (:object activity)))
-       "Like" (str " liked " (:id (:object activity))))
+       "Like" (str " liked " (:id (:object activity)))
+       (str " " (:type activity) " ")
+       )
      [:span.published (.fromNow (js/moment (:published activity)))]]]
 
    (when
        (= (:type activity) "Create")
-     [object-component (:object activity) like-object!])
+     [object-component (:object activity) (partial is-liked? state) like-object!])
 
    ;; [:details [:code (prn-str activity)]]
    ])
