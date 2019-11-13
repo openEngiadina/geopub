@@ -5,7 +5,6 @@ GeoPub is a small demonstrator showing how ActivityPub can be used for handling 
 It implements the ActivityPub Client-to-Server Protocol but is currently only compatible with the [[https://github.com/miaEngiadina/minimal-ap][minimal-ap]] experimental ActivityPub server.
 
 * Developer quick start
-
 ** Prerequisites
 
 - [[https://clojure.org/][Clojure]] (GeoPub is written in [[https://clojurescript.org/][ClojureScript]])

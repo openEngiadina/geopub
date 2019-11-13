@@ -161,7 +161,10 @@
 
      [:dl
       [:dt "type"]
-      [:dd (:type object)]])
+      [:dd (or (get object (keyword "@type")) (:type object))]
+      [:dt "name"]
+      [:dd (:name object)]
+      ])
 
    (when (and is-liked? like-object!)
      (if (is-liked? object)
