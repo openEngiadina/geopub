@@ -38,7 +38,8 @@
 
 ;; ====================== Config =============================================
 
-(def server-url "http://localhost:8080/")
+(def server-url "https://ap-dev.miaengiadina.ch/")
+;;(def server-url "http://localhost:8080/")
 
 (def default-center
   ;; Default center of map is Scuol
