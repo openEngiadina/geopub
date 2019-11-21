@@ -303,7 +303,12 @@
     [:li
      [:input {:type "button"
               :value "Import sample tours"
-              :on-click #(tours/post-sample-tours post-activity!)}]]
+              :on-click #(tours/post-sample-data post-activity! "ds-tours.json")}]]
+
+    [:li
+     [:input {:type "button"
+              :value "Import Ski lifts & pistes from OpenStreetMaps"
+              :on-click #(tours/post-sample-data post-activity! "scuol-ski.json")}]]
 
     [:li
      [:input {:type "button"

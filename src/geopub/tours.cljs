@@ -22,12 +22,12 @@
             [clojure.string :as str]
             [cljs-http.client :as http]))
 
-(defn post-sample-tours [post-activity!]
+(defn post-sample-data [post-activity! url]
   "Load sample data from discover.swiss and post to ActivityPub public collection"
   (go
     (let
-     [response (<! (http/get "ds-tours.json" {:with-credentials? false}))
-      tours (get-in response [:body :data])
+     [response (<! (http/get url {:with-credentials? false}))
+      tours (get-in response [:body])
       as-activity (fn [object] {:type "Create"
                                 :to ["https://www.w3.org/ns/activitystreams#Public"]
                                 :object object})]
@@ -35,16 +35,29 @@
         (post-activity! (as-activity tour))))))
 
 (defn tour-line [tour]
-  (let [line-string (get-in tour [:geoShape :line])]
-    (if line-string
+  (let
+      [line-string (get-in tour [:geoShape :line])
+       geometry-coordinates (get-in tour [:geometry :coordinates])]
+
+    (cond
+
+      line-string
       (map (fn [x] [(second x) (first x)])
            (map #(str/split % #",")
                 (str/split line-string #" ")))
-      nil)))
+
+      geometry-coordinates (map (fn [x] [(second x) (first x)])
+                                geometry-coordinates)
+
+      :else nil)))
+
 
 (defn tour? [object]
   "Is the object a tour"
-  (= "discover.swiss/Tour" (:type object)))
+  (or
+   (= "discover.swiss/Tour" (:type object))
+   (= "DownhillPiste" (:type object))
+   (= "AerialWayThing" (:type object))))
 
 (defn tour-id [tour]
   (get tour (keyword "@id")))
@@ -114,11 +127,14 @@
 (defn tour-component [tour submit-status tour-status]
   (when (tour? tour)
     [:div.tour
-     [:h3 "Tour"]
+     [:h3 (get tour :type)]
 
      [tour-image tour]
 
      [:dl
+
+      [:dt "Name"]
+      [:dd (or (get tour :name) "-")]
 
       [:dt "ID"]
       [:dd (tour-id tour)]
