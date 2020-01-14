@@ -1,15 +1,54 @@
 body {
-    font-family: sans-serif;
+    font-family: Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
 }
+
 #container {
     display: flex;
 }
+
 #sidebar {
-    height: 98vh;
-    width: 45vw;
+    height: 100vh;
+    flex-grow: 1;
     margin: auto;
-    overflow-y: scroll;
+    background-color: darkblue;
+    color: white;
 }
+
+#sidebar header {
+    margin-left: 20px;
+}
+
+#debug {
+    max-width: 150px;
+    margin-left: 20px;
+}
+
+#debug code {
+    display: block;
+}
+
+nav ul {
+    list-style-type: none;
+    margin: 50px auto 50px auto;
+}
+
+nav li {
+    margin: 15px;
+}
+
+nav li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.4em;
+}
+
+main {
+    flex-grow: 7;
+    background-color: red;
+}
+
 #mapid {
     height: 98vh;
     width: 55vw;
@@ -111,33 +150,6 @@ body {
 
 dl dt {
     font-weight: bold;
-}
-
-nav ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-}
-
-nav li {
-    float: left;
-}
-
-nav li a {
-    display: block;
-    color: #1f2041;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-}
-
-nav li a:hover {
-    background-color: #e9d2c0;
-}
-
-nav li .active {
-    background-color: #e9d2c0;
 }
 
 .actions-list {

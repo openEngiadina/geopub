@@ -1,20 +1,29 @@
 body {
     font-family: sans-serif;
 }
+
 #container {
     display: flex;
+    background-color: red;
 }
+
+nav {
+    background-color: blue;
+    color: white;
+}
+
 #sidebar {
     height: 98vh;
     width: 45vw;
     margin: auto;
     overflow-y: scroll;
 }
-#mapid {
-    height: 98vh;
-    width: 55vw;
-    margin: auto;
-}
+
+/* #mapid { */
+/*     height: 98vh; */
+/*     width: 55vw; */
+/*     margin: auto; */
+/* } */
 
 #liked hr {
     color: lightgrey;

@@ -1,4 +1,4 @@
-;; Copyright © 2019 pukkamustard <pukkamustard@posteo.net>
+;; Copyright © 2019, 2020 pukkamustard <pukkamustard@posteo.net>
 ;;
 ;; This file is part of GeoPub.
 ;;
@@ -24,39 +24,21 @@
             [react-leaflet :as react-leaflet]
             [clojure.string :as str]
             [cljsjs.moment]
-            [geopub.tours :as tours]))
+            [geopub.tours :as tours]
+            [geopub.ui :as ui]))
 
-(def copy-osm "&copy; <a href=\"http://osm.org/copyright\">OpenStreetMap</a> contributors")
-(def osm-url "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
-
-(def Map (r/adapt-react-class react-leaflet/Map))
-(def TileLayer (r/adapt-react-class react-leaflet/TileLayer))
-(def Marker (r/adapt-react-class react-leaflet/Marker))
-(def Popup (r/adapt-react-class react-leaflet/Popup))
-(def Polyline (r/adapt-react-class react-leaflet/Polyline))
-(def CircleMarker (r/adapt-react-class react-leaflet/CircleMarker))
 
 ;; ====================== Config =============================================
 
 (def server-url "https://ap-dev.miaengiadina.ch/")
 ;;(def server-url "http://localhost:8080/")
 
-(def default-center
-  ;; Default center of map is Scuol
-  [46.8 10.283333])
 
+(defonce state
+  (r/atom {}))
 
 ;; =================== State and helpers =====================================
 
-
-(defonce state
-  (r/atom {:actor-id (str server-url "actors/alice")
-           :actor {}
-           :active-page :timeline
-           :selected nil
-           :hover nil
-           :latlng default-center
-           :only-liked-status false}))
 
 (defn set-selected! [state selected]
   "Set selected activity/object"
@@ -332,137 +314,8 @@
     [(get-in object [:location :geo :latitude])
      (get-in object [:location :geo :longitude])]))
 
-(defn ap-demo-app []
-  (let
-   [is-selected? (partial is-selected? state)
-    is-hover? (partial is-hover? state)]
-    [:div#container
 
-     [:div#sidebar
-      [:h1 "GeoPub"]
-
-      [:p
-       "GeoPub is a demonstrator showing how the "
-       [:a {:href "https://activitypub.rocks/"} "ActivityPub protocol"]
-       " can be used for "
-       [:a {:href "https://miaengiadina.github.io/openengiadina/"} "open local knowledge."]]
-
-       ;; [:p
-       ;;  "GeoPub is free software. The source code is available on "
-       ;;  [:a {:href "https://github.com/miaEngiadina/geopub"} "GitHub"]
-       ;;  "."]
-
-      [nav-bar (:active-page @state)]
-
-      [:hr]
-
-      (case (:active-page @state)
-
-        :timeline [timeline-page]
-
-        :notes [:div#notes
-                [:div.info-text
-                 [:p "Notes are simple messages. Location information can be attached to notes so that they appear on the map to the right."]
-                 [:p "Similarly one could have an interface to create events or any other structured data."]]
-                [note-input post-activity!]
-                [:hr]
-                [timeline-page (filter
-                                #(and (= (get-in % [:object :type]) "Note")
-                                      (= (get-in % [:type]) "Create"))
-                                (get-public-activities state))]]
-
-        :tours [:div#tours
-                [:div.info-text
-                 [:p "Here a list of tours is displayed. The tours have been created by users and the creation of the tours can be seen in the timeline."]
-                 [:p "The status of the tour can be updated. This causes a \"Status\" object to be created (that can be also seen on the timeline)."]
-                 [:p "Optionally, only Status updates that have been liked can be considered for the calculation of the current status:"
-                  [:br]
-                  [:input {:type "checkbox"
-                           :name "only-liked-status"
-                           :checked (:only-liked-status @state)
-                           :on-change #(swap! state assoc :only-liked-status (-> % .-target .-checked))}]
-                  [:label {:for "only-liked-status"} "Only show liked status updates"]]
-
-                 [:p "This demonstrates how data can be curated (only data selected in a certain way is used for the final presentation)."]]
-                [tours/tours-component
-                 (get-public-objects state)
-                 is-selected?
-                 (partial set-selected! state)
-                 (partial set-hovered! state)
-                 post-activity!
-                 (partial tours/tour-status
-                          (if (:only-liked-status @state)
-                            (get-liked-objects state)
-                            (get-public-objects state)))]]
-
-        :liked [:div#liked
-                (for [object (get-liked-objects state)]
-                  [:div
-                   [object-component object]
-                   [:hr]])]
-
-        :system [system-page]
-
-        "404")]
-
-     [:div#mapid
-      [Map
-       {:style {:min-height "98vh"}
-        :center default-center
-        :zoom 12
-        :on-click (fn [e]
-                    (let [latlng (js->clj (.-latlng e))]
-                      (set-position! state [(get latlng "lat") (get latlng "lng")])))}
-       [TileLayer
-        {:url osm-url
-         :attribution copy-osm}]
-
-       (for [activity (get-in @state [:public :items])]
-
-         (let [id (:id activity)
-               location (object-location (:object activity))]
-           (when-not (nil? location)
-             [Marker {:position location
-                      :id id
-                      :on-click #(set-selected! state id)
-                      :on-mouse-over #(set-hovered! state id)
-                      :on-mouse-out #(set-hovered! state nil)}
-
-              [Popup
-               [object-component (:object activity)]]
-
-              (when (is-selected? state activity)
-                [CircleMarker
-                 {:center location
-                  :radius 10}])])))
-
-       (for [activity (get-public-activities state)]
-         (let
-          [id (:id activity)
-           tour (:object activity)
-           tour-status (tours/tour-status (if (:only-liked-status @state)
-                                            (get-liked-objects state)
-                                            (map :object (get-public-activities state)))
-                                          tour)
-           tour-line (tours/tour-line tour)]
-
-           (when (and (tours/tour? tour)
-                      tour-line)
-             [Polyline {:color (case (:status tour-status)
-                                 "open" "green"
-                                 "warning" "orange"
-                                 "closed" "red"
-                                 "blue")
-                        :positions tour-line
-                        :on-click #(set-selected! state id)
-                        :on-mouse-over #(set-hovered! state id)
-                        :on-mouse-out #(set-hovered! state nil)}
-
-              [Popup [tours/tour-component tour false tour-status]]])))
-
-       ]]]))
-
-(r/render [ap-demo-app]
+(r/render [ui/ui]
           (js/document.getElementById "app")
           refresh!)
 

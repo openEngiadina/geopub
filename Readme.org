@@ -1,5 +1,7 @@
 #+TITLE: GeoPub
 
+GeoPub is a content management system for geospatial data.
+
 GeoPub is a small demonstrator showing how ActivityPub can be used for handling [[https://miaengiadina.github.io/openengiadina/][open local knowledge]].
 
 It implements the ActivityPub Client-to-Server Protocol but is currently only compatible with the [[https://github.com/miaEngiadina/minimal-ap][minimal-ap]] experimental ActivityPub server.
