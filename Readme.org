@@ -31,6 +31,28 @@ cp -r resources/public/* docs
 
 #+RESULTS:
 
+* Developer notes
+
+** RDF/JS
+
+GeoPub uses the [[http://rdf.js.org/data-model-spec/][RDF/JS Data model specification]] and Javascript libraries for parsing data (currently only Turtle with [[https://github.com/rdfjs/N3.js][N3]]).
+
+See [[https://figwheel.org/docs/npm.html][the figwheel docs]] for more information on how to use npm modules in ClojureScript.
+
+*** TODO Use [[https://github.com/rubensworks/rdf-parse.js][RDF Parse]]
+
+A parser for many kinds of RDF serializations (including JSON-LD and RDFa). Binds together other JS libraries with a unified parsing interface.
+
+First attempt to use this library deferred because of problems with handling [[https://nodejs.org/api/stream.html#stream_class_stream_readable][Node.js style streams]] from ClojureScript.
+
+*** Native parsers
+
+Preferably we would not have to rely on the npm ecosystem and would use parsers implemented in pure Clojure(Script).
+
+This is utopian. The effort required to implement working and efficient parsers is high and in some cases [[https://json-ld.org/spec/REC/json-ld-api/20140116/][almost impossible]].
+
+I already wasted a lot of time trying to implement a Turtle parser with [[https://github.com/rm-hull/jasentaa][a parser combinator library]].
+
 * Overview
 
 GeoPub implements the ActivityPub protocol, which allows federated, crowd-sourced creation of semantic data.
@@ -50,6 +72,3 @@ A list of all notes created and a form for creating a note.
 A list of tours created by users. The status of a tour can be updated. This creates a new "Status" object. The displayed status on the tour is the status contained in the most recently created "Status" object.
 
 ** TODO Curated
-
-
-

@@ -4,4 +4,4 @@
         cljs-http {:mvn/version "0.1.46"}
         cljsjs/react-leaflet {:mvn/version "2.4.0-0"}
         cljsjs/moment {:mvn/version "2.24.0-0"}
-        }}
+        lambdaisland/uri {:mvn/version "1.1.0"}}}
