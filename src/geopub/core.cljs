@@ -16,36 +16,44 @@
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
 (ns geopub.core
-  (:require-macros [cljs.core.async.macros :refer [go]])
+  (:require-macros [cljs.core.async :refer [go]])
   (:require [reagent.core :as r]
             [cljs.core.async :refer [<!]]
-            [cljs-http.client :as http]
-            [geopub.ui.core :as ui]))
+            [geopub.ui.core :as ui]
+            [geopub.cpub.core :as cpub]))
 
 
-;; ====================== Config =============================================
+;; ====================== Config =================
 
 ;; (def server-url "https://ap-dev.miaengiadina.ch/")
-(def server-url "http://localhost:8080/")
+(def server-url "http://localhost:4000/")
 
+(def auth {:username "alice" :password "123"})
 
+;; ============== State and helpers ==============
 
-;; =================== State and helpers =====================================
+(defonce state (r/atom {:store []}))
 
-(defonce state (r/atom {}))
+;; ============== Start fetching data ============
 
+(defn get-objects []
+  "Get objects from server and place in store."
+  (go
+    (let [objects (<! (cpub/get-objects (str server-url "objects") auth))]
+      (swap! state #(assoc % :store objects)))))
 
-
-;; ===========================================================================
+(get-objects)
 
 (defn refresh! []
   ;; Refresh data from server (Actor and public collection)
-  (println "Refreshing"))
+  (println "Should refresh...TODO"))
+
+;; (defonce refresher
+;;   (js/setInterval #(refresh!) 20000))
+
+;; ==================== UI =======================
 
 (r/render [ui/ui state]
           (js/document.getElementById "app")
           refresh!)
-
-;; (defonce refresher
-;;   (js/setInterval #(refresh!) 20000))
 

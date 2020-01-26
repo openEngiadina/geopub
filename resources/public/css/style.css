@@ -21,12 +21,14 @@ body {
 }
 
 #debug {
-    max-width: 150px;
+    max-width: 200px;
     margin-left: 20px;
 }
 
 #debug code {
     display: block;
+    max-height: 200px;
+    overflow: scroll;
 }
 
 nav ul {
