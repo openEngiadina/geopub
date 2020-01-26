@@ -7,6 +7,9 @@ GeoPub is a small demonstrator showing how ActivityPub can be used for handling 
 It implements the ActivityPub Client-to-Server Protocol but is currently only compatible with the [[https://github.com/miaEngiadina/minimal-ap][minimal-ap]] experimental ActivityPub server.
 
 * Developer quick start
+
+See also the [[./docs/dev-notes.org][developer notes]].
+
 ** Prerequisites
 
 - [[https://clojure.org/][Clojure]] (GeoPub is written in [[https://clojurescript.org/][ClojureScript]])
@@ -30,28 +33,6 @@ cp -r resources/public/* docs
 #+END_SRC
 
 #+RESULTS:
-
-* Developer notes
-
-** RDF/JS
-
-GeoPub uses the [[http://rdf.js.org/data-model-spec/][RDF/JS Data model specification]] and Javascript libraries for parsing data (currently only Turtle with [[https://github.com/rdfjs/N3.js][N3]]).
-
-See [[https://figwheel.org/docs/npm.html][the figwheel docs]] for more information on how to use npm modules in ClojureScript.
-
-*** TODO Use [[https://github.com/rubensworks/rdf-parse.js][RDF Parse]]
-
-A parser for many kinds of RDF serializations (including JSON-LD and RDFa). Binds together other JS libraries with a unified parsing interface.
-
-First attempt to use this library deferred because of problems with handling [[https://nodejs.org/api/stream.html#stream_class_stream_readable][Node.js style streams]] from ClojureScript.
-
-*** Native parsers
-
-Preferably we would not have to rely on the npm ecosystem and would use parsers implemented in pure Clojure(Script).
-
-This is utopian. The effort required to implement working and efficient parsers is high and in some cases [[https://json-ld.org/spec/REC/json-ld-api/20140116/][almost impossible]].
-
-I already wasted a lot of time trying to implement a Turtle parser with [[https://github.com/rm-hull/jasentaa][a parser combinator library]].
 
 * Overview
 
