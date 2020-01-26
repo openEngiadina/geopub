@@ -1,9 +1,8 @@
 (ns geopub.ui.core
   (:require
-   [geopub.state :refer [state]]
    [geopub.ui.map]))
 
-(defn ui []
+(defn ui [state]
   [:div#container
    [:div#sidebar
 
