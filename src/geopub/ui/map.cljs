@@ -22,7 +22,7 @@
 (defn set-position! [state pos]
   (swap! state assoc :position pos))
 
-(defn map-component [state]
+(defn view [state]
   [:div#map
    [Map
     {:style {:min-height "100vh"}

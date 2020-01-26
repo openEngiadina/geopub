@@ -48,20 +48,20 @@ nav li a {
 
 main {
     flex-grow: 7;
-    background-color: red;
+    /* max-width: 80vw; */
+}
+
+
+#timeline {
+    margin: 20px;
+    overflow: scroll;
 }
 
 #mapid {
-    height: 98vh;
-    width: 55vw;
     margin: auto;
 }
 
 #liked hr {
-    color: lightgrey;
-}
-
-#timeline hr {
     color: lightgrey;
 }
 
