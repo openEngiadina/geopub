@@ -1,4 +1,4 @@
-(ns geopub.map
+(ns geopub.ui.map
   (:require
    [reagent.core :as r]
    [leaflet :as leaflet]

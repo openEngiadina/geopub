@@ -1,8 +1,7 @@
-(ns geopub.ui
+(ns geopub.ui.core
   (:require
    [geopub.state :refer [state]]
-   [geopub.map]
-   ))
+   [geopub.ui.map]))
 
 (defn ui []
   [:div#container
@@ -34,6 +33,6 @@
    [:main
     [:header]
 
-    [geopub.map/map-component state]
+    [geopub.ui.map/map-component state]
     ]]
   )

@@ -20,7 +20,7 @@
   (:require [reagent.core :as r]
             [cljs.core.async :refer [<!]]
             [cljs-http.client :as http]
-            [geopub.ui :as ui]))
+            [geopub.ui.core :as ui]))
 
 
 ;; ====================== Config =============================================
