@@ -25,7 +25,7 @@
   (.-Quad (.-internal (.-DataFactory n3))))
 
 (extend-type n3-quad-type
-  rdf/Quad
+  rdf/IQuad
   (rdf/quad-subject [x] (.-subject x))
   (rdf/quad-predicate [x] (.-predicate x))
   (rdf/quad-object [x] (.-object x))
@@ -46,14 +46,14 @@
 (def n3-term-type (.-Term (.-internal (.-DataFactory n3))))
 
 (extend-type n3-term-type
-  rdf/Term
+  rdf/ITerm
   (rdf/term-type [x] (.-termType x))
   (rdf/term-value [x] (.-value x)))
 
 (def n3-named-node-type (.-NamedNode (.-internal (.-DataFactory n3))))
 
 (extend-type n3-named-node-type
-  rdf/NamedNode
+  rdf/INamedNode
   (rdf/named-node-iri [x] (.-value x))
 
   IPrintWithWriter
@@ -62,7 +62,7 @@
 (def n3-blank-node-type (.-BlankNode (.-internal (.-DataFactory n3))))
 
 (extend-type n3-blank-node-type
-  rdf/BlankNode
+  rdf/IBlankNode
   (rdf/blank-node-id [x] (.-value x))
 
   IPrintWithWriter
@@ -72,7 +72,7 @@
 (def n3-literal-type (.-Literal (.-internal (.-DataFactory n3))))
 
 (extend-type n3-literal-type
-  rdf/Literal
+  rdf/ILiteral
   (rdf/literal-value [x] (.-value x))
   (rdf/literal-language [x] (.-language x))
   (rdf/literal-datatype [x] (.-datatype x))
@@ -84,7 +84,7 @@
 (def n3-variable-type (.-Variable (.-internal (.-DataFactory n3))))
 
 (extend-type n3-variable-type
-  rdf/Variable
+  rdf/IVariable
   (rdf/variable-value [x] (.-value x)))
 
 ;; Turtle parser
