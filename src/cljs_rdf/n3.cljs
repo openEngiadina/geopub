@@ -91,4 +91,4 @@
 
 (defn parse [input]
   "Parse an RDF document to quads"
-  (.parse (new n3/Parser) input))
+  (js->clj (.parse (new n3/Parser) input)))
