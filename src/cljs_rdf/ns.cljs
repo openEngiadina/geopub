@@ -15,22 +15,10 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
-(ns geopub.cpub.core
-  (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [cljs-http.client :as http]
-            [cljs.core.async :refer [<! poll!]]
-            [cljs-rdf.n3 :as n3]
-            [clojure.pprint :refer [pprint]]))
+(ns cljs-rdf.ns
+  "Commonly used namespaces"
+  (:require-macros [cljs-rdf.core :refer [defns]]))
 
+(defns rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 
-(defn get-objects [server-url auth]
-  "Return all objects as a sequence of quads in a channel"
-  (go
-    (let
-        [body
-         (:body (<! (http/get server-url
-                           {:with-credentials? false
-                            :basic-auth auth
-                            :headers {"Accept" "text/turtle"}
-                            })))]
-      (n3/parse body))))
+(defns xsd "http://www.w3.org/2001/XMLSchema#")
