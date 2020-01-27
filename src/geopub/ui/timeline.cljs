@@ -15,7 +15,20 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
-(ns geopub.ui.timeline)
+(ns geopub.ui.timeline
+  (:require-macros [cljs.core.logic :refer [run* fresh]])
+  (:require [cljs.core.logic :as l]))
+
+(run* [q z]
+  (fresh [x]
+    (l/membero q [1 2 3])
+    (l/== q x)
+    (l/== x z)))
+
+(run* [q]
+  (l/membero q [1 2 3])
+  (l/pred q #(odd? %)))
+
 
 (defn view [state]
   [:div#timeline

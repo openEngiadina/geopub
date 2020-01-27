@@ -5,4 +5,5 @@
         cljsjs/react-leaflet {:mvn/version "2.4.0-0"}
         cljsjs/moment {:mvn/version "2.24.0-0"}
         metosin/reitit-core {:mvn/version "0.4.2"}
-        metosin/reitit-frontend {:mvn/version "0.4.2"}}}
+        metosin/reitit-frontend {:mvn/version "0.4.2"}
+        org.clojure/core.logic {:mvn/version "0.8.11"}}}
