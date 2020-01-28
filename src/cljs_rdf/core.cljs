@@ -27,31 +27,21 @@
 
 (defns xsd "http://www.w3.org/2001/XMLSchema#")
 
-;; RDF/JS Data model specification (http://rdf.js.org/data-model-spec/)
+;; Basic Interfaces
 
-;; TODO: implement equality
+(defprotocol ITriple
+  (triple-subject [x])
+  (triple-predicate [x])
+  (triple-object [x]))
 
-(defprotocol IQuad
-  (quad-subject [x])
-  (quad-predicate [x])
-  (quad-object [x])
-  (quad-graph [x]))
+(defn triple? [x]
+  (satisfies? ITriple x))
 
-(defn quad? [x]
-  (satisfies? IQuad x))
+(defprotocol IIRI
+  (iri-value [x]))
 
-(defprotocol ITerm
-  (term-type [x])
-  (term-value [x]))
-
-(defn term? [x]
-  (satisfies? ITerm x))
-
-(defprotocol INamedNode
-  (named-node-iri [x]))
-
-(defn named-node? [x]
-  (satisfies? INamedNode x))
+(defn iri? [x]
+  (satisfies? IIRI x))
 
 (defprotocol IBlankNode
   (blank-node-id [x]))
@@ -67,106 +57,97 @@
 (defn literal? [x]
   (satisfies? ILiteral x))
 
-(defprotocol IVariable
-  (variable-value [x]))
+;; Graph
 
-(defn variable? [x]
-  (satisfies? IVariable x))
+(defprotocol IGraph
+  (graph-add [x triple] "Add a triple to the dataset.")
+  (graph-delete [x triple] "Remove triple from the dataset.")
+  (graph-has [x triple] "Returns true if triple is in dataset, false if not."))
 
-;; Dataset (inspired by RDF/JS Dataset specification, https://rdf.js.org/dataset-spec/)
+(defn graph? [x]
+  (satisfies? IGraph x))
 
-(defprotocol IDataset
-  (dataset-add [x quad] "Add a quad to the dataset.")
-  (dataset-delete [x quad] "Remove quad from the dataset.")
-  (dataset-has [x quad] "Returns true if quad is in dataset, false if not."))
-
-(defn dataset? [x]
-  (satisfies? IDataset x))
-
-(defn dataset-rel [seq q]
-  "Unify dataset into a relational program."
+(defn graph-rel [seq q]
+  "Unify graph into a relational program."
   (fn [s]
     (l/to-stream
-     ;; TODO plenty of room for optimizing. Currently just treats dataset as a seq.
+     ;; TODO plenty of room for optimizing. Currently just treats graph as a seq.
      (map #(l/unify s % q) seq))))
 
-;; Implement protocol for basic types
+;; ;; Implement protocol for basic types
 
-(extend-type js/String
-  INamedNode
-  (named-node-iri [x] x)
+;; (extend-type js/String
+;;   INamedNode
+;;   (named-node-iri [x] x)
 
-  ILiteral
-  (literal-value [x] (.valueOf x))
-  (literal-language [x] nil)
-  (literal-datatype [x] (xsd "string")))
+;;   ILiteral
+;;   (literal-value [x] (.valueOf x))
+;;   (literal-language [x] nil)
+;;   (literal-datatype [x] (xsd "string")))
 
-(extend-type js/Number
-  ILiteral
-  (literal-value [x] (.valueOf x))
-  (literal-language [x] nil)
-  (literal-datatype [x]
-    (do
-      (cond
-        (integer? (.valueOf x)) (xsd "integer")
-        (double? (.valueOf x)) (xsd "double")))))
+;; (extend-type js/Number
+;;   ILiteral
+;;   (literal-value [x] (.valueOf x))
+;;   (literal-language [x] nil)
+;;   (literal-datatype [x]
+;;     (do
+;;       (cond
+;;         (integer? (.valueOf x)) (xsd "integer")
+;;         (double? (.valueOf x)) (xsd "double")))))
 
 
 ;; Implementation of data model using records
 
-(declare ->Quad)
+(declare ->Triple)
 
-(defrecord Quad [subject predicate object graph]
-  IQuad
-  (quad-subject [q] (:subject q))
-  (quad-predicate [q] (:predicate q))
-  (quad-object [q] (:object q))
-  (quad-graph [q] (:graph q))
+(defrecord Triple [subject predicate object]
+  ITriple
+  (triple-subject [q] (:subject q))
+  (triple-predicate [q] (:predicate q))
+  (triple-object [q] (:object q))
 
   l/IUnifyTerms
   (l/-unify-terms [u v s]
-    (if (instance? Quad v)
+    (if (instance? Triple v)
       (-> s
           (l/unify (:subject u) (:subject v))
           (l/unify (:predicate u) (:predicate v))
-          (l/unify (:object u) (:object v))
-          (l/unify (:graph u) (:graph v)))
+          (l/unify (:object u) (:object v)))
       (l/unify s v u)))
 
   l/IWalkTerm
   (l/-walk-term [v s]
-    (->Quad
+    (->Triple
      (l/-walk* s (:subject v))
      (l/-walk* s (:predicate v))
-     (l/-walk* s (:object v))
-     (l/-walk* s (:graph v))))
+     (l/-walk* s (:object v))))
 
   l/IReifyTerm
   (l/-reify-term [v s]
     (-> s
         (l/-reify* (:subject v))
         (l/-reify* (:predicate v))
-        (l/-reify* (:object v))
-        (l/-reify* (:graph v)))))
+        (l/-reify* (:object v)))))
 
-(defn quad
-  "Returns a Quad."
-  ([q] (->Quad
-        (quad-subject q)
-        (quad-property q)
-        (quad-object q)
-        (quad-graph q)))
-  ([s p o] (->Quad s p o nil))
-  ([s p o g] (->Quad s p o g)))
+(defn triple [s p o]
+  "Returns a triple."
+  (->Triple s p o))
+
+(defn triple-cast [v]
+  "Cast something that implements ITriple into a triple."
+  (triple
+   (triple-subject v)
+   (triple-predicate v)
+   (triple-object v)))
 
 ;; (run* [q]
 ;;       (fresh [s p o]
-;;              (l/== (quad s p o) (quad 1 2 3))
-;;              (l/== (quad s p o) q)))
+;;              (l/== (triple s p o) (triple 1 2 3))
+;;              (l/== (triple s p o) q)))
 
 ;; (run* [q]
 ;;   (fresh [s p o]
-;;     (l/== (quad s p o) q)
+;;     (l/== (triple s p o) q)
 ;;     ))
 
 (declare ->BlankNode)

@@ -23,7 +23,7 @@
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
             [cljs-rdf.core :as rdf]
-            [cljs-rdf.dataset.set :as rdfds]
+            [cljs-rdf.graph.set]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
@@ -46,17 +46,19 @@
   "Return the datastore"
   (:store @state))
 
-(defn- add-quads-to-store [state quads]
+(defn- add-triples-to-store [state triples]
   (swap! state
-         (fn [s] (reduce rdf/dataset-add (:store s) quads))))
+         (fn [s]
+           (assoc s :store
+                  (reduce rdf/graph-add (:store s) triples)))))
 
 ;; ============== Start fetching data ============
 
 (defn get-objects []
   "Get objects from server and place in store."
   (go
-    (let [quads (<! (cpub/get-objects (str server-url "objects") auth))]
-      (add-quads-to-store state quads))))
+    (let [triples (<! (cpub/get-objects (str server-url "objects") auth))]
+      (add-triples-to-store state triples))))
 
 (defn refresh! []
   ;; Refresh data from server (Actor and public collection)

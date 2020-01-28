@@ -1,5 +1,5 @@
-(ns cljs-rdf.dataset.set
-  "Implement RDF Dataset using PersistentHashSet"
+(ns cljs-rdf.graph.set
+  "Implement RDF Graph using PersistentHashSet"
   (:require [cljs-rdf.core :as rdf]))
 
 
@@ -14,7 +14,8 @@
 ;; TODO: This implementation of dataset allows adding the identical quad mutltiple times if the underlying implementation of the Quad is different. Fixing this requires casting it to a "canonical" representation.
 
 (extend-type PersistentHashSet
-  rdf/IDataset
-  (rdf/dataset-add [x quad] (conj x quad))
-  (rdf/dataset-delete [x quad] (disj x quad))
-  (rdf/dataset-has [x quad] (contains? x quad)))
+  rdf/IGraph
+  (rdf/graph-add [x quad] (conj x quad))
+  (rdf/graph-delete [x quad] (disj x quad))
+  (rdf/graph-has [x quad] (contains? x quad)))
+

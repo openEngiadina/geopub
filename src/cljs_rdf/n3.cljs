@@ -25,39 +25,29 @@
   (.-Quad (.-internal (.-DataFactory n3))))
 
 (extend-type n3-quad-type
-  rdf/IQuad
-  (rdf/quad-subject [x] (.-subject x))
-  (rdf/quad-predicate [x] (.-predicate x))
-  (rdf/quad-object [x] (.-object x))
-  (rdf/quad-graph [x] (.-graph x))
+  rdf/ITriple
+  (rdf/triple-subject [x] (.-subject x))
+  (rdf/triple-predicate [x] (.-predicate x))
+  (rdf/triple-object [x] (.-object x))
 
   IPrintWithWriter
   (-pr-writer [o w _]
     (write-all w
                "#Quad {"
-               "subject: " (prn-str (rdf/quad-subject o))
-               ", predicate: " (prn-str (rdf/quad-predicate o))
-               ", object: " (prn-str (rdf/quad-object o))
-               ", graph: " (prn-str (rdf/quad-graph o))
+               "subject: " (prn-str (rdf/triple-subject o))
+               ", predicate: " (prn-str (rdf/triple-predicate o))
+               ", object: " (prn-str (rdf/triple-object o))
                "}"
                )))
-
-
-(def n3-term-type (.-Term (.-internal (.-DataFactory n3))))
-
-(extend-type n3-term-type
-  rdf/ITerm
-  (rdf/term-type [x] (.-termType x))
-  (rdf/term-value [x] (.-value x)))
 
 (def n3-named-node-type (.-NamedNode (.-internal (.-DataFactory n3))))
 
 (extend-type n3-named-node-type
-  rdf/INamedNode
-  (rdf/named-node-iri [x] (.-value x))
+  rdf/IIRI
+  (rdf/iri-value [x] (.-value x))
 
   IPrintWithWriter
-  (-pr-writer [o w _] (write-all w "<" (rdf/named-node-iri o) ">")))
+  (-pr-writer [o w _] (write-all w "<" (rdf/iri-value o) ">")))
 
 (def n3-blank-node-type (.-BlankNode (.-internal (.-DataFactory n3))))
 
@@ -81,14 +71,8 @@
   ;; TODO also print datatype and language
   (-pr-writer [o w _] (write-all w "\"" (pr-str (rdf/literal-value o)) "\"")))
 
-(def n3-variable-type (.-Variable (.-internal (.-DataFactory n3))))
-
-(extend-type n3-variable-type
-  rdf/IVariable
-  (rdf/variable-value [x] (.-value x)))
-
 ;; Turtle parser
 
 (defn parse [input]
-  "Parse an RDF document to quads"
+  "Parse an RDF document to Triples"
   (js->clj (.parse (new n3/Parser) input)))
