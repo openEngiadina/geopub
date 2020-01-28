@@ -48,7 +48,8 @@ nav li a {
 
 main {
     flex-grow: 7;
-    /* max-width: 80vw; */
+    max-height: 100vh;
+    overflow: scroll;
 }
 
 

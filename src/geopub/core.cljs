@@ -22,6 +22,7 @@
             [cljs.core.async :refer [<!]]
             [cljs.core.logic :as l]
             [geopub.ui.map]
+            [geopub.ui.store]
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
             [cljs-rdf.core :as rdf]
@@ -77,6 +78,11 @@
   [["timeline"
     {:name ::timeline
      :view geopub.ui.timeline/view}]
+
+   ["store"
+    {:name ::store
+     :view geopub.ui.store/view}]
+
    ["map"
     {:name ::map
      :view geopub.ui.map/view}]])
@@ -91,6 +97,7 @@
     [:nav
      [:ul
       [:li [:a {:href "#timeline"} "Timeline"]]
+      [:li [:a {:href "#store"} "Store"]]
       [:li [:a {:href "#map"} "Map"]]]
 
      [:hr]
@@ -98,9 +105,10 @@
      [:ul
       [:li [:a {:href "#settings"} "Settings"]]]]
 
-    [:div#debug
-     [:code
-      (str @state)]]]
+    ;; [:div#debug
+    ;;  [:code
+    ;;   (str @state)]]
+    ]
 
    [:main
     (let [view (:view (:current-route @state))]
