@@ -16,9 +16,11 @@
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
 (ns geopub.core
-  (:require-macros [cljs.core.async :refer [go]])
+  (:require-macros [cljs.core.async :refer [go]]
+                   [cljs.core.logic :refer [run* fresh]])
   (:require [reagent.core :as r]
             [cljs.core.async :refer [<!]]
+            [cljs.core.logic :as l]
             [geopub.ui.map]
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
@@ -69,7 +71,7 @@
 
 ;; ==================== UI =======================
 
-(def default-view geopub.ui.map/view)
+(def default-view geopub.ui.timeline/view)
 
 (def routes
   [["timeline"
@@ -119,7 +121,6 @@
 
 (init!)
 
-(rdf/named-node-iri
- (rdf/quad-subject
-  (first
-   (state-store state))))
+(run* [s p o]
+  (rdf/graph-tripleo (state-store state) (rdf/->Triple s p o)))
+

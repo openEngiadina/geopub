@@ -24,4 +24,5 @@
    [relative (gensym "relative-")]
     `(defn ~prefix
        [~relative]
-       (str ~namespace (name ~relative)))))
+       (cljs-rdf.core/iri
+        (str ~namespace (name ~relative))))))

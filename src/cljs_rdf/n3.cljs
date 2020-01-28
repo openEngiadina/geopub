@@ -75,4 +75,4 @@
 
 (defn parse [input]
   "Parse an RDF document to Triples"
-  (js->clj (.parse (new n3/Parser) input)))
+  (map rdf/triple (js->clj (.parse (new n3/Parser) input))))

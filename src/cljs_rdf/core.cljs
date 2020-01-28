@@ -62,7 +62,8 @@
 (defprotocol IGraph
   (graph-add [x triple] "Add a triple to the dataset.")
   (graph-delete [x triple] "Remove triple from the dataset.")
-  (graph-has [x triple] "Returns true if triple is in dataset, false if not."))
+  (graph-has [x triple] "Returns true if triple is in dataset, false if not.")
+  (graph-tripleo [x q] "Unify graph into a relational program"))
 
 (defn graph? [x]
   (satisfies? IGraph x))
@@ -76,79 +77,52 @@
 
 ;; ;; Implement protocol for basic types
 
-;; (extend-type js/String
-;;   INamedNode
-;;   (named-node-iri [x] x)
+(extend-type js/String
+  IIRI
+  (iri-value [x] x)
 
-;;   ILiteral
-;;   (literal-value [x] (.valueOf x))
-;;   (literal-language [x] nil)
-;;   (literal-datatype [x] (xsd "string")))
+  ILiteral
+  (literal-value [x] (.valueOf x))
+  (literal-language [x] nil)
+  (literal-datatype [x] (xsd "string")))
 
-;; (extend-type js/Number
-;;   ILiteral
-;;   (literal-value [x] (.valueOf x))
-;;   (literal-language [x] nil)
-;;   (literal-datatype [x]
-;;     (do
-;;       (cond
-;;         (integer? (.valueOf x)) (xsd "integer")
-;;         (double? (.valueOf x)) (xsd "double")))))
+(extend-type js/Number
+  ILiteral
+  (literal-value [x] (.valueOf x))
+  (literal-language [x] nil)
+  (literal-datatype [x]
+    (do
+      (cond
+        (integer? (.valueOf x)) (xsd "integer")
+        (double? (.valueOf x)) (xsd "double")))))
 
 
 ;; Implementation of data model using records
 
-(declare ->Triple)
 
-(defrecord Triple [subject predicate object]
-  ITriple
-  (triple-subject [q] (:subject q))
-  (triple-predicate [q] (:predicate q))
-  (triple-object [q] (:object q))
+(declare ->IRI)
+
+(defrecord IRI [value]
+  IIRI
+  (iri-value [v] (:value v))
 
   l/IUnifyTerms
   (l/-unify-terms [u v s]
-    (if (instance? Triple v)
-      (-> s
-          (l/unify (:subject u) (:subject v))
-          (l/unify (:predicate u) (:predicate v))
-          (l/unify (:object u) (:object v)))
+    (if (instance? IRI v)
+      (l/unify s (:value u) (:value v))
       (l/unify s v u)))
 
   l/IWalkTerm
   (l/-walk-term [v s]
-    (->Triple
-     (l/-walk* s (:subject v))
-     (l/-walk* s (:predicate v))
-     (l/-walk* s (:object v))))
+    (->IRI
+     (l/-walk* s (:value v))))
 
   l/IReifyTerm
   (l/-reify-term [v s]
-    (-> s
-        (l/-reify* (:subject v))
-        (l/-reify* (:predicate v))
-        (l/-reify* (:object v)))))
+    (l/-reify* s (:value v))))
 
-(defn triple [s p o]
-  "Returns a triple."
-  (->Triple s p o))
-
-(defn triple-cast [v]
-  "Cast something that implements ITriple into a triple."
-  (triple
-   (triple-subject v)
-   (triple-predicate v)
-   (triple-object v)))
-
-;; (run* [q]
-;;       (fresh [s p o]
-;;              (l/== (triple s p o) (triple 1 2 3))
-;;              (l/== (triple s p o) q)))
-
-;; (run* [q]
-;;   (fresh [s p o]
-;;     (l/== (triple s p o) q)
-;;     ))
+(defn iri [v]
+  (->IRI v))
 
 (declare ->BlankNode)
 
@@ -225,61 +199,75 @@
      ;; return a new Literal
      :else (->Literal value language datatype))))
 
-;; (run* [q]
-;;       (fresh [a]
-;;              (l/membero a [1 2 3 4])
-;;              (l/== (literal a) q)))
+(declare ->Triple)
 
-;; (run* [q]
-;;       (fresh [a b c]
-;;              (l/== (->Literal a b c) q)))
+(defrecord Triple [subject predicate object]
+  ITriple
+  (triple-subject [q] (:subject q))
+  (triple-predicate [q] (:predicate q))
+  (triple-object [q] (:object q))
 
-;; ;; Playground
+  l/IUnifyTerms
+  (l/-unify-terms [u v s]
+    (if (instance? Triple v)
+      (-> s
+          (l/unify (:subject u) (:subject v))
+          (l/unify (:predicate u) (:predicate v))
+          (l/unify (:object u) (:object v)))
+      (l/unify s v u)))
 
-;; (defrecord Something [v]
+  l/IWalkTerm
+  (l/-walk-term [v s]
+    (->Triple
+     (l/-walk* s (:subject v))
+     (l/-walk* s (:predicate v))
+     (l/-walk* s (:object v))))
 
-;;   l/IUnifyTerms
-;;   (-unify-terms [u v s]
-;;     (if (instance? Something v)
-;;       (l/unify s (:v u) (:v v))
-;;       (l/unify s v u)))
+  l/IReifyTerm
+  (l/-reify-term [v s]
+    (-> s
+        (l/-reify* (:subject v))
+        (l/-reify* (:predicate v))
+        (l/-reify* (:object v)))))
 
-;;   l/IWalkTerm
-;;   (l/-walk-term [v s]
-;;     (->Something (l/-walk* s (:v v))))
+(defn subject [s]
+  "Return an IRI or a BlankNode"
+  (cond
+    (satisfies? IIRI s) (iri s)
+    (satisfies? IBlankNode s) (blank-node s)))
 
-;;   l/IReifyTerm
-;;   (l/-reify-term [v s]
-;;     (println "-reify-term " v s)
-;;     (l/-reify* s (:v v))))
+(defn predicate [p]
+  "Returns an IRI"
+  (cond
+    (satisfies? IIRI p) (iri p)))
 
-;; (satisfies? l/IUnifyTerms (->Something nil))
+(defn object [o]
+  "Returns a Literal, IRI or BlankNode"
+  (cond
+    ;; Cast as literal before casting as IRI. This causes (object-cast "hello") to return a literal instead of an IRI.
+    (satisfies? ILiteral o) (literal o)
+    (satisfies? IIRI o) (iri o)
+    (satisfies? IBlankNode o) (blank-node o)))
 
-;; (run* [q]
-;;       (fresh [a]
-;;              (l/membero q [1 2 3 4])
-;;              (l/== (->Something q) (->Something a))))
+(defn triple
+  "Returns a triple."
+  ([t] (cond
+         (instance? Triple t) t
 
-;; (run* [q]
-;;       (fresh [a]
-;;              (l/membero q [1 2 3 4])
-;;              (l/== (->Something q) a)))
+         (satisfies? ITriple t)
+         (->Triple
+          (subject (triple-subject t))
+          (predicate (triple-predicate t))
+          (object (triple-object t)))))
 
-;; (run* [q]
-;;       (fresh [a]
-;;              (l/membero a [1 2 3])
-;;              (l/== (->Something a) q)))
+  ([s p o] (->Triple
+            (subject s)
+            (predicate p)
+            (object o))))
 
-;; (run* [q]
-;;       (l/== (->Something 1) 3))
-
-;; (run* [q]
-;;       (fresh [a b]
-;;              (l/== b 2)
-;;              (l/== a b)
-;;              (l/== q (->Something a))))
-
-;; (run* [q]
-;;       (fresh [a]
-;;              (l/== q (->Something a))))
+(defn tripleo
+  "Relation to match triple"
+  [s p o t]
+  (fn [a]
+    (l/unify a (->Triple s p o) t)))
 
