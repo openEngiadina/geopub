@@ -10,7 +10,7 @@ body {
 
 #sidebar {
     height: 100vh;
-    flex-grow: 1;
+    flex: 0 0 15vw;
     margin: auto;
     background-color: darkblue;
     color: white;
@@ -18,17 +18,6 @@ body {
 
 #sidebar header {
     margin-left: 20px;
-}
-
-#debug {
-    max-width: 200px;
-    margin-left: 20px;
-}
-
-#debug code {
-    display: block;
-    max-height: 200px;
-    overflow: scroll;
 }
 
 nav ul {
@@ -54,8 +43,11 @@ main {
 
 
 #timeline {
-    margin: 20px;
-    overflow: scroll;
+    margin: 50px;
+}
+
+#store {
+    margin: 50px;
 }
 
 #mapid {
@@ -71,8 +63,10 @@ main {
 }
 
 .activity {
-    min-height: 70px;
-    padding: 5px;
+    margin: 15px;
+    padding: 10px;
+    border: 1px solid grey;
+    border-radius: 5px;
 }
 
 .activity .meta {

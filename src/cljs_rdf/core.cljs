@@ -122,11 +122,7 @@
 
   l/IReifyTerm
   (l/-reify-term [v s]
-    (l/-reify* s (:value v)))
-
-  IPrintWithWriter
-  (-pr-writer [o w _]
-    (write-all "<" (:value o) ">")))
+    (l/-reify* s (:value v))))
 
 (defn iri [v]
   (cond

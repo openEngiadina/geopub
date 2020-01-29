@@ -18,28 +18,42 @@
 (ns geopub.ui.timeline
   (:require-macros [cljs.core.logic :refer [run* fresh]])
   (:require [geopub.ns :refer [as rdfs]]
+            [geopub.ui.utils :refer [iri-component literal-component]]
             [cljs.core.logic :as l]
             [cljs-rdf.core :as rdf]
             [cljs-rdf.graph.set]))
 
-(defn object-component [object]
-  [:div.object "hi"])
+(defmulti object-component
+  (fn [object] (first (rdf/description-get object (rdf/rdf :type)))))
+
+(defmethod object-component
+  (as :Note)
+  [object]
+  [:div.object
+   (for [content (rdf/description-get object (as :content))]
+     [:p [literal-component content]])])
+
+(defmethod object-component
+  :default
+  [object]
+  [:div.object "I'm a object"])
 
 (defn activity-component [activity]
   [:div.activity
-   [:div.meta
-    [:p
-     [:span.actor (prn-str (rdf/description-get activity (as :actor)))]
-     [:span.type (prn-str (rdf/description-get activity (rdf/rdf :type)))]]]
 
    ;; render object
    (for
-       [object
-        (map (partial rdf/description-move activity)
-             (rdf/description-get activity (as :object)))]
+    [object
+     (map (partial rdf/description-move activity)
+          (rdf/description-get activity (as :object)))]
 
      ^{:key (prn-str (rdf/description-subject object))}
-     [object-component object])])
+     [object-component object])
+
+   [:div.meta
+    [iri-component (rdf/description-get activity (as :actor))]
+    [:br]
+    [iri-component (rdf/description-get activity (rdf/rdf :type))]]])
 
 (defn get-activities [graph]
   "Returns a list of activities (as RDF Descriptions)"
