@@ -63,6 +63,7 @@
 (defn get-activities [graph]
   "Returns a list of activities (as RDF Descriptions)"
   ;; A query to get all activities
+  ;; TODO only store the relevant subgraph in the description
   (map #(rdf/description % graph)
        (run* [s]
              (fresh [activity-type]
