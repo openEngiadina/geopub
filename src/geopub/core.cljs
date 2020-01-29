@@ -142,10 +142,13 @@
             (.getElementById js/document "app")
             refresh!))
 
+;; (reset-store)
+;; (get-objects)
+
+;; NOTE: The mystery why the size of the store increases when loading the ontology: Blank Nodes. N3.js gives new ids so blank nodes (and thing refering those blank nodes) are duplicted...need metadata
 (load-ontologies)
 
 (init!)
-
 
 ;; TODO: This query does not work
 ;; (run* [s]
