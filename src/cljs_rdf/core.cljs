@@ -18,7 +18,8 @@
 (ns cljs-rdf.core
   "RDF in ClojureScript"
   (:require-macros [cljs-rdf.core :refer [defns]]
-                   [cljs-rdf.core :as rdf])
+                   [cljs-rdf.core :as rdf]
+                   [cljs.core.logic :refer [run* fresh]])
   (:require [cljs.core.logic :as l]))
 
 ;; Commonly used namespaces
@@ -76,6 +77,7 @@
      ;; TODO plenty of room for optimizing. Currently just treats graph as a seq.
      (map #(l/unify s % q) seq))))
 
+
 ;; ;; Implement protocol for basic types
 
 (extend-type js/String
@@ -120,7 +122,11 @@
 
   l/IReifyTerm
   (l/-reify-term [v s]
-    (l/-reify* s (:value v))))
+    (l/-reify* s (:value v)))
+
+  IPrintWithWriter
+  (-pr-writer [o w _]
+    (write-all "<" (:value o) ">")))
 
 (defn iri [v]
   (cond
@@ -284,3 +290,40 @@
   (fn [a]
     (l/unify a (triple s p o) t)))
 
+
+(defprotocol IDescription
+  "A Graph with a starting point"
+  (description-subject [this] "Returns the subject of the description.")
+  (description-get [this predicate] "Returns the objects for the given predicate.")
+  (description-move [this to] "Move the subject."))
+
+(declare ->Description)
+
+(defrecord Description [subject graph]
+  IGraph
+  (graph-add [this triple]
+    (->Description
+     (:subject this)
+     (graph-add (:graph this) triple)))
+  (graph-delete [this triple]
+    (->Description
+     (:subject this)
+     (graph-delete (:graph this) triple)))
+  (graph-has [this triple]
+    (graph-has (:graph this) triple))
+  (graph-match [this q]
+    (graph-match (:graph this) q))
+  (graph-tripleo [this q]
+    (graph-tripleo (:graph this) q))
+
+  IDescription
+  (description-subject [this]
+    (:subject this))
+  (description-get [this predicate]
+    (run* [o]
+      (graph-tripleo (:graph this) (triple (:subject this) predicate o))))
+  (description-move [this to]
+    (->Description to (:graph this))))
+
+(defn description [subject graph]
+  (->Description subject graph))

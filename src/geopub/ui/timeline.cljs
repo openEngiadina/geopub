@@ -20,22 +20,31 @@
   (:require [geopub.ns :refer [as rdfs]]
             [cljs.core.logic :as l]
             [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.set]
-            [cljs-rdf.description :as rdfd :refer [description-get]]))
+            [cljs-rdf.graph.set]))
+
+(defn object-component [object]
+  [:div.object "hi"])
 
 (defn activity-component [activity]
   [:div.activity
    [:div.meta
     [:p
-     [:span.actor (description-get activity (as :actor))]
-     [:span.type (description-get activity (rdf/rdf :type))]
-     [:span.object (description-get activity (as :object))]]]
-   [:details [:code (prn-str activity)]]])
+     [:span.actor (prn-str (rdf/description-get activity (as :actor)))]
+     [:span.type (prn-str (rdf/description-get activity (rdf/rdf :type)))]]]
+
+   ;; render object
+   (for
+       [object
+        (map (partial rdf/description-move activity)
+             (rdf/description-get activity (as :object)))]
+
+     ^{:key (prn-str (rdf/description-subject object))}
+     [object-component object])])
 
 (defn get-activities [graph]
   "Returns a list of activities (as RDF Descriptions)"
   ;; A query to get all activities
-  (map #(rdfd/description % graph)
+  (map #(rdf/description % graph)
        (run* [s]
              (fresh [activity-type]
                     (rdf/graph-tripleo graph
@@ -47,4 +56,5 @@
   [:div#timeline
    [:h1 "Timeline"]
    (for [activity (get-activities (:store @state))]
+     ^{:key (prn-str (rdf/description-subject activity))}
      [activity-component activity])])

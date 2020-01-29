@@ -28,7 +28,6 @@
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
             [cljs-rdf.core :as rdf]
-            [cljs-rdf.description :as rdfd]
             [cljs-rdf.graph.set]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
