@@ -17,7 +17,7 @@
 
 (ns geopub.ui.timeline
   (:require-macros [cljs.core.logic :refer [run* fresh]])
-  (:require [geopub.ns :refer [as rdfs]]
+  (:require [geopub.ns :refer [as rdfs schema]]
             [geopub.ui.utils :refer [iri-component literal-component]]
             [cljs.core.logic :as l]
             [cljs-rdf.core :as rdf]
@@ -32,6 +32,11 @@
   [:div.object
    (for [content (rdf/description-get object (as :content))]
      [:p [literal-component content]])])
+
+(defmethod object-component
+  (schema "Event")
+  [object]
+  [:div.object "I'm an event"])
 
 (defmethod object-component
   :default
