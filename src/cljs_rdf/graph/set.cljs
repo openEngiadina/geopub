@@ -3,6 +3,21 @@
   (:require [cljs-rdf.core :as rdf]
             [cljs.core.logic :as l]))
 
+(defn graph-match [graph triple]
+  (let [s (rdf/triple-subject triple)
+        p (rdf/triple-predicate triple)
+        o (rdf/triple-object triple)]
+
+    (filter
+     (fn [tg]
+       (let [sg (rdf/triple-subject tg)
+             pg (rdf/triple-predicate tg)
+             og (rdf/triple-object tg)]
+         (and
+          (or (l/lvar? s) (= s sg))
+          (or (l/lvar? p) (= p pg))
+          (or (l/lvar? o) (= o og)))))
+     graph)))
 
 (extend-type PersistentHashSet
   rdf/IGraph
@@ -10,11 +25,19 @@
   (rdf/graph-delete [x triple] (disj x triple))
   (rdf/graph-has [x triple] (contains? x triple))
 
-  (rdf/graph-tripleo [x q]
-    (fn [s]
-      (l/to-stream
-       ;; TODO plenty of room for optimizing. Currently just treats graph as a seq.
-       (map #(l/unify s % q) x)))))
+  (rdf/graph-tripleo [graph q]
+    (fn [a]
+      (let [q (l/-walk* a q)]
+        (cond
+          (rdf/triple? q)
+          (l/to-stream
+           (map #(l/unify a % q)
+                (graph-match graph q)))
 
+          ;; dump all triples
+          (l/lvar? q)
+          (l/to-stream (map #(l/unify a % q) graph))
 
+          ;; will not match with anything that is not a string
+          :else (l/to-stream '()))))))
 

@@ -17,7 +17,9 @@
 
 (ns geopub.core
   (:require-macros [cljs.core.async :refer [go]]
-                   [cljs.core.logic :refer [run* fresh]])
+                   [cljs.core.logic :refer [run* fresh run]]
+                   [cljs-rdf.core :refer [defns]]
+                   )
   (:require [reagent.core :as r]
             [cljs.core.async :refer [<!]]
             [cljs.core.logic :as l]
@@ -41,6 +43,11 @@
 
 (def auth {:username "alice" :password "123"})
 
+;; ActivityStreams namespace
+
+(defns as "http://www.w3.org/ns/activitystreams#")
+(defns rdfs "http://www.w3.org/2000/01/rdf-schema#")
+
 ;; ============== State and helpers ==============
 
 (defonce state (r/atom {:store #{}}))
@@ -62,6 +69,14 @@
   (go
     (let [triples (<! (cpub/get-objects (str server-url "objects") auth))]
       (add-triples-to-store state triples))))
+
+(defn load-ontologies []
+  (go
+    (let [activitystreams (<! (cpub/get-activitystreams-ontology))]
+      (add-triples-to-store state activitystreams))))
+
+(defn reset-store []
+  (swap! state #(assoc % :store #{})))
 
 (defn refresh! []
   ;; Refresh data from server (Actor and public collection)
@@ -127,8 +142,29 @@
             (.getElementById js/document "app")
             refresh!))
 
+(load-ontologies)
+
 (init!)
 
-(run* [s p o]
-  (rdf/graph-tripleo (state-store state) (rdf/->Triple s p o)))
+;; ;; Query to get all types of Activities
+;; (run* [s]
+;;   (fresh [p o]
+;;     (l/== p (rdfs "subClassOf"))
+;;     (l/== o (as "Activity"))
+;;     (rdf/graph-tripleo (state-store state) (rdf/triple s p o))))
+
+;; ;; Query to get all Activity and Object types in ActivityStreams
+;; (run* [s]
+;;   (fresh [p o]
+;;     (l/== p (rdfs "subClassOf"))
+;;     (l/membero o [(as "Activity") (as "Object")])
+;;     (rdf/graph-tripleo (state-store state) (rdf/triple s p o))))
+
+;; ;; Query to get id of all activities
+;; (run* [s]
+;;   (fresh [activity-type]
+;;     (rdf/graph-tripleo (state-store state)
+;;                        (rdf/triple activity-type (rdfs "subClassOf") (as "Activity")))
+;;     (rdf/graph-tripleo (state-store state)
+;;                        (rdf/triple s (rdf/rdf "type") activity-type))))
 

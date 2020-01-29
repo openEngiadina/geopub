@@ -22,9 +22,20 @@
             [cljs-rdf.n3 :as n3]
             [clojure.pprint :refer [pprint]]))
 
+(defn get-activitystreams-ontology []
+  "Retrieve ontology and return triples in a channel"
+  (go
+    (let
+        [body
+         (:body (<! (http/get "activitystreams2.ttl"
+                              {:with-credentials? false
+                               :headers {"Accept" "text/turtle"}
+                               })))]
+      (n3/parse body))))
+
 
 (defn get-objects [server-url auth]
-  "Return all objects as a sequence of quads in a channel"
+  "Return all objects as a sequence of triples in a channel"
   (go
     (let
         [body

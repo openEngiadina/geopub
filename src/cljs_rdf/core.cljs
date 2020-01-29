@@ -18,7 +18,7 @@
 (ns cljs-rdf.core
   "RDF in ClojureScript"
   (:require-macros [cljs-rdf.core :refer [defns]]
-                   [cljs.core.logic :refer [run* fresh defne]])
+                   [cljs-rdf.core :as rdf])
   (:require [cljs.core.logic :as l]))
 
 ;; Commonly used namespaces
@@ -122,7 +122,12 @@
     (l/-reify* s (:value v))))
 
 (defn iri [v]
-  (->IRI v))
+  (cond
+    (instance? IRI v) v
+
+    (iri? v) (->IRI (str (iri-value v)))
+
+    :else (->IRI v)))
 
 (declare ->BlankNode)
 
@@ -148,7 +153,11 @@
 (defn blank-node
   "Returns a blank node. If no id is suplied a new (and unique) id will be generated."
   ([] (->BlankNode (gensym)))
-  ([id] (->BlankNode id)))
+  ([v]
+   (cond
+     (instance? BlankNode v) v
+     (blank-node? v) (->BlankNode (blank-node-id v))
+     :else (->BlankNode v))))
 
 (declare ->Literal)
 
@@ -193,8 +202,8 @@
      ;; satisfies the ILiteral protocol, cast to a Literal
      (literal? value)
      (->Literal (literal-value value)
-                (or language (literal-language value))
-                (or datatype (literal-datatype value)))
+                (str (or language (literal-language value)))
+                (iri (or datatype (literal-datatype value))))
 
      ;; return a new Literal
      :else (->Literal value language datatype))))
@@ -234,12 +243,14 @@
   "Return an IRI or a BlankNode"
   (cond
     (satisfies? IIRI s) (iri s)
-    (satisfies? IBlankNode s) (blank-node s)))
+    (satisfies? IBlankNode s) (blank-node s)
+    :else s))
 
 (defn predicate [p]
   "Returns an IRI"
   (cond
-    (satisfies? IIRI p) (iri p)))
+    (satisfies? IIRI p) (iri p)
+    :else p))
 
 (defn object [o]
   "Returns a Literal, IRI or BlankNode"
@@ -247,7 +258,8 @@
     ;; Cast as literal before casting as IRI. This causes (object-cast "hello") to return a literal instead of an IRI.
     (satisfies? ILiteral o) (literal o)
     (satisfies? IIRI o) (iri o)
-    (satisfies? IBlankNode o) (blank-node o)))
+    (satisfies? IBlankNode o) (blank-node o)
+    :else o))
 
 (defn triple
   "Returns a triple."
@@ -269,5 +281,5 @@
   "Relation to match triple"
   [s p o t]
   (fn [a]
-    (l/unify a (->Triple s p o) t)))
+    (l/unify a (triple s p o) t)))
 
