@@ -75,8 +75,9 @@
   (swap! state #(assoc % :store #{})))
 
 (defn refresh! []
+  (load-ontologies)
   ;; Refresh data from server (Actor and public collection)
-  (do (get-objects)))
+  (get-objects))
 
 ;; (defonce refresher
 ;;   (js/setInterval #(refresh!) 20000))
@@ -140,11 +141,10 @@
 
 ;; (reset-store)
 
-(get-objects)
-
+;; (get-objects)
 
 ;; NOTE: The mystery why the size of the store increases when loading the ontology: Blank Nodes. N3.js gives new ids so blank nodes (and thing refering those blank nodes) are duplicted...need metadata
-(load-ontologies)
+;; (load-ontologies)
 
 (init!)
 

@@ -1,5 +1,6 @@
 (ns geopub.ui.store
-  (:require [cljs-rdf.core :as rdf]))
+  (:require [cljs-rdf.core :as rdf]
+            [geopub.ui.utils :refer [rdf-term-component]]))
 
 (defn triple-table [triples]
   [:table
@@ -7,9 +8,9 @@
     (for [t triples]
       ^{:key (prn-str t)}
       [:tr
-       [:td (prn-str (rdf/triple-subject t))]
-       [:td (prn-str (rdf/triple-predicate t))]
-       [:td (prn-str (rdf/triple-object t))]])
+       [:td [rdf-term-component (rdf/triple-subject t)]]
+       [:td [rdf-term-component (rdf/triple-predicate t)]]
+       [:td [rdf-term-component (rdf/triple-object t)]]])
     ]])
 
 (defn view [state]
@@ -17,5 +18,4 @@
    [:h1 "Store"]
    [:p (str (count (:store @state)) " triples loaded.")]
    [triple-table (:store @state)]
-   ;; [triple-table (take 1 (:store @state))]
    ])
