@@ -17,17 +17,18 @@
 
 (ns geopub.core
   (:require-macros [cljs.core.async :refer [go]]
-                   [cljs.core.logic :refer [run* fresh run]]
-                   [cljs-rdf.core :refer [defns]]
-                   )
+                   [cljs.core.logic :refer [run* fresh run]])
   (:require [reagent.core :as r]
             [cljs.core.async :refer [<!]]
             [cljs.core.logic :as l]
+            [clojure.set :refer [intersection]]
+            [geopub.ns :refer [as rdfs]]
             [geopub.ui.map]
             [geopub.ui.store]
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
             [cljs-rdf.core :as rdf]
+            [cljs-rdf.description :as rdfd]
             [cljs-rdf.graph.set]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
@@ -43,10 +44,6 @@
 
 (def auth {:username "alice" :password "123"})
 
-;; ActivityStreams namespace
-
-(defns as "http://www.w3.org/ns/activitystreams#")
-(defns rdfs "http://www.w3.org/2000/01/rdf-schema#")
 
 ;; ============== State and helpers ==============
 
@@ -143,7 +140,9 @@
             refresh!))
 
 ;; (reset-store)
-;; (get-objects)
+
+(get-objects)
+
 
 ;; NOTE: The mystery why the size of the store increases when loading the ontology: Blank Nodes. N3.js gives new ids so blank nodes (and thing refering those blank nodes) are duplicted...need metadata
 (load-ontologies)
