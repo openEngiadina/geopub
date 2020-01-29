@@ -1,10 +1,19 @@
 #+TITLE: GeoPub
 
-GeoPub is a content management system for geospatial data.
+GeoPub is a content management system for [[https://miaengiadina.github.io/openengiadina/][open local knowledge]].
 
-GeoPub is a small demonstrator showing how ActivityPub can be used for handling [[https://miaengiadina.github.io/openengiadina/][open local knowledge]].
+* Status
 
-It implements the ActivityPub Client-to-Server Protocol but is currently only compatible with the [[https://github.com/miaEngiadina/minimal-ap][minimal-ap]] experimental ActivityPub server.
+Currently in heavy development. Ideas on how to use an RDF graph as an underlying data model  and incorporate relational programming are being explored.
+
+The intention is to mature the ideas into a working application.
+
+** History
+
+This is the third iteration of GeoPub. The initial two iterations were demonstrators:
+
+- The initial demonstrator in JavaScript (a5c3785ed8d6a35868bc169f07e40e889087fd2e)
+- The second demonstrator in ClojureScript (a5c3785ed8d6a35868bc169f07e40e889087fd2e)
 
 * Developer quick start
 
@@ -34,22 +43,3 @@ cp -r resources/public/* docs
 
 #+RESULTS:
 
-* Overview
-
-GeoPub implements the ActivityPub protocol, which allows federated, crowd-sourced creation of semantic data.
-
-[[https://www.w3.org/TR/activitystreams-core/#actors][Actors]] (users, groups, etc.) post [[https://www.w3.org/TR/activitystreams-core/#activities][activities]] that describe the creation/deletion or modification of objects.
-
-** Timeline
-
-The timeline shows a list of all public activities posted by users. Most activities are of type "Create", that is a user created something (e.g. a Note, a Tour, a Status).
-
-** Notes
-
-A list of all notes created and a form for creating a note.
-
-** Tours
-
-A list of tours created by users. The status of a tour can be updated. This creates a new "Status" object. The displayed status on the tour is the status contained in the most recently created "Status" object.
-
-** TODO Curated
