@@ -112,10 +112,11 @@
       [:li [:a {:href "#store"} "Store"]]
       [:li [:a {:href "#map"} "Map"]]]
 
-     [:hr]
+     ;; [:hr]
 
-     [:ul
-      [:li [:a {:href "#settings"} "Settings"]]]]
+     ;; [:ul
+     ;;  [:li [:a {:href "#settings"} "Settings"]]]
+     ]
 
     ;; [:div#debug
     ;;  [:code
