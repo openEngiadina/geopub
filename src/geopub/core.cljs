@@ -146,6 +146,13 @@
 
 (init!)
 
+
+;; TODO: This query does not work
+;; (run* [s]
+;;   (fresh [p o id]
+;;     (l/== s (rdf/blank-node id))
+;;     (rdf/graph-tripleo (state-store state) (rdf/triple s p o))))
+
 ;; ;; Query to get all types of Activities
 ;; (run* [s]
 ;;   (fresh [p o]

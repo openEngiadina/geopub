@@ -3,27 +3,30 @@
   (:require [cljs-rdf.core :as rdf]
             [cljs.core.logic :as l]))
 
-(defn graph-match [graph triple]
-  (let [s (rdf/triple-subject triple)
-        p (rdf/triple-predicate triple)
-        o (rdf/triple-object triple)]
 
-    (filter
-     (fn [tg]
-       (let [sg (rdf/triple-subject tg)
-             pg (rdf/triple-predicate tg)
-             og (rdf/triple-object tg)]
-         (and
-          (or (l/lvar? s) (= s sg))
-          (or (l/lvar? p) (= p pg))
-          (or (l/lvar? o) (= o og)))))
-     graph)))
 
 (extend-type PersistentHashSet
   rdf/IGraph
-  (rdf/graph-add [x triple] (conj x triple))
-  (rdf/graph-delete [x triple] (disj x triple))
-  (rdf/graph-has [x triple] (contains? x triple))
+  (rdf/graph-add [graph triple] (conj graph triple))
+  (rdf/graph-delete [graph triple] (disj graph triple))
+  (rdf/graph-has [graph triple] (contains? graph triple))
+
+  (rdf/graph-match [graph triple]
+    ;; TODO nested matching. Currently it is not possible to get all triples that have a BlankNode as subject (while not specifying the id of the BlankNode)
+    (let [s (rdf/triple-subject triple)
+          p (rdf/triple-predicate triple)
+          o (rdf/triple-object triple)]
+
+      (filter
+       (fn [tg]
+         (let [sg (rdf/triple-subject tg)
+               pg (rdf/triple-predicate tg)
+               og (rdf/triple-object tg)]
+           (and
+            (or (l/lvar? s) (= s sg))
+            (or (l/lvar? p) (= p pg))
+            (or (l/lvar? o) (= o og)))))
+       graph)))
 
   (rdf/graph-tripleo [graph q]
     (fn [a]

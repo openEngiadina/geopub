@@ -63,6 +63,7 @@
   (graph-add [x triple] "Add a triple to the dataset.")
   (graph-delete [x triple] "Remove triple from the dataset.")
   (graph-has [x triple] "Returns true if triple is in dataset, false if not.")
+  (graph-match [x q] "Returns sequence of triples matching query")
   (graph-tripleo [x q] "Unify graph into a relational program"))
 
 (defn graph? [x]
