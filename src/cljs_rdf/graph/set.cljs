@@ -35,7 +35,7 @@
           (rdf/triple? q)
           (l/to-stream
            (map #(l/unify a % q)
-                (graph-match graph q)))
+                (rdf/graph-match graph q)))
 
           ;; dump all triples
           (l/lvar? q)
