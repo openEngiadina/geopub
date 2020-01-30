@@ -16,10 +16,9 @@
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
 (ns geopub.ui.timeline
-  (:require-macros [cljs.core.logic :refer [run* fresh]])
   (:require [geopub.ns :refer [as rdfs schema]]
             [geopub.ui.utils :refer [iri-component literal-component]]
-            [cljs.core.logic :as l]
+            [geopub.data.activitypub :as activitypub]
             [cljs-rdf.core :as rdf]
             [cljs-rdf.graph.set]))
 
@@ -60,21 +59,9 @@
     [:br]
     [iri-component (rdf/description-get activity (rdf/rdf :type))]]])
 
-(defn get-activities [graph]
-  "Returns a list of activities (as RDF Descriptions)"
-  ;; A query to get all activities
-  ;; TODO only store the relevant subgraph in the description
-  (map #(rdf/description % graph)
-       (run* [s]
-             (fresh [activity-type]
-                    (rdf/graph-tripleo graph
-                                       (rdf/triple activity-type (rdfs "subClassOf") (as "Activity")))
-                    (rdf/graph-tripleo graph
-                                       (rdf/triple s (rdf/rdf "type") activity-type))))))
-
 (defn view [state]
   [:div#timeline
    [:h1 "Timeline"]
-   (for [activity (get-activities (:store @state))]
+   (for [activity (activitypub/get-activities (:store @state))]
      ^{:key (prn-str (rdf/description-subject activity))}
      [activity-component activity])])

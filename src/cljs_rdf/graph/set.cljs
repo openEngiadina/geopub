@@ -44,3 +44,4 @@
           ;; will not match with anything that is not a string
           :else (l/to-stream '()))))))
 
+(defn graph [] (hash-set))

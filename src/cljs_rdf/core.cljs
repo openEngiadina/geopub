@@ -70,14 +70,6 @@
 (defn graph? [x]
   (satisfies? IGraph x))
 
-(defn graph-rel [seq q]
-  "Unify graph into a relational program."
-  (fn [s]
-    (l/to-stream
-     ;; TODO plenty of room for optimizing. Currently just treats graph as a seq.
-     (map #(l/unify s % q) seq))))
-
-
 ;; ;; Implement protocol for basic types
 
 (extend-type js/String
@@ -280,12 +272,83 @@
             (predicate p)
             (object o))))
 
+;; Logic helpers
+
 (defn tripleo
   "Relation to match triple"
   [s p o t]
   (fn [a]
     (l/unify a (triple s p o) t)))
 
+(defn triple-subjecto
+  "Relation between triple and subject"
+  [t s]
+  (l/fresh [p o]
+           (tripleo s p o t)))
+
+(defn triple-predicateo
+  "Relation between triple and predicate"
+  [t p]
+  (l/fresh [s o]
+           (tripleo s p o t)))
+
+(defn triple-objecto
+  "Relation between triple and object"
+  [t o]
+  (l/fresh [s p]
+           (tripleo s p o t)))
+
+(defn typeo
+  "Relationship between subject and type"
+  [s rdf-type t]
+  (tripleo s (rdf :type) rdf-type t))
+
+(defn graph-typeo
+  "Run typeo on a graph. This is useful for quickly getting the type of an object from a graph"
+  [graph s rdf-type]
+  (fresh [t]
+         (typeo s rdf-type t)
+         (graph-tripleo graph t)))
+
+(defn reachableo
+  "Is z reachable from a in graph withing n steps?"
+  [graph n a z]
+  (if (> n 0)
+    (fresh [t1 t2 via]
+           (l/conde
+
+       ;; base case: there is a triple t1 directly connecting a to z
+            [(triple-subjecto t1 a)
+             (triple-objecto t1 z)
+             (graph-tripleo graph t1)]
+
+       ;; recursion: there is a triple t2 that connects a to via and z is reachable from via
+            [(triple-subjecto t2 a)
+             (triple-objecto t2 via)
+             (graph-tripleo graph t2)
+             (reachableo graph (dec n) via z)]))
+
+    l/fail))
+
+(defn collecto
+  "Collect triples starting at a given subject."
+  [graph n from t]
+  (if (> n 0)
+
+    (l/conde
+
+     ;; base case: triples with subject
+     [(triple-subjecto t from)
+      (graph-tripleo graph t)]
+
+     ;; recursion: collect triples with objects of from as subject
+     [(fresh [t2 o]
+             (triple-subjecto t2 from)
+             (triple-objecto t2 o)
+             (graph-tripleo graph t2)
+             (collecto graph (dec n) o t))])
+
+    l/fail))
 
 (defprotocol IDescription
   "A Graph with a starting point"
@@ -317,7 +380,7 @@
     (:subject this))
   (description-get [this predicate]
     (run* [o]
-      (graph-tripleo (:graph this) (triple (:subject this) predicate o))))
+          (graph-tripleo (:graph this) (triple (:subject this) predicate o))))
   (description-move [this to]
     (->Description to (:graph this))))
 

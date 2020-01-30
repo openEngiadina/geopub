@@ -27,6 +27,7 @@
             [geopub.ui.store]
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
+            [geopub.data.activitypub :as activitypub]
             [cljs-rdf.core :as rdf]
             [cljs-rdf.graph.set]
             [reitit.core :as rc]
@@ -154,26 +155,3 @@
 ;;   (fresh [p o id]
 ;;     (l/== s (rdf/blank-node id))
 ;;     (rdf/graph-tripleo (state-store state) (rdf/triple s p o))))
-
-;; ;; Query to get all types of Activities
-;; (run* [s]
-;;   (fresh [p o]
-;;     (l/== p (rdfs "subClassOf"))
-;;     (l/== o (as "Activity"))
-;;     (rdf/graph-tripleo (state-store state) (rdf/triple s p o))))
-
-;; ;; Query to get all Activity and Object types in ActivityStreams
-;; (run* [s]
-;;   (fresh [p o]
-;;     (l/== p (rdfs "subClassOf"))
-;;     (l/membero o [(as "Activity") (as "Object")])
-;;     (rdf/graph-tripleo (state-store state) (rdf/triple s p o))))
-
-;; ;; Query to get id of all activities
-;; (run* [s]
-;;   (fresh [activity-type]
-;;     (rdf/graph-tripleo (state-store state)
-;;                        (rdf/triple activity-type (rdfs "subClassOf") (as "Activity")))
-;;     (rdf/graph-tripleo (state-store state)
-;;                        (rdf/triple s (rdf/rdf "type") activity-type))))
-
