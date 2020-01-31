@@ -2,7 +2,7 @@
   "Helpers to deal with ActivityPub data"
   (:require-macros [cljs.core.logic :refer [run* fresh]])
   (:require [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.set]
+            [cljs-rdf.graph.map]
             [cljs.core.logic :as l]
             [geopub.ns :refer [as rdfs]]))
 
@@ -12,7 +12,7 @@
   ;; Create description pointing to the activity
   (rdf/description id
                    ;; with a graph
-                   (reduce rdf/graph-add (cljs-rdf.graph.set/graph)
+                   (reduce rdf/graph-add (cljs-rdf.graph.map/graph)
                            ;; containing triples of the activity (three levels deep)
                            (run* [t] (rdf/collecto graph 3 id t)))))
 

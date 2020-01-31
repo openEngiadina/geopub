@@ -29,7 +29,7 @@
             [geopub.cpub.core :as cpub]
             [geopub.data.activitypub :as activitypub]
             [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.set]
+            [cljs-rdf.graph.map]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
@@ -47,7 +47,7 @@
 
 ;; ============== State and helpers ==============
 
-(defonce state (r/atom {:store #{}}))
+(defonce state (r/atom {:store (cljs-rdf.graph.map/graph)}))
 
 (defn state-store [state]
   "Return the datastore"
@@ -73,7 +73,7 @@
       (add-triples-to-store state activitystreams))))
 
 (defn reset-store []
-  (swap! state #(assoc % :store #{})))
+  (swap! state #(assoc % :store (cljs-rdf.graph.map/graph))))
 
 (defn refresh! []
   (load-ontologies)
@@ -149,6 +149,12 @@
 ;; (load-ontologies)
 
 (init!)
+
+
+
+;; (run* [t]
+;;   (rdf/collecto (state-store state) 3 (rdf/iri "http://localhost:4000/users/alice") t)
+;;   )
 
 ;; TODO: This query does not work
 ;; (run* [s]

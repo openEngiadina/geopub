@@ -20,7 +20,7 @@
             [geopub.ui.utils :refer [iri-component literal-component]]
             [geopub.data.activitypub :as activitypub]
             [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.set]))
+            [cljs-rdf.graph.map]))
 
 (defmulti object-component
   (fn [object] (first (rdf/description-get object (rdf/rdf :type)))))

@@ -1,11 +1,16 @@
 (ns geopub.ui.store
   (:require [cljs-rdf.core :as rdf]
+            [cljs.core.logic :as l]
             [geopub.ui.utils :refer [rdf-term-component]]))
 
-(defn triple-table [triples]
+;; TODO this should probably go in Graph protocol
+(defn all-triples [graph]
+  (rdf/graph-match graph (rdf/triple (l/lvar) (l/lvar) (l/lvar))))
+
+(defn triple-table [graph]
   [:table
    [:tbody
-    (for [t triples]
+    (for [t (all-triples graph)]
       ^{:key (prn-str t)}
       [:tr
        [:td [rdf-term-component (rdf/triple-subject t)]]
@@ -16,6 +21,5 @@
 (defn view [state]
   [:div#store
    [:h1 "Store"]
-   [:p (str (count (:store @state)) " triples loaded.")]
    [triple-table (:store @state)]
    ])
