@@ -5,8 +5,8 @@
   (:require [cljs-rdf.core :as rdf]
             [cljs.core.logic :as l]))
 
-;; Index helpers
 
+;; Index helpers
 (defn- assoc-clean
   "If value is non-nil and non-empty replace value of key in map, else dissoc key."
   [map k v]
@@ -37,17 +37,54 @@
                             ;; with object removed from object-set
                             (disj (get-in map [s p]) o))))
 
-(defn seq-match [index a]
-  ;; TODO return a lazy seq
-  (map list
-       (if (l/lvar? a)
-         (seq index)
-         (filter (partial = a) index))))
-
 (defn- map-cons
   "cons a to every element of c"
   [c a]
-  (map (partial cons a) c))
+  (map
+   ;; cons a to element of c and make sure element of c is a seq.
+   #(cons a (if (seq? %) % (list %)))
+   c))
+
+;; Match protocol
+(defprotocol IMatch
+  "Protocol for matching data to a pattern. Pattern may contain logical variables."
+  (-match [x pattern] "Match data to pattern and return sequence of matches."))
+
+(extend-protocol IMatch
+
+  nil
+  (-match [index pattern]
+    '())
+
+  PersistentHashSet
+  (-match [index pattern]
+    ;; pattern should not be a coll. if it is, take the first value from it.
+    (let [pattern (if (coll? pattern) (first pattern) pattern)]
+      (if (l/lvar? pattern)
+        (seq index)
+        (filter (partial = pattern) index))))
+
+  PersistentHashMap
+  (-match [index pattern]
+
+    (let [;; the value we match with at this level
+          a (first pattern)]
+
+      (if (not (l/lvar? a))
+
+        ;; a is concrete
+        (->
+         ;; get the sub-data we continue to match on
+         (get index a)
+         ;; match for the rest of the pattern
+         (-match (next pattern))
+         ;; add a to list of matches
+         (map-cons a))
+
+        ;; a is a logical variable. Iterate over all keys in the map and recursively match on concrete values.
+        (mapcat #(-match index (cons % (next pattern)))
+                (keys index))))))
+
 
 (defn- reverse-matches [matches]
   (map reverse matches))
@@ -61,45 +98,7 @@
 (defn reify-matches [matches]
   (map reify-match matches))
 
-(defn- index2-match
-  [index a b]
-
-
-  (if (not (l/lvar? a))
-
-    ;; a is a concrete value
-    (->
-     ;; get the index1 for a
-     (get index a)
-     ;; match for b
-     (seq-match b)
-     ;; add a to the returned matches
-     (map-cons a)
-     )
-
-    ;; iterate over all possible as and recursively match with concrete value
-    (mapcat #(index2-match index % b)
-            (keys index))))
-
-(defn- index3-match
-  [index a b c]
-  (if (not (l/lvar? a))
-
-    ;; a is a concrete value
-    (->
-     ;; get the index for a
-     (get index a)
-     ;; match for b c
-     (index2-match b c)
-     ;; add a to the returned matches
-     (map-cons a))
-
-    ;; iterate over all possible as and recursively match with concrete value
-    (mapcat #(index3-match index % b c)
-            (keys index))))
-
 ;; Graph
-
 (declare ->Graph)
 
 (defrecord Graph [spo ops]
@@ -134,11 +133,10 @@
           o (rdf/triple-object triple)]
 
       (cond
-
         ;; if o is concrete use the ops index
         (not (l/lvar? o))
         (-> (:ops graph)
-            (index3-match o p s)
+            (-match [o p s])
             ;; don't forget to reverse the matches
             (reverse-matches)
             (reify-matches))
@@ -146,7 +144,7 @@
         ;; else use the spo index
         :else
         (-> (:spo graph)
-            (index3-match s p o)
+            (-match [s p o])
             (reify-matches)))))
 
   (rdf/graph-tripleo [graph q]
@@ -164,13 +162,12 @@
                             (rdf/graph-match graph (rdf/triple (l/lvar) (l/lvar) (l/lvar)))))
 
           ;; will not match with anything that is not a string
-          :else (l/to-stream '())))))
-  )
+          :else (l/to-stream '()))))))
 
-(defn graph [] (->Graph {} {}))
+(defn graph [] (->Graph (hash-map) (hash-map)))
 
 ;; (-> (graph)
 ;;     (rdf/graph-add (rdf/triple :a :b :c))
 ;;     (rdf/graph-add (rdf/triple :a :b :d))
-;;     (rdf/graph-match (rdf/triple (l/lvar) (l/lvar) (l/lvar)))
+;;     (rdf/graph-match (rdf/triple (l/lvar) (l/lvar) :d))
 ;;     )
