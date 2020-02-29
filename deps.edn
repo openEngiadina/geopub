@@ -1,9 +1,13 @@
 {:paths ["src" "resources" "target"]
- :deps {com.bhauman/figwheel-main {:mvn/version "0.2.3"}
+ :deps {thheller/shadow-cljs {:mvn/version "2.8.90"}
         reagent {:mvn/version "0.8.1"}
         cljs-http {:mvn/version "0.1.46"}
-        cljsjs/react-leaflet {:mvn/version "2.4.0-0"}
-        cljsjs/moment {:mvn/version "2.24.0-0"}
         metosin/reitit-core {:mvn/version "0.4.2"}
         metosin/reitit-frontend {:mvn/version "0.4.2"}
-        org.clojure/core.logic {:mvn/version "0.8.11"}}}
+        org.clojure/core.logic {:mvn/version "0.8.11"}}
+
+ :aliases
+ {:shadow-cljs
+  {:extra-deps {thheller/shadow-cljs {:mvn/version <latest>}}
+   :main-opts ["-m" "shadow.cljs.devtools.cli"]}}
+ }
