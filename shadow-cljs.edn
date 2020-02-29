@@ -6,5 +6,6 @@
  :builds {:app {:target :browser
                 :output-dir "target/js"
                 :asset-path "/js"
-                :modules {:main {:init-fn geopub.core/init!}}}}
- }
+                :modules {:main {:init-fn geopub.core/init!}}
+
+                :devtools {:after-load geopub.core/reload!}}}}
