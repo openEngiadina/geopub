@@ -26,20 +26,15 @@ See also the [[./docs/dev-notes.org][developer notes]].
 ** Running development server
 
 #+BEGIN_SRC sh
-clj -m figwheel.main -b dev --repl
+clj -A:shadow-cljs watch app
 #+END_SRC
 
 This will download any required dependencies, start a development server with live-reloading and a REPL.
 
-** Building and deploying to docs folder
+** Building
 
 #+BEGIN_SRC sh
-clj -m figwheel.main --optimizations advanced -bo dev
-rm -r docs/
-mkdir -p docs/cljs-out/
-cp target/public/cljs-out/dev-main.js docs/cljs-out 
-cp -r resources/public/* docs
+clj -A:shadow-cljs release app
 #+END_SRC
 
-#+RESULTS:
-
+*** TODO copy public resources and create a complete build
