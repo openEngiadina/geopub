@@ -1,8 +1,0 @@
-^{:css-dirs ["resources/public/css"]}
-{:main geopub.core
- :npm-deps false
- :infer-externs true
- :foreign-libs [{:file "dist/index.bundle.js"
-                 :provides ["rdf-parse" "n3"]
-                 :global-exports {rdf-parse rdfParser
-                                  n3 n3}}]}

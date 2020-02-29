@@ -2,7 +2,6 @@
   "name": "geopub",
   "version": "1.0.0",
   "description": "GeoPub is a content management system for geospatial data.",
-  "main": "webpack.config.js",
   "directories": {
     "doc": "docs"
   },
@@ -15,10 +14,7 @@
     "react-dom": "^16.13.0",
     "react-leaflet": "^2.6.1"
   },
-  "devDependencies": {
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10"
-  },
+  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
