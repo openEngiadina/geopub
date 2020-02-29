@@ -1,0 +1,16 @@
+{
+  "name": "geopub-n3.js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "browserify -s n3 index.js -o ../../src/cljs_rdf/n3.js"
+  },
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "browserify": "^16.5.0",
+    "n3": "^1.3.5"
+  }
+}

@@ -18,7 +18,7 @@
 (ns cljs-rdf.n3
   "Bindings to the N3.js library"
   (:require [cljs-rdf.core :as rdf]
-            [n3]))
+            ["./n3.js" :as n3]))
 
 ;; Extend N3 classes to protocols
 (def n3-quad-type

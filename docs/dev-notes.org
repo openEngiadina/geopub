@@ -1,17 +1,25 @@
 #+TITLE: GeoPub Developer Notes
 
-Also a todo list.
+An overview of the GeoPub architecture.
 
 * Build system
-** TODO Advanced Optimization
 
-Not working, probably because of js from npm and missing externs.
+GeoPub is written in [[https://clojurescript.org/][ClojureScript]]. [[http://shadow-cljs.org/][shadow-cljs]] and the [[https://clojure.org/guides/deps_and_cli][Clojure CLI]] are used as build tool.
 
-** TODO ClojureScript
+** JavaScript Integration
 
-Currently we are using [[https://figwheel.org/][Figwheel Main]] which provides live reloading.
+shadow-cljs seamlessly handles JavaScript libraries that are installed via NPM. See also [[https://shadow-cljs.github.io/docs/UsersGuide.html#js-deps][the shadow-cljs documentaiton]].
 
-Re-evaluate the bundled ClojureScript build tools for a leaner build system.
+*** Browserify
+
+The [[https://github.com/rdfjs/N3.js][N3.js]] library for parsing Turtle does requires Node.js specific stuff and needs to be transformed before it can run in the browser. For this we use [[http://browserify.org/][browserify]].
+
+The folder [[../resources/n3.js][resources/n3.js]] contains a npm project that will build a bundle of N3.js that runs in the browser. The bundle is written to [[../src/cljs_rdf/n3.js][src/cljs_rdf/n3.js]] and is checked into git.
+
+Shadow-cljs allows the created bundle to be directly loaded into ClojureScript (see [[https://shadow-cljs.github.io/docs/UsersGuide.html#classpath-js][documentation]]).
+
+To recreate the bundle you need to run ~npm run build~ in the [[../resources/n3.js][resources/n3.js]] folder.
+
 
 ** TODO Guix
 
