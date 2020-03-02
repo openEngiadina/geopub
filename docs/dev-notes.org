@@ -42,12 +42,37 @@ This custom repl type starts the server:
 ** TODO Guix
 
 Make build reproducible with Guix.
-* RDF/JS
+* RDF Parsers & Writers
 
-GeoPub uses the [[http://rdf.js.org/data-model-spec/][RDF/JS Data model specification]] and Javascript libraries for parsing data (currently only Turtle with [[https://github.com/rdfjs/N3.js][N3]]).
+Currently GeoPub uses the [[https://github.com/rdfjs/N3.js][N3.js]] library for parsing [[https://www.w3.org/TR/turtle/][RDF/Turtle]].
 
 ** TODO Use [[https://github.com/rubensworks/rdf-parse.js][RDF Parse]]
 
 A parser for many kinds of RDF serializations (including JSON-LD and RDFa). Binds together other JS libraries with a unified parsing interface.
 
 First attempt to use this library deferred because of problems with handling [[https://nodejs.org/api/stream.html#stream_class_stream_readable][Node.js style streams]] from ClojureScript.
+
+Even with a Clojure native parser this is useful to read a bunch of different formats.
+
+** Clojure(Script) native parser/writer
+
+It would be much nicer to have a native Clojure(Script) parser for Turtle. This would allow defining macros to load ontologies at compile time and other niceties.
+
+*** Using [[https://github.com/rm-hull/jasentaa][jasentaa]]
+
+Failed due to this: https://groups.google.com/forum/#!topic/clojure/yLHLUmMZftw
+
+Probably solvable with more lazyness.
+
+*** TODO Using [[https://github.com/Engelberg/instaparse][instaparse]]
+
+instaparse supports EBNF and ABNF but not W3C EBNF.
+
+But it should still be possible to transform grammar definition from W3C EBNF to
+standard EBNF/ABNF. See also:
+
+- https://github.com/Engelberg/instaparse/issues/100
+- https://bottlecaps.de/rex/
+
+Another (more ambitious) approach is to implement W3C EBNF parser in
+instaparser. Could be useful for all the other W3C thingies.
