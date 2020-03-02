@@ -20,16 +20,12 @@ Shadow-cljs allows the created bundle to be directly loaded into ClojureScript (
 
 To recreate the bundle you need to run ~npm run build~ in the [[../resources/n3.js][resources/n3.js]] folder.
 
-
-** TODO Guix
-
-Make build reproducible with Guix.
-* Emacs integration
+** Emacs integration
 
 Emacs Cider integration works (for me) when using the ~shadow-cljs~ tool to
 start the repl (not with Clojure CLI tools).
 
-** TODO make work with Clojure CLI tools
+*** TODO make work with Clojure CLI tools
 
 This would get rid of the ~shadow-cljs~ npm dependency.
 
@@ -43,22 +39,15 @@ This custom repl type starts the server:
 (eval . (cider-register-cljs-repl-type 'shadow-watch "(do (require '[shadow.cljs.devtools.server :as server]) (server/start!) (require '[shadow.cljs.devtools.api :as shadow]) (shadow/watch :app) (shadow/nrepl-select :app)) "))
 #+END_SRC
 
+** TODO Guix
+
+Make build reproducible with Guix.
 * RDF/JS
 
 GeoPub uses the [[http://rdf.js.org/data-model-spec/][RDF/JS Data model specification]] and Javascript libraries for parsing data (currently only Turtle with [[https://github.com/rdfjs/N3.js][N3]]).
-
-See [[https://figwheel.org/docs/npm.html][the figwheel docs]] for more information on how to use npm modules in ClojureScript.
 
 ** TODO Use [[https://github.com/rubensworks/rdf-parse.js][RDF Parse]]
 
 A parser for many kinds of RDF serializations (including JSON-LD and RDFa). Binds together other JS libraries with a unified parsing interface.
 
 First attempt to use this library deferred because of problems with handling [[https://nodejs.org/api/stream.html#stream_class_stream_readable][Node.js style streams]] from ClojureScript.
-
-** Native parsers
-
-Preferably we would not have to rely on the npm ecosystem and would use parsers implemented in pure Clojure(Script).
-
-This is utopian. The effort required to implement working and efficient parsers is high and in some cases [[https://json-ld.org/spec/REC/json-ld-api/20140116/][almost impossible]].
-
-I already wasted a lot of time trying to implement a Turtle parser with [[https://github.com/rm-hull/jasentaa][a parser combinator library]].
