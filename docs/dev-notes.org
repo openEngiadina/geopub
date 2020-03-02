@@ -24,6 +24,25 @@ To recreate the bundle you need to run ~npm run build~ in the [[../resources/n3.
 ** TODO Guix
 
 Make build reproducible with Guix.
+* Emacs integration
+
+Emacs Cider integration works (for me) when using the ~shadow-cljs~ tool to
+start the repl (not with Clojure CLI tools).
+
+** TODO make work with Clojure CLI tools
+
+This would get rid of the ~shadow-cljs~ npm dependency.
+
+The pre-defined 'shadow repl-type does not start a server. This seems to be
+necessary (and documented here:
+https://shadow-cljs.github.io/docs/UsersGuide.html#embedded).
+
+This custom repl type starts the server:
+
+#+BEGIN_SRC elisp
+(eval . (cider-register-cljs-repl-type 'shadow-watch "(do (require '[shadow.cljs.devtools.server :as server]) (server/start!) (require '[shadow.cljs.devtools.api :as shadow]) (shadow/watch :app) (shadow/nrepl-select :app)) "))
+#+END_SRC
+
 * RDF/JS
 
 GeoPub uses the [[http://rdf.js.org/data-model-spec/][RDF/JS Data model specification]] and Javascript libraries for parsing data (currently only Turtle with [[https://github.com/rdfjs/N3.js][N3]]).
