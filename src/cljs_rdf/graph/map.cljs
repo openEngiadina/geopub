@@ -147,6 +147,9 @@
             (-match [s p o])
             (reify-matches)))))
 
+  (rdf/graph-seq [graph]
+    (rdf/graph-match graph (rdf/triple (l/lvar) (l/lvar) (l/lvar))))
+
   (rdf/graph-tripleo [graph q]
     (fn [a]
       (let [q (l/-walk* a q)]
