@@ -20,6 +20,8 @@ Shadow-cljs allows the created bundle to be directly loaded into ClojureScript (
 
 To recreate the bundle you need to run ~npm run build~ in the [[../resources/n3.js][resources/n3.js]] folder.
 
+**** TODO Try and use browserify replacement libraries instead of using browserify (https://github.com/browserify/stream-browserify)
+
 ** Emacs integration
 
 Emacs Cider integration works (for me) when using the ~shadow-cljs~ tool to
