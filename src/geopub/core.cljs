@@ -150,6 +150,11 @@
             cpub-get-data!))
 
 
+
+;; how to like something:
+;; (-> (activitypub/like (rdf/iri "http://openengiadina.net/"))
+    ;; (cpub/post-rdf (str actor-id "/outbox") auth))
+
 ;; (reset-store)
 ;; (cpub-get-data!)
 

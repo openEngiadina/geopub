@@ -2,7 +2,7 @@
   "Helpers to deal with ActivityPub data"
   (:require-macros [cljs.core.logic :refer [run* fresh]])
   (:require [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.map]
+            [cljs-rdf.graph.map :as rdf-graph]
             [cljs.core.logic :as l]
             [geopub.ns :refer [as rdfs]]))
 
@@ -35,3 +35,11 @@
                       )]
 
     (map (partial get-activity graph) activity-ids)))
+
+
+(defn like
+  "Returns an activity to like an object"
+  [object]
+  (-> (rdf-graph/graph)
+      (rdf/graph-add (rdf/triple (rdf/iri "") (rdf/rdf :type) (as "Like")))
+      (rdf/graph-add (rdf/triple (rdf/iri "") (as :object) object))))
