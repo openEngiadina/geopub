@@ -42,6 +42,8 @@
 
 (def server-url "http://localhost:4000/")
 
+;; Currently the actor and auth is hardcoded.
+(def actor-id (str server-url "users/alice"))
 (def auth {:username "alice" :password "123"})
 
 
@@ -53,35 +55,40 @@
   "Return the datastore"
   (:store @state))
 
-(defn- add-triples-to-store [state triples]
+(defn- add-triples-to-store! [state triples]
+  "Helper to add triples to the store"
   (swap! state
          (fn [s]
            (assoc s :store
                   (reduce rdf/graph-add (:store s) triples)))))
 
-;; ============== Start fetching data ============
-
-(defn get-objects []
-  "Get objects from server and place in store."
-  (go
-    (let [triples (<! (cpub/get-objects (str server-url "objects") auth))]
-      (add-triples-to-store state triples))))
-
-(defn load-ontologies []
-  (go
-    (let [activitystreams (<! (cpub/get-activitystreams-ontology))]
-      (add-triples-to-store state activitystreams))))
+(defn- go-add-triples-to-store! [chan]
+  "Add triples from a channel to the store"
+  (go (add-triples-to-store! state (<! chan))))
 
 (defn reset-store []
+  "Helper to reset the store"
   (swap! state #(assoc % :store (cljs-rdf.graph.map/graph))))
 
-(defn refresh! []
-  (load-ontologies)
-  ;; Refresh data from server (Actor and public collection)
-  (get-objects))
+;; ============== Start fetching data ============
+
+(defn load-ontologies []
+  (go-add-triples-to-store! (cpub/get-activitystreams-ontology)))
+
+(defn cpub-get-data! []
+  "Get data from CPub server"
+  ;; get public timeline
+  (go-add-triples-to-store! (cpub/get-public-timeline server-url))
+  ;; get actor profile
+  (go-add-triples-to-store! (cpub/get-rdf actor-id auth))
+  ;; get actor inbox TODO: figure out outbox from actor object
+  (go-add-triples-to-store! (cpub/get-rdf (str actor-id "/inbox") auth))
+  ;; get actor outbox
+  (go-add-triples-to-store! (cpub/get-rdf (str actor-id "/outbox") auth)))
 
 ;; (defonce refresher
-;;   (js/setInterval #(refresh!) 20000))
+;;   "aka the cpu killer"
+;;   (js/setInterval #(cpub-get-data!) 2000))
 
 ;; ==================== UI =======================
 
@@ -131,6 +138,7 @@
         [default-view state]))]])
 
 (defn init! []
+  (load-ontologies)
   (rfe/start!
    (rf/router routes)
    (fn [match]
@@ -139,27 +147,11 @@
    {:use-fragment true})
   (r/render [ui state]
             (.getElementById js/document "app")
-            refresh!))
+            cpub-get-data!))
 
-(defn reload! [])
 
 ;; (reset-store)
-
-;; (get-objects)
+;; (cpub-get-data!)
 
 ;; NOTE: The mystery why the size of the store increases when loading the ontology: Blank Nodes. N3.js gives new ids so blank nodes (and thing refering those blank nodes) are duplicted...need metadata
 ;; (load-ontologies)
-
-;; (init!)
-
-
-
-;; (run* [t]
-;;   (rdf/collecto (state-store state) 3 (rdf/iri "http://localhost:4000/users/alice") t)
-;;   )
-
-;; TODO: This query does not work
-;; (run* [s]
-;;   (fresh [p o id]
-;;     (l/== s (rdf/blank-node id))
-;;     (rdf/graph-tripleo (state-store state) (rdf/triple s p o))))

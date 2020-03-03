@@ -34,14 +34,18 @@
       (n3/parse body))))
 
 
-(defn get-objects [server-url auth]
-  "Return all objects as a sequence of triples in a channel"
+(defn get-rdf [url auth]
+  "Gets a sequence of triples from an url and returns them in a channel"
   (go
     (let
         [body
-         (:body (<! (http/get server-url
+         (:body (<! (http/get url
                            {:with-credentials? false
                             :basic-auth auth
                             :headers {"Accept" "text/turtle"}
                             })))]
       (n3/parse body))))
+
+(defn get-public-timeline [server-url]
+  "Returns a channel holding the content of the public timeline"
+  (get-rdf (str server-url "public") nil))
