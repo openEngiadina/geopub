@@ -24,7 +24,7 @@
             [clojure.set :refer [intersection]]
             [geopub.ui.map]
             [geopub.ui.store]
-            [geopub.ui.timeline]
+            [geopub.ui.activity]
             [cpub.core :as cpub]
             [activitypub.core :as activitypub]
             [rdf.core :as rdf]
@@ -91,12 +91,12 @@
 
 ;; ==================== UI =======================
 
-(def default-view geopub.ui.timeline/view)
+(def default-view geopub.ui.activity/view)
 
 (def routes
-  [["timeline"
-    {:name ::timeline
-     :view geopub.ui.timeline/view}]
+  [["activity"
+    {:name ::activity
+     :view geopub.ui.activity/view}]
 
    ["store"
     {:name ::store
@@ -115,7 +115,7 @@
 
     [:nav
      [:ul
-      [:li [:a {:href "#timeline"} "Timeline"]]
+      [:li [:a {:href "#activity"} "Activity"]]
       [:li [:a {:href "#store"} "Store"]]
       [:li [:a {:href "#map"} "Map"]]]
 

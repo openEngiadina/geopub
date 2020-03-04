@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
-(ns geopub.ui.timeline
+(ns geopub.ui.activity
   (:require [geopub.ns :refer [as rdfs schema]]
             [geopub.ui.utils :refer [iri-component literal-component]]
             [activitypub.core :as activitypub]
@@ -63,7 +63,7 @@
 
 (defn view [state]
   [:div#timeline
-   [:h1 "Timeline"]
+   [:h1 "Activity"]
    (for [activity (activitypub/get-activities (:store @state))]
      ^{:key (prn-str (rd/description-subject activity))}
      [activity-component activity])])
