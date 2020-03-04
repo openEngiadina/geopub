@@ -27,7 +27,7 @@
             [geopub.ui.store]
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
-            [geopub.data.activitypub :as activitypub]
+            [activitypub.core :as activitypub]
             [rdf.core :as rdf]
             [rdf.graph.map]
             [reitit.core :as rc]

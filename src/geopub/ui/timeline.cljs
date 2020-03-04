@@ -18,7 +18,7 @@
 (ns geopub.ui.timeline
   (:require [geopub.ns :refer [as rdfs schema]]
             [geopub.ui.utils :refer [iri-component literal-component]]
-            [geopub.data.activitypub :as activitypub]
+            [activitypub.core :as activitypub]
             [rdf.core :as rdf]
             [rdf.description :as rd]
             [rdf.ns :as ns]

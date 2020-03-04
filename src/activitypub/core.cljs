@@ -1,4 +1,4 @@
-(ns geopub.data.activitypub
+(ns activitypub.core
   "Helpers to deal with ActivityPub data"
   (:require-macros [cljs.core.logic :refer [run* fresh]])
   (:require [rdf.core :as rdf]
