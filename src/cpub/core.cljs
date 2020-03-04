@@ -15,7 +15,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
-(ns geopub.cpub.core
+(ns cpub.core
+  "Helpers for interacting with CPub server"
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
