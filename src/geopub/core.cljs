@@ -108,7 +108,7 @@
 
 (defn ui [state]
   [:div#container
-   [:div#sidebar
+   [:div#topbar
 
     [:header
      [:h1 "GeoPub"]]

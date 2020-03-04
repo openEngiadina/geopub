@@ -6,27 +6,39 @@ body {
 
 #container {
     display: flex;
+    max-height: 100vh;
+    flex-direction: column;
 }
 
-#sidebar {
-    height: 100vh;
-    flex: 0 0 15vw;
+#topbar {
+    width: 100vw;
+    height: 70px;
+    /* flex: 0 0 15vw; */
     margin: auto;
-    background-color: darkblue;
+    background-color: #4782a7;
     color: white;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
 }
 
-#sidebar header {
+#topbar header {
     margin-left: 20px;
+}
+
+nav {
+    margin: 0 0 0 50px;
 }
 
 nav ul {
     list-style-type: none;
-    margin: 50px auto 50px auto;
+    margin: auto 0 auto 0;
+    padding: 0;
 }
 
 nav li {
-    margin: 15px;
+    display: inline;
+    margin: 0 20px 0 20px;
 }
 
 nav li a {
@@ -36,11 +48,8 @@ nav li a {
 }
 
 main {
-    flex-grow: 7;
-    max-height: 100vh;
     overflow: auto;
 }
-
 
 #timeline {
     margin: 50px;
