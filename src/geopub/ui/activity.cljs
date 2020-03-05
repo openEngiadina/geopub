@@ -18,35 +18,15 @@
 (ns geopub.ui.activity
   (:require [geopub.ns :refer [as rdfs schema]]
             [geopub.ui.utils :refer [iri-component literal-component]]
+            [geopub.data.view :as data]
             [activitypub.core :as activitypub]
             [rdf.core :as rdf]
             [rdf.description :as rd]
             [rdf.ns :as ns]
             [rdf.graph.map]))
 
-(defmulti object-component
-  (fn [object] (first (rd/description-get object (ns/rdf :type)))))
-
-(defmethod object-component
-  (as :Note)
-  [object]
-  [:div.object
-   (for [content (rd/description-get object (as :content))]
-     [:p [literal-component content]])])
-
-(defmethod object-component
-  (schema "Event")
-  [object]
-  [:div.object "I'm an event"])
-
-(defmethod object-component
-  :default
-  [object]
-  [:div.object "I'm a object"])
-
 (defn activity-component [activity]
   [:div.activity
-
    ;; render object
    (for
     [object
@@ -54,7 +34,7 @@
           (rd/description-get activity (as :object)))]
 
      ^{:key (prn-str (rd/description-subject object))}
-     [object-component object])
+     [data/view object])
 
    [:div.meta
     [iri-component (rd/description-get activity (as :actor))]

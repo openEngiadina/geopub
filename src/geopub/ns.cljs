@@ -16,7 +16,8 @@
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
 (ns geopub.ns
-  (:require-macros [rdf.core :refer [defns]]))
+  (:require-macros [rdf.core :refer [defns]])
+  (:require [rdf.core]))
 
 ;; Commonly used namespaces
 

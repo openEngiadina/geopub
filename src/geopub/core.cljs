@@ -25,6 +25,7 @@
             [geopub.ui.map]
             [geopub.ui.store]
             [geopub.ui.activity]
+            [geopub.ui.browse]
             [cpub.core :as cpub]
             [activitypub.core :as activitypub]
             [rdf.core :as rdf]
@@ -98,6 +99,11 @@
     {:name ::activity
      :view geopub.ui.activity/view}]
 
+   ["browse/:iri"
+    {:name ::browse
+     :view geopub.ui.browse/view
+     :parameters {:path {:iri string?}}}]
+
    ["store"
     {:name ::store
      :view geopub.ui.store/view}]
@@ -115,9 +121,9 @@
 
     [:nav
      [:ul
-      [:li [:a {:href "#activity"} "Activity"]]
-      [:li [:a {:href "#store"} "Store"]]
-      [:li [:a {:href "#map"} "Map"]]]
+      [:li [:a {:href (rfe/href ::activity)} "Activity"]]
+      [:li [:a {:href (rfe/href ::store)} "Store"]]
+      [:li [:a {:href (rfe/href ::map)} "Map"]]]
 
      ;; [:hr]
 
@@ -131,7 +137,7 @@
     ]
 
    [:main
-    (let [view (:view (:current-route @state))]
+    (let [view (get-in @state [:current-route :data :view])]
       (if view
         [view state]
         [default-view state]))]])
@@ -141,13 +147,12 @@
   (rfe/start!
    (rf/router routes)
    (fn [match]
-     (swap! state #(assoc % :current-route (:data match))))
+     (swap! state #(assoc % :current-route match)))
     ;; set to false to enable HistoryAPI
    {:use-fragment true})
   (r/render [ui state]
             (.getElementById js/document "app")
             cpub-get-data!))
-
 
 
 ;; how to like something:

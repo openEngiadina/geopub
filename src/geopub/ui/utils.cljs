@@ -1,5 +1,7 @@
 (ns geopub.ui.utils
-  (:require [rdf.core :as rdf]))
+  (:require [rdf.core :as rdf]
+            [goog.string]
+            [reitit.frontend.easy :as rfe]))
 
 (defn iri-component [iri & {:keys [class]}]
   (let [class (or class "iri")]
@@ -8,7 +10,10 @@
       (rdf/iri? iri)
       [:span
        {:class class}
-       (rdf/iri-value iri)]
+       [:a
+        {:href (rfe/href :geopub.core/browse
+                         {:iri (goog.string.urlEncode (rdf/iri-value iri))})}
+        (rdf/iri-value iri)]]
 
       (seq? iri)
       (iri-component (first iri))
