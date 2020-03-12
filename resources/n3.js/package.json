@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "browserify -s n3 index.js -o ../../src/cljs_rdf/n3.js"
+    "build": "browserify -s n3 index.js -o ../../src/rdf/n3.js"
   },
   "author": "",
   "license": "GPL-3.0-or-later",
