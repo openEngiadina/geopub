@@ -1,0 +1,25 @@
+#+TITLE: Clojure RDF
+
+I intend to extract this part of GeoPub into seperate libraries:
+
+- cljc-rdf: base protocols and data types (Clojure and ClojureScript)
+- cljs-rdf-n3: bindings to N3.js
+- cljs-rdf-parse: bidnings to rdf-parse.js
+
+And then potentially there could be other bindings to Java libs (e.g. clj-rdf-jena)
+
+Much inspiration is taken from following projects:
+
+- [[https://github.com/marcelotto/rdf-ex][rdf-ex]]: RDF library for Elixir
+- [[https://github.com/thi-ng/trio/][thi.ng/trio]]: Non-RDF triple store
+- [[https://github.com/structureddynamics/clj-turtle][clj-turtle]]: A Clojure DSL to produce RDF/Turtle data.
+- [[https://github.com/cordawyn/schemantic-web][schemantic-web]]: Semantic Web library for Scheme48.
+- [[https://github.com/antoniogarrote/clj-plaza][clj-plaza]]
+
+* License
+
+The Clojure/ClojureScipt libraries should eventually be released under the EPL
+(Eclipse Public License). It is the most common license in the Clojure world and
+seems to be a bit like LGPL.
+
+Contributors please be aware.
