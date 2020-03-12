@@ -102,6 +102,9 @@
   (triple-predicate [x] (:predicate x))
   (triple-object [x] (:object x)))
 
+(defn triple? [t]
+  (instance? Triple t))
+
 (defn- iri-like? [s]
   (or (instance? IRI s) (satisfies? IIRIConvert s)))
 
