@@ -96,7 +96,11 @@
 (defprotocol ITripleConvert
   (-as-triple [x] "Converts value to Triple"))
 
-(defrecord Triple [subject predicate object])
+(defrecord Triple [subject predicate object]
+  ITriple
+  (triple-subject [x] (:subject x))
+  (triple-predicate [x] (:predicate x))
+  (triple-object [x] (:object x)))
 
 (defn- iri-like? [s]
   (or (instance? IRI s) (satisfies? IIRIConvert s)))
@@ -147,10 +151,17 @@
 ;; Protocols
 
 (defprotocol IGraph
-  "Protocol for accessing a graph")
+  "Protocol for accessing a graph"
+  (graph-match [x triple] "Returns sequence of triples matching query."))
+
+(defn graph? [x]
+  (satisfies? IGraph x))
 
 (defprotocol IGraphUpdate
-  "Protocol for updating graph")
+  "Protocol for updating graph"
+  (graph-add [x triple] "Add a triple to the dataset")
+  ;; TOOD graph-delete, graph-add-seq
+  )
 
 (defprotocol ITripleSeq
   "Protocol for converting anything to a sequence of triples")
