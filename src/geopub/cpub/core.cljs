@@ -19,9 +19,9 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs-http.client :as http]
             [cljs.core.async :refer [<! poll!]]
-            [cljs-rdf.n3 :as n3]
-            [cljs-rdf.core :as rdf]
-            [cljs-rdf.turtle :as turtle]
+            [rdf.n3 :as n3]
+            [rdf.core :as rdf]
+            ;; [cljs-rdf.turtle :as turtle]
             [clojure.pprint :refer [pprint]]))
 
 (defn get-activitystreams-ontology []
@@ -58,4 +58,4 @@
              {:with-credentials? false
               :basic-auth auth
               :headers {"Content-type" "text/turtle"}
-              :body (turtle/encode (rdf/graph-seq data))}))
+              :body (turtle/encode (rdf/triple-seq data))}))

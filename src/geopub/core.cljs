@@ -28,8 +28,8 @@
             [geopub.ui.timeline]
             [geopub.cpub.core :as cpub]
             [geopub.data.activitypub :as activitypub]
-            [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.map]
+            [rdf.core :as rdf]
+            [rdf.graph.map]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
@@ -49,7 +49,7 @@
 
 ;; ============== State and helpers ==============
 
-(defonce state (r/atom {:store (cljs-rdf.graph.map/graph)}))
+(defonce state (r/atom {:store (rdf.graph.map/graph)}))
 
 (defn state-store [state]
   "Return the datastore"
@@ -68,7 +68,7 @@
 
 (defn reset-store []
   "Helper to reset the store"
-  (swap! state #(assoc % :store (cljs-rdf.graph.map/graph))))
+  (swap! state #(assoc % :store (rdf.graph.map/graph))))
 
 ;; ============== Start fetching data ============
 

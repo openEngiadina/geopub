@@ -1,5 +1,5 @@
 (ns geopub.ui.utils
-  (:require [cljs-rdf.core :as rdf]))
+  (:require [rdf.core :as rdf]))
 
 (defn iri-component [iri & {:keys [class]}]
   (let [class (or class "iri")]

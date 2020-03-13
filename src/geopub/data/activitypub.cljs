@@ -1,8 +1,11 @@
 (ns geopub.data.activitypub
   "Helpers to deal with ActivityPub data"
   (:require-macros [cljs.core.logic :refer [run* fresh]])
-  (:require [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.map :as rdf-graph]
+  (:require [rdf.core :as rdf]
+            [rdf.graph.map :as rdf-graph]
+            [rdf.logic :as rl]
+            [rdf.description :as rd]
+            [rdf.ns :as ns]
             [cljs.core.logic :as l]
             [geopub.ns :refer [as rdfs]]))
 
@@ -10,11 +13,11 @@
   "Returns an activty"
   [graph id]
   ;; Create description pointing to the activity
-  (rdf/description id
+  (rd/description id
                    ;; with a graph
-                   (reduce rdf/graph-add (cljs-rdf.graph.map/graph)
+                   (reduce rdf/graph-add (rdf-graph/graph)
                            ;; containing triples of the activity (three levels deep)
-                           (run* [t] (rdf/collecto graph 3 id t)))))
+                           (run* [t] (rl/collecto graph 3 id t)))))
 
 (defn get-activities
   "Returns all activities as a list of RDF descriptions"
@@ -25,13 +28,13 @@
                       (fresh [activity-type]
 
                         ;; Get all possible activity types
-                        (rdf/graph-tripleo graph
+                        (rl/graph-tripleo graph
                                            (rdf/triple activity-type
                                                        (rdfs "subClassOf")
                                                        (as "Activity")))
 
                         ;; Get all activities
-                        (rdf/graph-typeo graph id activity-type))
+                        (rl/graph-typeo graph id activity-type))
                       )]
 
     (map (partial get-activity graph) activity-ids)))
@@ -41,5 +44,5 @@
   "Returns an activity to like an object"
   [object]
   (-> (rdf-graph/graph)
-      (rdf/graph-add (rdf/triple (rdf/iri "") (rdf/rdf :type) (as "Like")))
+      (rdf/graph-add (rdf/triple (rdf/iri "") (ns/rdf :type) (as "Like")))
       (rdf/graph-add (rdf/triple (rdf/iri "") (as :object) object))))

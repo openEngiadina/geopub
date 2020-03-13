@@ -23,6 +23,8 @@
   (index-merge index
                (hash-map a (hash-map b (hash-set c)))))
 
+(declare ->Graph)
+
 (defrecord Graph [spo ops]
   rdf/IGraph
   (rdf/graph-match [graph triple]
@@ -52,6 +54,11 @@
           o (rdf/triple-object triple)]
       (->Graph
        (add-to-index (:spo graph) s p o)
-       (add-to-index (:ops graph) o p s)))))
+       (add-to-index (:ops graph) o p s))))
+
+  rdf/ITripleSeq
+  (rdf/triple-seq [graph]
+    (rdf/graph-match graph
+                     (rdf/triple (l/lvar) (l/lvar) (l/lvar)))))
 
 (defn graph [] (->Graph (hash-map) (hash-map)))

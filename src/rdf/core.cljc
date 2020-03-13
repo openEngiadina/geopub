@@ -26,6 +26,8 @@
   IIRI
   (iri-value [x] (:value x)))
 
+(defn iri? [x] (instance? IRI x))
+
 (defn iri
   "Returns an iri"
   [v]
@@ -54,6 +56,8 @@
   (literal-language [x] (:language x))
   (literal-datatype [x] (:datatype x)))
 
+(defn literal? [x] (instance? Literal x))
+
 (defn literal
   "Returns a literal with optional language and datatype."
   ([value & {:keys [language datatype]}]
@@ -75,7 +79,12 @@
 (defprotocol IBlankNodeConvert
   (-as-blank-node [x] "Converts value to BlankNode"))
 
-(defrecord BlankNode [id])
+(defrecord BlankNode [id]
+  IBlankNode
+  (blank-node-id [x] (:id x)))
+
+(defn blank-node? [x]
+  (instance? BlankNode x))
 
 (defn blank-node
   "Returns a blank node. If no id is suplied a new (and unique) id will be generated."
@@ -106,13 +115,13 @@
   (instance? Triple t))
 
 (defn- iri-like? [s]
-  (or (instance? IRI s) (satisfies? IIRIConvert s)))
+  (or (iri? s) (satisfies? IIRIConvert s)))
 
 (defn- blank-node-like? [s]
-  (or (instance? BlankNode s) (satisfies? IBlankNodeConvert s)))
+  (or (blank-node? s) (satisfies? IBlankNodeConvert s)))
 
 (defn- literal-like? [s]
-  (or (instance? Literal s) (satisfies? ILiteralConvert s)))
+  (or (literal? s) (satisfies? ILiteralConvert s)))
 
 (defn triple
   "Returns a Triple"
@@ -167,4 +176,5 @@
   )
 
 (defprotocol ITripleSeq
-  "Protocol for converting anything to a sequence of triples")
+  "Protocol for converting anything to a sequence of triples"
+  (triple-seq [x]))

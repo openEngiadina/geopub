@@ -19,17 +19,19 @@
   (:require [geopub.ns :refer [as rdfs schema]]
             [geopub.ui.utils :refer [iri-component literal-component]]
             [geopub.data.activitypub :as activitypub]
-            [cljs-rdf.core :as rdf]
-            [cljs-rdf.graph.map]))
+            [rdf.core :as rdf]
+            [rdf.description :as rd]
+            [rdf.ns :as ns]
+            [rdf.graph.map]))
 
 (defmulti object-component
-  (fn [object] (first (rdf/description-get object (rdf/rdf :type)))))
+  (fn [object] (first (rd/description-get object (ns/rdf :type)))))
 
 (defmethod object-component
   (as :Note)
   [object]
   [:div.object
-   (for [content (rdf/description-get object (as :content))]
+   (for [content (rd/description-get object (as :content))]
      [:p [literal-component content]])])
 
 (defmethod object-component
@@ -48,20 +50,20 @@
    ;; render object
    (for
     [object
-     (map (partial rdf/description-move activity)
-          (rdf/description-get activity (as :object)))]
+     (map (partial rd/description-move activity)
+          (rd/description-get activity (as :object)))]
 
-     ^{:key (prn-str (rdf/description-subject object))}
+     ^{:key (prn-str (rd/description-subject object))}
      [object-component object])
 
    [:div.meta
-    [iri-component (rdf/description-get activity (as :actor))]
+    [iri-component (rd/description-get activity (as :actor))]
     [:br]
-    [iri-component (rdf/description-get activity (rdf/rdf :type))]]])
+    [iri-component (rd/description-get activity (ns/rdf :type))]]])
 
 (defn view [state]
   [:div#timeline
    [:h1 "Timeline"]
    (for [activity (activitypub/get-activities (:store @state))]
-     ^{:key (prn-str (rdf/description-subject activity))}
+     ^{:key (prn-str (rd/description-subject activity))}
      [activity-component activity])])
