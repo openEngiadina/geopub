@@ -171,9 +171,8 @@
 
 (defprotocol IGraphUpdate
   "Protocol for updating graph"
-  (graph-add [x triple] "Add a triple to the dataset")
-  ;; TOOD graph-delete, graph-add-seq
-  )
+  (graph-add [x triple] "Add a triple to the graph.")
+  (graph-delete [x triple] "Delete a triple from the graph."))
 
 (defprotocol ITripleSeq
   "Protocol for converting anything to a sequence of triples"

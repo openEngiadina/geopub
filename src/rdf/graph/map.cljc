@@ -3,7 +3,7 @@
 
   Two indexes are created. One mapping from subject to predicate to object and one from object to predicate to subject. Depending on query the better index is used."
   (:require [rdf.core :as rdf]
-            [rdf.graph.map.index :refer [index-match index-merge]]
+            [rdf.graph.map.index :refer [index-match index-merge index-remove]]
             [clojure.core.logic :as l]))
 
 ;; helpers
@@ -55,6 +55,14 @@
       (->Graph
        (add-to-index (:spo graph) s p o)
        (add-to-index (:ops graph) o p s))))
+
+  (rdf/graph-delete [graph triple]
+    (let [s (rdf/triple-subject triple)
+          p (rdf/triple-predicate triple)
+          o (rdf/triple-object triple)]
+      (->Graph
+       (index-remove (:spo graph) [s p o])
+       (index-remove (:ops graph) [o p s]))))
 
   rdf/ITripleSeq
   (rdf/triple-seq [graph]
