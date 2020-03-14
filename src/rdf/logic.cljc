@@ -166,7 +166,7 @@
 
     l/fail))
 
-(defn collecto
+(defn graph-collecto
   "Collect triples starting at a given subject."
   [graph n from t]
   (if (> n 0)
@@ -182,6 +182,6 @@
              (triple-subjecto t2 from)
              (triple-objecto t2 o)
              (graph-tripleo graph t2)
-             (collecto graph (dec n) o t))])
+             (graph-collecto graph (dec n) o t))])
 
     l/fail))

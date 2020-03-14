@@ -8,7 +8,12 @@
             [rdf.logic :as rl]
             [clojure.core.logic :as l]))
 
-(defrecord Description [subject graph])
+(defrecord Description [subject graph]
+
+  rdf/ITripleSeq
+  (triple-seq [description]
+    (run* [t]
+      (rl/graph-collecto (:graph description) 1 (:subject description) t))))
 
 (defn description [subject graph]
   (->Description subject graph))

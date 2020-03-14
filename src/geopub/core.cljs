@@ -114,6 +114,7 @@
 
 (defn ui [state]
   [:div#container
+
    [:div#topbar
 
     [:header
@@ -123,18 +124,7 @@
      [:ul
       [:li [:a {:href (rfe/href ::activity)} "Activity"]]
       [:li [:a {:href (rfe/href ::store)} "Store"]]
-      [:li [:a {:href (rfe/href ::map)} "Map"]]]
-
-     ;; [:hr]
-
-     ;; [:ul
-     ;;  [:li [:a {:href "#settings"} "Settings"]]]
-     ]
-
-    ;; [:div#debug
-    ;;  [:code
-    ;;   (str @state)]]
-    ]
+      [:li [:a {:href (rfe/href ::map)} "Map"]]]]]
 
    [:main
     (let [view (get-in @state [:current-route :data :view])]
