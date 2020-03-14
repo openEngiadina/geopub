@@ -18,7 +18,7 @@
 (ns geopub.cpub.core
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs-http.client :as http]
-            [cljs.core.async :refer [<! poll!]]
+            [cljs.core.async :refer [<!]]
             [rdf.n3 :as n3]
             [rdf.core :as rdf]
             ;; [cljs-rdf.turtle :as turtle]
@@ -54,8 +54,10 @@
 
 
 (defn post-rdf [data url auth]
-  (http/post url
-             {:with-credentials? false
-              :basic-auth auth
-              :headers {"Content-type" "text/turtle"}
-              :body (turtle/encode (rdf/triple-seq data))}))
+  (go
+    (let [body (<! (n3/encode data))]
+      (http/post url
+                 {:with-credentials? false
+                  :basic-auth auth
+                  :headers {"Content-type" "text/turtle"}
+                  :body body}))))
