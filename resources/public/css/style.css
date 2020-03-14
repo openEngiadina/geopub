@@ -59,17 +59,14 @@ main {
     margin: 50px;
 }
 
+#browse {
+    margin: 50px;
+}
+
 #mapid {
     margin: auto;
 }
 
-#liked hr {
-    color: lightgrey;
-}
-
-#tours hr {
-    color: lightgrey;
-}
 
 .activity {
     margin: 15px;
@@ -90,78 +87,10 @@ main {
     font-size: small;
 }
 
-.info-text {
-    padding: 7px;
-    margin: 5px 50px 5px 30px;
-}
-
-.selected {
-    /* border-left: 10px solid grey; */
-    /* background-color: #e9d2c0; */
-}
-
-.activity:hover {
-    /* background-color: #e9d2c0; */
-}
-
 .activity .meta .type {
     margin-left: 10px;
 }
+
 .activity .meta .published {
     float: right;
-}
-
-.tour-status.open {
-    background-color: lightgreen;
-}
-
-.tour-status.warning {
-    background-color: orange;
-}
-
-.tour-status.closed {
-    background-color: red;
-    color: white;
-}
-
-.object {
-    min-height: 50px;
-    margin: 10px;
-    padding: 10px;
-}
-
-.object .like {
-    float: right;
-}
-
-.tour-image {
-    width: 100px;
-    order: 0;
-}
-
-#create-note .text-input{
-    width: 90%;
-}
-
-#create-note .latlng {
-    margin-top: 20px;
-    color: grey;
-}
-
-#create-note .send-button{
-    margin-top: 5px;
-    margin-left: 60%;
-    width: 35%;
-}
-
-dl dt {
-    font-weight: bold;
-}
-
-.actions-list {
-    list-style-type: none;
-}
-
-.actions-list li {
-    margin: 5px;
 }

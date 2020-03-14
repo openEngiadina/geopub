@@ -11,6 +11,6 @@
                 (goog.string.urlDecode)
                 (rdf/iri))
         description (rdf-description/description iri (:store @state))]
-    [:div
+    [:div {:id :browse}
      [:h1 "Browse"]
      [data/view description]]))
