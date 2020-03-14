@@ -16,7 +16,6 @@
   rdf/IIRIConvert
   (-as-iri [x] (rdf/iri (.-value x))))
 
-;; TODO implement I*Convert for all RDF.js types and serialize with N3!
 (defprotocol INamedNodeConvert
   "Protocol for types that can be converted to NamedNode"
   (-as-named-node [x]))
