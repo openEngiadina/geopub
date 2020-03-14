@@ -13,11 +13,7 @@
   "Returns an activty"
   [graph id]
   ;; Create description pointing to the activity
-  (rd/description id
-                   ;; with a graph
-                   (reduce rdf/graph-add (rdf-graph/graph)
-                           ;; containing triples of the activity (three levels deep)
-                           (run* [t] (rl/collecto graph 3 id t)))))
+  (rd/description id graph))
 
 (defn get-activities
   "Returns all activities as a list of RDF descriptions"
