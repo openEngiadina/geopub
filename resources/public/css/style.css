@@ -67,6 +67,26 @@ main {
     margin: auto;
 }
 
+.object {
+}
+
+.object header {
+}
+
+.object header .raw-id {
+    color: grey;
+    font-size: medium;
+    margin-left: 10px;
+}
+
+.object header .raw-id a {
+    color: grey;
+}
+
+.object header .subtitle {
+    color: grey;
+    font-size: medium;
+}
 
 .activity {
     margin: 15px;

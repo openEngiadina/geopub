@@ -1,11 +1,16 @@
 (ns geopub.data.rdf
   "Helpers for displaying RDF data"
   (:require [rdf.core :as rdf]
-            [rdf.description :refer [description-get]]
+            [rdf.description :refer [description-get
+                                     description-subject]]
             [rdf.ns :as rdf-ns]
+            [rdf.n3 :as n3]
+            [reagent.core :as r]
+            [cljs.core.async :refer [<!]]
             [geopub.ns :as ns :refer [as rdfs schema]]
             [goog.string]
-            [reitit.frontend.easy :as rfe]))
+            [reitit.frontend.easy :as rfe])
+  (:require-macros [cljs.core.async :refer [go]]))
 
 (defn iri-component
   "Render an IRI as a link that can be followed in the internal browser."
@@ -41,31 +46,72 @@
 
     (rdf/blank-node? term) [blank-node-component term]
 
+    (seq? term) [rdf-term-component (first term)]
+
     :else "-"))
 
-
 ;; Description
- 
-(defmulti description-component
-  "Takes an rdf description and tries to create a nice view."
-  (fn [object]
-    ;; TODO: currently we take the first type. Better would be to take the first best type. Even better allow view-type preference to be specified.
-    (first (description-get object (rdf-ns/rdf :type)))))
 
-(defmethod description-component
-  (as :Note)
+(defn- description-type
+  "Helper to get type of subject being described. This defines what multimethod is used to render the description."
   [object]
-  [:div.object
-   (for [content (description-get object (as :content))]
-     [:p [literal-component content]])])
+  ;; TODO the described object can have multiple types. Currently we use the first type. Allow a preference to be given.
+  (first (description-get object (rdf-ns/rdf :type))))
 
-(defmethod description-component
-  (schema "Event")
-  [object]
-  [:div.object "I'm an event"])
+(defmulti description-header-component
+  "Render an appropriate title for a description"
+  (fn [object] (description-type object)))
 
-(defmethod description-component
+(defmethod description-header-component
   :default
   [object]
-  [:div.object "I'm a object"])
+  [:header [:h1 (rdf-term-component (description-subject object))]])
+
+(defmethod description-header-component
+  (rdfs "Class")
+  [object]
+  (let [title (or (first (description-get object (rdfs "label")))
+                  (description-subject object))
+        sub-title (first (description-get object (rdfs "comment")))]
+    [:header
+     [:h1 [rdf-term-component title]
+      [:span.raw-id "(" (rdf-term-component (description-subject object)) ")"]]
+     (if sub-title [:p.subtitle [rdf-term-component sub-title]])]
+    ))
+
+(defn description-turtle-component [object]
+  (let [as-turtle (r/atom "")]
+    (fn []
+      ;; encode description as RDF/Turtle
+      (go (swap! as-turtle (constantly (<! (n3/encode object)))))
+       [:code.turtle [:pre @as-turtle]])))
+
+(defmulti description-body-component
+  "Takes an rdf description and tries to create a nice view."
+  (fn [object] (description-type object)))
+
+(defmethod description-body-component
+  :default
+  [object]
+  [:div.object-body
+   [description-turtle-component object]])
+
+(defn description-component
+  [object]
+  [:section.object
+   [description-header-component object]
+   [description-body-component object]])
+
+;; (defmethod description-component
+;;   (as :Note)
+;;   [object]
+;;   [:div.object
+;;    (for [content (description-get object (as :content))]
+;;      [:p [literal-component content]])])
+
+;; (defmethod description-component
+;;   (schema "Event")
+;;   [object]
+;;   [:div.object "I'm an event"])
+
 
