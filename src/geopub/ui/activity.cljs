@@ -17,8 +17,9 @@
 
 (ns geopub.ui.activity
   (:require [geopub.ns :refer [as rdfs schema]]
-            [geopub.ui.utils :refer [iri-component literal-component]]
-            [geopub.data.view :as data]
+            [geopub.data.rdf :refer [iri-component
+                                     literal-component
+                                     description-component]]
             [activitypub.core :as activitypub]
             [rdf.core :as rdf]
             [rdf.description :as rd]
@@ -34,7 +35,7 @@
           (rd/description-get activity (as :object)))]
 
      ^{:key (prn-str (rd/description-subject object))}
-     [data/view object])
+     [description-component object])
 
    [:div.meta
     [iri-component (rd/description-get activity (as :actor))]

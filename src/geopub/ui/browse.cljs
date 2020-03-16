@@ -3,7 +3,7 @@
             [rdf.description :as rdf-description]
             [rdf.n3 :as n3]
             [goog.string]
-            [geopub.data.view :as data]
+            [geopub.data.rdf :refer [description-component]]
             [cljs.core.async :refer [<!]]
             [reagent.core :as r])
   (:require-macros [cljs.core.async :refer [go]]))
@@ -25,6 +25,6 @@
       [:div {:id :browse}
        [:h1 "Browse"]
 
-       [data/view description]
+       [description-component description]
        
        [:code @as-turtle]])))
