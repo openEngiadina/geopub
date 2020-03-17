@@ -98,6 +98,15 @@
       (go (swap! as-turtle (constantly (<! (n3/encode object)))))
        [:code.turtle [:pre @as-turtle]])))
 
+(defn description-property-list-component [object]
+  [:dl
+   (for
+       [triple (rdf/triple-seq object)]
+     [:div.object-property-list
+      ;; TODO: add key
+      [:dt [rdf-term-component (rdf/triple-predicate triple)]]
+      [:dd [rdf-term-component (rdf/triple-object triple)]]])])
+
 (defmulti description-body-component
   "Takes an rdf description and tries to create a nice view."
   (fn [object] (description-type object)))
@@ -106,6 +115,7 @@
   :default
   [object]
   [:div.object-body
+   [description-property-list-component object]
    [:details
     [:summary "Turtle"]
     [description-turtle-component object]]])

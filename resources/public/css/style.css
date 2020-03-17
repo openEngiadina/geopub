@@ -88,11 +88,16 @@ main {
     font-size: medium;
 }
 
-.object .object-body pre {
+.object pre {
     overflow: auto;
     width: 80%;
     padding: 10px;
 }
+
+.object .object-property-list dd {
+    margin-bottom: 2em;
+}
+
 
 .activity {
     margin: 15px;
