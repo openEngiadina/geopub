@@ -1,19 +1,6 @@
 (ns rdf.core
   "RDF in Clojure")
 
-(declare iri)
-
-(defmacro defns
-  "Macro for defining a custom new namespace"
-  [prefix namespace]
-  (let
-      [relative (gensym "relative-")]
-      `(defn ~prefix
-         [~relative]
-         (iri
-          (str ~namespace (name ~relative))))))
-
-
 ;; IRI
 
 (defprotocol IIRI
