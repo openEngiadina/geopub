@@ -172,6 +172,7 @@
 (defprotocol IGraphUpdate
   "Protocol for updating graph"
   (graph-add [x triple] "Add a triple to the graph.")
+  (graph-merge [x y] "Merge two graphs.")
   (graph-delete [x triple] "Delete a triple from the graph."))
 
 (defprotocol ITripleSeq
