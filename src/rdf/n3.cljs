@@ -110,12 +110,21 @@
                (implements? ILiteralConvert o) (-as-literal o))))))
 
 ;; Parsing
+;;
 
-(defn parse [input]
-  "Parse RDF/Turtle to a sequence of Triples"
-  (map rdf/triple
-       ;; convert to Clojure list before mapping
-       (js->clj (.parse (new n3/Parser) input))))
+(defn parse
+  "Parse RDF/Turtle to a sequence of Triples. Returns a transducer if no input is given."
+  ([]
+   (fn [rf]
+     (fn
+       ([] (rf))
+       ([result] (rf result))
+       ([result input] (rf result (parse input))))))
+  ([input]
+   (map rdf/triple
+        ;; convert to Clojure list before mapping
+        (js->clj (.parse (new n3/Parser) input)))))
+
 
 ;; Encoding
  

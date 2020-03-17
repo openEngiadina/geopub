@@ -6,7 +6,7 @@
             [rdf.ns :as rdf-ns]
             [rdf.n3 :as n3]
             [reagent.core :as r]
-            [cljs.core.async :refer [<!]]
+            [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
             [geopub.ns :as ns :refer [as rdfs schema]]
             [goog.string]
@@ -16,11 +16,15 @@
 ;; Data fetching
  
 (defn get-rdf [url & [opts]]
-  (go (let [request-opts (merge {:with-credentials? false
-                                 :headers {"Accept" "text/turtle"}} opts)
-            request (http/get url request-opts)
-            body (:body (<! request))]
-        (n3/parse body))))
+  (let [request-opts (merge {:with-credentials? false
+                             :headers {"Accept" "text/turtle"}} opts)
+        request (http/get url request-opts)
+        xform (comp
+               (map #(get % :body))
+               (n3/parse))]
+    (async/pipe request
+                (async/chan 1 xform))))
+
 
 ;; Reagent components
 
