@@ -7,10 +7,22 @@
             [rdf.n3 :as n3]
             [reagent.core :as r]
             [cljs.core.async :refer [<!]]
+            [cljs-http.client :as http]
             [geopub.ns :as ns :refer [as rdfs schema]]
             [goog.string]
             [reitit.frontend.easy :as rfe])
   (:require-macros [cljs.core.async :refer [go]]))
+
+;; Data fetching
+ 
+(defn get-rdf [url & [opts]]
+  (go (let [request-opts (merge {:with-credentials? false
+                                 :headers {"Accept" "text/turtle"}} opts)
+            request (http/get url request-opts)
+            body (:body (<! request))]
+        (n3/parse body))))
+
+;; Reagent components
 
 (defn iri-component
   "Render an IRI as a link that can be followed in the internal browser."

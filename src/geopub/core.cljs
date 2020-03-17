@@ -22,11 +22,13 @@
             [cljs.core.async :refer [<!]]
             [cljs.core.logic :as l]
             [clojure.set :refer [intersection]]
+            [goog.Uri :as uri]
             [geopub.ui.map]
             [geopub.ui.store]
             [geopub.ui.activity]
             [geopub.ui.browse]
-            [cpub.core :as cpub]
+            [geopub.data.rdf :refer [get-rdf]]
+            [geopub.cpub :as cpub]
             [activitypub.core :as activitypub]
             [rdf.core :as rdf]
             [rdf.graph.map]
@@ -37,10 +39,8 @@
 
 ;; ====================== Config =================
 
-;; (def server-url "https://ap-dev.miaengiadina.ch/")
-
-
-(def server-url "http://localhost:4000/")
+(def server-url
+  (uri/parse "http://localhost:4000/"))
 
 ;; Currently the actor and auth is hardcoded.
 (def actor-id (str server-url "users/alice"))
@@ -73,18 +73,19 @@
 ;; ============== Start fetching data ============
 
 (defn load-ontologies []
-  (go-add-triples-to-store! (cpub/get-activitystreams-ontology)))
+  (go-add-triples-to-store!
+   (geopub.data.rdf/get-rdf "activitystreams2.ttl")))
 
 (defn cpub-get-data! []
   "Get data from CPub server"
   ;; get public timeline
   (go-add-triples-to-store! (cpub/get-public-timeline server-url))
   ;; get actor profile
-  (go-add-triples-to-store! (cpub/get-rdf actor-id auth))
+  (go-add-triples-to-store! (get-rdf actor-id {:auth auth}))
   ;; get actor inbox TODO: figure out outbox from actor object
-  (go-add-triples-to-store! (cpub/get-rdf (str actor-id "/inbox") auth))
+  (go-add-triples-to-store! (get-rdf (str actor-id "/inbox") {:basic-auth auth}))
   ;; get actor outbox
-  (go-add-triples-to-store! (cpub/get-rdf (str actor-id "/outbox") auth)))
+  (go-add-triples-to-store! (get-rdf (str actor-id "/outbox") {:basic-auth auth})))
 
 ;; (defonce refresher
 ;;   "aka the cpu killer"
