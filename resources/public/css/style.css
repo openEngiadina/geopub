@@ -88,6 +88,12 @@ main {
     font-size: medium;
 }
 
+.object .object-body pre {
+    overflow: auto;
+    width: 80%;
+    padding: 10px;
+}
+
 .activity {
     margin: 15px;
     padding: 10px;

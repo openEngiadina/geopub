@@ -106,7 +106,9 @@
   :default
   [object]
   [:div.object-body
-   [description-turtle-component object]])
+   [:details
+    [:summary "Turtle"]
+    [description-turtle-component object]]])
 
 (defn description-component
   [object]
