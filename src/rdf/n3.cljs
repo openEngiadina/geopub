@@ -1,7 +1,7 @@
 (ns rdf.n3
   "Bindings to the N3.js library for parsing Turtle"
   (:require [rdf.core :as rdf]
-            ["./n3.js" :as n3]
+            ["n3" :as n3]
             [cljs.core.async :as async :refer [<! >!]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
