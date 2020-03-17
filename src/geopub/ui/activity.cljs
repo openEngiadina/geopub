@@ -17,6 +17,7 @@
 
 (ns geopub.ui.activity
   (:require [geopub.ns :refer [as rdfs schema]]
+            [geopub.state]
             [geopub.data.rdf :refer [iri-component
                                      literal-component
                                      description-component]]
@@ -45,6 +46,6 @@
 (defn view [state]
   [:div#timeline
    [:h1 "Activity"]
-   (for [activity (activitypub/get-activities (:store @state))]
+   (for [activity (activitypub/get-activities (:graph @state))]
      ^{:key (prn-str (rd/description-subject activity))}
      [activity-component activity])])

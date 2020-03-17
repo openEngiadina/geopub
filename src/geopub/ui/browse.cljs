@@ -11,7 +11,7 @@
                 (get-in [:current-route :path-params :iri])
                 (goog.string.urlDecode)
                 (rdf/iri))
-        description (rdf-description/description iri (:store @state))]
+        description (rdf-description/description iri (:graph @state))]
 
     [:div {:id :browse}
      [description-component description]]))

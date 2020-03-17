@@ -31,11 +31,11 @@
 (defn get-geo-object [state]
   "Returns a list of activities that have a latitude and longitude"
   ;; TODO only store the relevant subgraph in the description
-  (map #(rd/description % (:store @state))
+  (map #(rd/description % (:graph @state))
        (run* [s]
          (fresh [x y]
-           (rl/graph-tripleo (:store @state) (rdf/triple s (geo "long") x))
-           (rl/graph-tripleo (:store @state) (rdf/triple s (geo "lat") y))))))
+           (rl/graph-tripleo (:graph @state) (rdf/triple s (geo "long") x))
+           (rl/graph-tripleo (:graph @state) (rdf/triple s (geo "lat") y))))))
 
 (defn get-location [object]
   (let

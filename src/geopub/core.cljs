@@ -16,22 +16,15 @@
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
 (ns geopub.core
-  (:require-macros [cljs.core.async :refer [go]]
-                   [cljs.core.logic :refer [run* fresh run]])
   (:require [reagent.core :as r]
-            [cljs.core.async :refer [<!]]
-            [cljs.core.logic :as l]
-            [clojure.set :refer [intersection]]
             [goog.Uri :as uri]
+            [geopub.state]
             [geopub.ui.map]
             [geopub.ui.store]
             [geopub.ui.activity]
             [geopub.ui.browse]
             [geopub.data.rdf :refer [get-rdf]]
             [geopub.cpub :as cpub]
-            [activitypub.core :as activitypub]
-            [rdf.core :as rdf]
-            [rdf.graph.map]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
@@ -46,50 +39,27 @@
 (def actor-id (str server-url "users/alice"))
 (def auth {:username "alice" :password "123"})
 
-
 ;; ============== State and helpers ==============
 
-(defonce state (r/atom {:store (rdf.graph.map/graph)}))
-
-(defn state-store [state]
-  "Return the datastore"
-  (:store @state))
-
-(defn- add-triples-to-store! [state triples]
-  "Helper to add triples to the store"
-  (swap! state
-         (fn [s]
-           (assoc s :store
-                  (reduce rdf/graph-add (:store s) triples)))))
-
-(defn- go-add-triples-to-store! [chan]
-  "Add triples from a channel to the store"
-  (go (add-triples-to-store! state (<! chan))))
-
-(defn reset-store []
-  "Helper to reset the store"
-  (swap! state #(assoc % :store (rdf.graph.map/graph))))
+(defonce state (geopub.state/init))
 
 ;; ============== Start fetching data ============
 
 (defn load-ontologies []
-  (go-add-triples-to-store!
-   (geopub.data.rdf/get-rdf "activitystreams2.ttl")))
+  (geopub.state/add-triples! state (get-rdf "activitystreams2.ttl")))
 
 (defn cpub-get-data! []
   "Get data from CPub server"
   ;; get public timeline
-  (go-add-triples-to-store! (cpub/get-public-timeline server-url))
+  (geopub.state/add-triples! state
+                             (cpub/get-public-timeline server-url))
   ;; get actor profile
-  (go-add-triples-to-store! (get-rdf actor-id {:auth auth}))
+  (geopub.state/add-triples! state
+                             (get-rdf actor-id {:auth auth}))
   ;; get actor inbox TODO: figure out outbox from actor object
-  (go-add-triples-to-store! (get-rdf (str actor-id "/inbox") {:basic-auth auth}))
+  (geopub.state/add-triples! state (get-rdf (str actor-id "/inbox") {:basic-auth auth}))
   ;; get actor outbox
-  (go-add-triples-to-store! (get-rdf (str actor-id "/outbox") {:basic-auth auth})))
-
-;; (defonce refresher
-;;   "aka the cpu killer"
-;;   (js/setInterval #(cpub-get-data!) 2000))
+  (geopub.state/add-triples! state (get-rdf (str actor-id "/outbox") {:basic-auth auth})))
 
 ;; ==================== UI =======================
 

@@ -18,5 +18,4 @@
   [:div#store
    [:h1 "Store"]
    [triple-table (rdf/triple-seq
-                  (:store @state))]
-   ])
+                  (:graph @state))]])

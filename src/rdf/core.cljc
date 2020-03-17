@@ -13,6 +13,7 @@
          (iri
           (str ~namespace (name ~relative))))))
 
+
 ;; IRI
 
 (defprotocol IIRI
@@ -105,11 +106,25 @@
 (defprotocol ITripleConvert
   (-as-triple [x] "Converts value to Triple"))
 
+(defprotocol ITripleSeq
+  "Protocol for converting anything to a sequence of triples"
+  (triple-seq [x]))
+
+(extend-type default
+  ITripleSeq
+  (triple-seq [x]
+    (cond
+      (seqable? x) (seq x)
+      (satisfies? ITriple x) (list x))))
+
 (defrecord Triple [subject predicate object]
   ITriple
   (triple-subject [x] (:subject x))
   (triple-predicate [x] (:predicate x))
-  (triple-object [x] (:object x)))
+  (triple-object [x] (:object x))
+
+  ITripleSeq
+  (triple-seq [x] (list x)))
 
 (defn triple? [t]
   (instance? Triple t))
@@ -160,7 +175,7 @@
 
 ;; TODO quads
 
-;; Protocols
+;; Graph Protocols
 
 (defprotocol IGraph
   "Protocol for accessing a graph"
@@ -175,6 +190,3 @@
   (graph-merge [x y] "Merge two graphs.")
   (graph-delete [x triple] "Delete a triple from the graph."))
 
-(defprotocol ITripleSeq
-  "Protocol for converting anything to a sequence of triples"
-  (triple-seq [x]))
