@@ -48,7 +48,9 @@
 (defn load-ontologies []
   (geopub.state/add-triples! state
                              (get-rdf "activitystreams2.ttl"
-                                      {:content-type "text/turtle"})))
+                                      {:content-type "text/turtle"}))
+  (geopub.state/add-triples! state
+                             (get-rdf "schema.ttl" {:content-type "text/turtle"})))
 
 (defn cpub-get-data! []
   "Get data from CPub server"
@@ -63,9 +65,6 @@
   ;; get actor outbox
   (geopub.state/add-triples! state (get-rdf (str actor-id "/outbox") {:basic-auth auth})))
 
-
-(geopub.state/reset-graph! state)
-(load-ontologies)
 
 ;; ==================== UI =======================
 
