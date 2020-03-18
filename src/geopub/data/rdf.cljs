@@ -149,9 +149,10 @@
   [object]
   [:div.object-body
    [description-property-list-component object]
-   [:details
-    [:summary "Turtle"]
-    [description-turtle-component object]]])
+   ;; [:details
+   ;;  [:summary "Turtle"]
+   ;;  [description-turtle-component object]]
+   ])
 
 (defn description-component
   [object]
