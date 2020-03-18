@@ -45,7 +45,8 @@
 
 (defn view [state]
   [:div.ui-page
-   [:h1 "Activity"]
-   (for [activity (activitypub/get-activities (:graph @state))]
-     ^{:key (prn-str (rd/description-subject activity))}
-     [activity-component activity])])
+   [:main
+    [:h1 "Activity"]
+    (for [activity (activitypub/get-activities (:graph @state))]
+      ^{:key (prn-str (rd/description-subject activity))}
+      [activity-component activity])]])

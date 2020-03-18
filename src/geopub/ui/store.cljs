@@ -16,6 +16,7 @@
 
 (defn view [state]
   [:div.ui-page
-   [:h1 "Store"]
-   [triple-table (rdf/triple-seq
-                  (:graph @state))]])
+   [:main
+    [:h1 "Store"]
+    [triple-table (rdf/triple-seq
+                   (:graph @state))]]])

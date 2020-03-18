@@ -16,5 +16,8 @@
         description (r/track #(rdf-description/description iri (:graph @state)))]
 
     [:div.ui-page
-     [description-component @description]]))
+     [:div.sidebar
+      "Yo"
+      ]
+     [:main [description-component @description]]]))
 

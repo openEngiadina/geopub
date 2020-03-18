@@ -6,7 +6,7 @@ body {
 
 #container {
     display: flex;
-    max-height: 100vh;
+    height: 100vh;
     flex-direction: column;
 }
 
@@ -47,16 +47,31 @@ nav li a {
     font-size: 1.4em;
 }
 
-main {
+
+.ui-page {
+    display: flex;
+    align-items: stretch;
+    flex-grow: 1;
     overflow: auto;
 }
 
-.ui-page {
-    margin: 50px;
+.ui-page main {
 }
 
-#mapid {
-    margin: auto;
+.ui-page .sidebar {
+    flex-basis: 15rem;
+    border-right: 0.2px solid lightgrey;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.ui-page main {
+    overflow: auto;
+    margin-top: 20px;
+    margin-left: 30px;
+    flex-grow: 1;
 }
 
 .object {

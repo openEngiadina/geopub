@@ -102,11 +102,10 @@
       [:li [:a {:href (rfe/href ::store)} "Store"]]
       [:li [:a {:href (rfe/href ::map)} "Map"]]]]]
 
-   [:main
     (let [view (get-in @state [:current-route :data :view])]
       (if view
         [view state]
-        [default-view state]))]])
+        [default-view state]))])
 
 (defn init! []
   (load-ontologies)

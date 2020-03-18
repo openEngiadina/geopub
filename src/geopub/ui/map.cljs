@@ -54,7 +54,7 @@
   [Marker {:position (get-location object)}])
 
 (defn view [state]
-  [:div#map
+  [:main#map
    [Map
     {:style {:min-height "100vh"}
      :center default-center
