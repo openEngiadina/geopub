@@ -51,15 +51,7 @@ main {
     overflow: auto;
 }
 
-#timeline {
-    margin: 50px;
-}
-
-#store {
-    margin: 50px;
-}
-
-#browse {
+.ui-page {
     margin: 50px;
 }
 

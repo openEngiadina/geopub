@@ -44,7 +44,7 @@
     [iri-component (rd/description-get activity (ns/rdf :type))]]])
 
 (defn view [state]
-  [:div#timeline
+  [:div.ui-page
    [:h1 "Activity"]
    (for [activity (activitypub/get-activities (:graph @state))]
      ^{:key (prn-str (rd/description-subject activity))}

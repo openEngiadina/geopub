@@ -15,6 +15,6 @@
         
         description (r/track #(rdf-description/description iri (:graph @state)))]
 
-    [:div {:id :browse}
+    [:div.ui-page
      [description-component @description]]))
 
