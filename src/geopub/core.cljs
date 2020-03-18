@@ -46,7 +46,9 @@
 ;; ============== Start fetching data ============
 
 (defn load-ontologies []
-  (geopub.state/add-triples! state (get-rdf "activitystreams2.ttl")))
+  (geopub.state/add-triples! state
+                             (get-rdf "activitystreams2.ttl"
+                                      {:content-type "text/turtle"})))
 
 (defn cpub-get-data! []
   "Get data from CPub server"
@@ -60,6 +62,10 @@
   (geopub.state/add-triples! state (get-rdf (str actor-id "/inbox") {:basic-auth auth}))
   ;; get actor outbox
   (geopub.state/add-triples! state (get-rdf (str actor-id "/outbox") {:basic-auth auth})))
+
+
+(geopub.state/reset-graph! state)
+(load-ontologies)
 
 ;; ==================== UI =======================
 
@@ -120,8 +126,10 @@
 ;; (-> (activitypub/like (rdf/iri "http://openengiadina.net/"))
 ;;     (cpub/post-rdf (str actor-id "/outbox") auth))
 
-;; (reset-store)
 ;; (cpub-get-data!)
 
 ;; NOTE: The mystery why the size of the store increases when loading the ontology: Blank Nodes. N3.js gives new ids so blank nodes (and thing refering those blank nodes) are duplicted...need metadata
 ;; (load-ontologies)
+
+;; (geopub.state/reset-graph! state)
+;; (geopub.state/add-triples! state (get-rdf "https://www.rubensworks.net/"))

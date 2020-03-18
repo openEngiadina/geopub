@@ -5,6 +5,7 @@
                                      description-subject]]
             [rdf.ns :as rdf-ns]
             [rdf.n3 :as n3]
+            [rdf.parse :as rdf-parse]
             [reagent.core :as r]
             [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
@@ -14,17 +15,45 @@
   (:require-macros [cljs.core.async :refer [go]]))
 
 ;; Data fetching
+
+;; TODO Parser is capable of parsing streams, but cljs-http returns entire body in one go. Explore using the Streams API (https://developer.mozilla.org/en-US/docs/Web/API/Streams_API). This might also explain the amount of plumbing.
+
+(defn- get-content-type [response]
+  (first
+   (clojure.string/split
+    (get-in response [:headers "content-type"]) ";")))
+
+(defn- parse-http-request [url request & [opts]]
+  ;; TODO Error handling
+  ;; TODO This includes a lot of plumbing. The reason is that the content-type (required by the parser) is in the response and needs to be taken out before creating the parser. The interface for rdf-parse/parse does not seem right. Figure out how to do this nicer.
+  (let [parser-input (async/chan)
+        parser-output (async/chan)]
+    ;; take response from request
+    (async/take! request
+                 (fn [response]
+                   ;; put body into parser-input channel
+                   (async/put! parser-input
+                               (:body response)
+                               ;; and close the parser-input channel.
+                               #(async/close! parser-input))
+                   ;; parse body and pipe to parser-output
+                   (async/pipe
+                    (rdf-parse/parse parser-input
+                                     :content-type (or (:content-type opts)
+                                                       (get-content-type response))
+                                     :base-iri (str url)
+                                     :path (str url))
+                    parser-output)))
+    ;; return channel with parsed triples
+    parser-output))
  
 (defn get-rdf [url & [opts]]
   (let [request-opts (merge {:with-credentials? false
-                             :headers {"Accept" "text/turtle"}} opts)
-        request (http/get url request-opts)
-        xform (comp
-               (map #(get % :body))
-               (n3/parse))]
-    (async/pipe request
-                (async/chan 1 xform))))
-
+                             :headers {"Accept"
+                                       (clojure.string/join
+                                        ", " (rdf-parse/content-types))}} opts)
+        request (http/get url request-opts)]
+    (parse-http-request url request opts)))
 
 ;; Reagent components
 
