@@ -75,9 +75,15 @@
     {:name ::activity
      :view geopub.ui.activity/view}]
 
-   ["browse/:iri"
+
+   ["browse/description/:iri"
     {:name ::browse
-     :view geopub.ui.browse/view
+     :view geopub.ui.browse/description-view
+     :parameters {:path {:iri string?}}}]
+
+   ["browse/type/:iri"
+    {:name ::browse-type
+     :view geopub.ui.browse/type-view
      :parameters {:path {:iri string?}}}]
 
    ["store"

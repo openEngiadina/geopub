@@ -26,22 +26,22 @@ body {
     margin-left: 20px;
 }
 
-nav {
+#topbar nav {
     margin: 0 0 0 50px;
 }
 
-nav ul {
+#topbar nav ul {
     list-style-type: none;
     margin: auto 0 auto 0;
     padding: 0;
 }
 
-nav li {
+#topbar nav li {
     display: inline;
     margin: 0 20px 0 20px;
 }
 
-nav li a {
+#topbar nav li a {
     color: white;
     text-decoration: none;
     font-size: 1.4em;
@@ -65,6 +65,15 @@ nav li a {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+}
+
+.ui-page .sidebar nav ul {
+    list-style-type: none;
+}
+
+.ui-page .sidebar nav ul li {
+    margin: 20px 0 20px 0;
+    font-size: 1.2em;
 }
 
 .ui-page main {
