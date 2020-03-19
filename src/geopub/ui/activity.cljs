@@ -43,8 +43,19 @@
     [:br]
     [iri-component (rd/description-get activity (ns/rdf :type))]]])
 
+(defn sidebar []
+  [:div.sidebar
+   [:nav
+    [:ul
+     [:li [:a {:href "#"} "you"]]
+     [:li [:a {:href "#"} "people you follow"]]
+     [:li [:a {:href "#"} "group xyz"]]
+     [:li [:a {:href "#"} "all"]]
+     ]]])
+
 (defn view [state]
   [:div.ui-page
+   [sidebar]
    [:main
     [:h1 "Activity"]
     (for [activity (activitypub/get-activities (:graph @state))]
