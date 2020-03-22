@@ -10,6 +10,7 @@
             [reagent.core :as r]
             [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
+            [cljs-http.core]
             [geopub.ns :as ns :refer [as rdfs schema]]
             [goog.string]
             [reitit.frontend.easy :as rfe])
@@ -19,21 +20,60 @@
 
 ;; TODO Parser is capable of parsing streams, but cljs-http returns entire body in one go. Explore using the Streams API (https://developer.mozilla.org/en-US/docs/Web/API/Streams_API).
 
+(defn- map-content-types
+  "Some projects and services do not use standard content-types for some reason or an other."
+  [ct]
+  (condp = ct
+    ;; https://www.w3.org/TR/activitystreams-core/#media-type
+    "application/activity+json" "application/ld+json"
+    ct))
+
 (defn- get-content-type [response]
-  (first
-   (clojure.string/split
-    (get-in response [:headers "content-type"]) ";")))
+  (-> response
+      (get-in [:headers "content-type"])
+      (clojure.string/split ";")
+      (first)
+      (map-content-types)))
+
+(defn wrap-request
+  "Returns a batteries-included HTTP request function coresponding to the given
+   core client. See client/request"
+  [request]
+  (-> cljs-http.core/request
+      cljs-http.client/wrap-accept
+      cljs-http.client/wrap-form-params
+      cljs-http.client/wrap-multipart-params
+      cljs-http.client/wrap-edn-params
+      cljs-http.client/wrap-edn-response
+      cljs-http.client/wrap-transit-params
+      cljs-http.client/wrap-transit-response
+      cljs-http.client/wrap-json-params
+      ;; wrap-json-response
+      cljs-http.client/wrap-content-type
+      cljs-http.client/wrap-query-params
+      cljs-http.client/wrap-basic-auth
+      cljs-http.client/wrap-oauth
+      cljs-http.client/wrap-method
+      cljs-http.client/wrap-url
+      cljs-http.client/wrap-channel-from-request-map
+      cljs-http.client/wrap-default-headers))
 
 (defn get-rdf
   "Do a HTTP Get request and attempt to parse respose as RDF. Returns a channel holding an RDF graph or an error."
   [url & [opts]]
   (go
-    (let [request-opts (merge {:headers {"Accept"
-                                         (clojure.string/join
-                                          ", " (rdf-parse/content-types))}} opts)
-          request (<! (http/get url request-opts))]
+    (let [request-opts (merge {:headers
+                               {"Accept" (clojure.string/join
+                                          ", " (rdf-parse/content-types))}
+                               :method :get
+                               :url url}
+                              opts)
+          ;; cljs-http does too much post-processing (such as parsing json)
+          request (wrap-request cljs-http.core/request)
 
-      (if (:success request)
+          response (<! (request request-opts))]
+
+      (if (:success response )
 
         ;; Parse RDF triples and add to a new graph
         (<! (async/reduce
@@ -47,14 +87,14 @@
              ;; initialize a fresh graph
              (rdf.graph.map/graph)
              ;; receive parsed triples in  channel
-             (rdf-parse/parse-string (:body request)
+             (rdf-parse/parse-string (:body response)
                                      :content-type (or (:content-type opts)
-                                                       (get-content-type request))
+                                                       (get-content-type response))
                                      :base-iri (str url)
                                      :path (str url))))
 
         ;; HTTP request failed. Return an error.
-        (ex-info "HTTP request failed" request)))))
+        (ex-info "HTTP request failed" response)))))
 
 
 ;; Reagent components
