@@ -5,6 +5,7 @@
             [cljs.core.async :as async :refer [<! >!]]
             ["rdf-parse" :as rdf-parse]
             ["stream" :as stream]
+            ["setimmediate"]
             [rdf.js.data-model]))
 
 ;; The rdf-parse.js parser
@@ -47,12 +48,13 @@
     "text/n3"
     "application/rdf+xml"
     "application/xml"
+    "application/ld+json"
+    "application/json"
     "text/xml"
     "image/svg+xml"
     "text/html"
     "application/xhtml+xml"
-    "application/ld+json"
-    "application/json"))
+    ))
 
 (defn parse
   "Takes data from the input-channel and parses them to Triples. Returns a channel that contains triples. input-channel needs to be closed before all triples are emitted."
