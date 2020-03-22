@@ -55,9 +55,6 @@ body {
     overflow: auto;
 }
 
-.ui-page main {
-}
-
 .ui-page .sidebar {
     flex-basis: 15rem;
     border-right: 0.2px solid lightgrey;
@@ -74,6 +71,19 @@ body {
 .ui-page .sidebar nav ul li {
     margin: 20px 0 20px 0;
     font-size: 1.2em;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.main-container .toolbar {
+    height: 20px;
+    text-align: right;
+    margin-top: 20px;
+    margin-right: 20px;
 }
 
 .ui-page main {

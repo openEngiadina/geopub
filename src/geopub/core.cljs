@@ -144,7 +144,7 @@
 ;; (load-ontologies)
 
 ;; (geopub.state/reset-graph! state)
-;; (geopub.state/add-triples! state (get-rdf "https://openengiadina.net/"
+;; (geopub.state/add-rdf-graph! state (get-rdf "https://openengiadina.net/"
 ;;                                           {:with-credentials? false}))
 
 ;; (geopub.state/add-triples! state (get-rdf "https://inqlab.net/"

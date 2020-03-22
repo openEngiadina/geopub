@@ -3,8 +3,10 @@
             [rdf.description :as rdf-description]
             [reagent.core :as r]
             [goog.string]
+            [geopub.state]
             [geopub.data.rdf :refer [description-header-component
-                                     description-component]]))
+                                     description-component]]
+            [reitit.frontend.easy :as rfe]))
 
 (defn sidebar []
   [:div.sidebar
@@ -24,13 +26,40 @@
       (goog.string.urlDecode)
       (rdf/iri)))
 
+(defn go-to-url []
+  (let [input (r/atom "")]
+    (fn []
+      [:span
+       [:input {:type "text"
+                :on-change #(reset! input (-> % .-target .-value))}]
+       [:button
+        {:on-click #(rfe/push-state :geopub.core/browse
+                                    {:iri (goog.string.urlEncode @input)})}
+        "Go"]])))
+
+
+(defn toolbar [state]
+  [:div.toolbar
+
+   [go-to-url]
+
+   [:button
+    {:on-click
+     #(geopub.state/add-rdf-graph!
+       state
+       (geopub.data.rdf/get-rdf (rdf/iri-value (get-iri state))))}
+    "Fetch more data"]])
+
 (defn description-view [state]
   (let [iri (get-iri state)
         description (r/track #(rdf-description/description iri (:graph @state)))]
 
     [:div.ui-page
      [sidebar]
-     [:main [description-component @description]]]))
+     [:div.main-container
+      [toolbar state]
+      [:main
+       [description-component @description]]]]))
 
 
 (defn type-view [state]
