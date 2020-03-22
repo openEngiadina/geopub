@@ -46,24 +46,32 @@
 ;; ============== Start fetching data ============
 
 (defn load-ontologies []
-  (geopub.state/add-triples! state
+  (geopub.state/add-rdf-graph! state
                              (get-rdf "activitystreams2.ttl"
                                       {:content-type "text/turtle"}))
-  (geopub.state/add-triples! state
+  (geopub.state/add-rdf-graph! state
                              (get-rdf "schema.ttl" {:content-type "text/turtle"})))
 
 (defn cpub-get-data! []
   "Get data from CPub server"
   ;; get public timeline
-  (geopub.state/add-triples! state
-                             (cpub/get-public-timeline server-url))
+  (geopub.state/add-rdf-graph! state
+                               (cpub/get-public-timeline server-url))
   ;; get actor profile
-  (geopub.state/add-triples! state
-                             (get-rdf actor-id {:auth auth}))
+  (geopub.state/add-rdf-graph! state
+                               (get-rdf actor-id
+                                        {:auth auth
+                                         :with-credentials? false}))
+
   ;; get actor inbox TODO: figure out outbox from actor object
-  (geopub.state/add-triples! state (get-rdf (str actor-id "/inbox") {:basic-auth auth}))
+  (geopub.state/add-rdf-graph! state (get-rdf (str actor-id "/inbox")
+                                              {:basic-auth auth
+                                               :with-credentials? false
+                                               }))
   ;; get actor outbox
-  (geopub.state/add-triples! state (get-rdf (str actor-id "/outbox") {:basic-auth auth})))
+  (geopub.state/add-rdf-graph! state (get-rdf (str actor-id "/outbox")
+                                              {:basic-auth auth
+                                               :with-credentials? false})))
 
 
 ;; ==================== UI =======================
@@ -136,4 +144,11 @@
 ;; (load-ontologies)
 
 ;; (geopub.state/reset-graph! state)
-;; (geopub.state/add-triples! state (get-rdf "https://www.rubensworks.net/"))
+;; (geopub.state/add-triples! state (get-rdf "https://openengiadina.net/"
+;;                                           {:with-credentials? false}))
+
+;; (geopub.state/add-triples! state (get-rdf "https://inqlab.net/"
+;;                                           {:with-credentials? false}))
+
+;; (geopub.state/add-triples! state (get-rdf "https://ruben.verborgh.org"
+;;                                           {:with-credentials? false}))

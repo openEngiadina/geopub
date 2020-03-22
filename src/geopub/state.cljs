@@ -10,6 +10,17 @@
   (r/atom
    {:graph (rdf.graph.map/graph)}))
 
+(defn add-rdf-graph!
+  "Takes RDF graph from a channel and merge with stategraph."
+  [state chan]
+  (go
+    (let [input-graph (<! chan)
+          ;; merge graph in state with input-graph
+          new-graph (rdf/graph-merge (:graph @state) input-graph)]
+      ;; swap in new graph
+      (swap! state (fn [state]
+                     (assoc state :graph new-graph))))))
+
 (defn add-triples!
   "Takes triples from a channel and adds them to the graph. The input channel must be closed before changes are applied."
   [state chan]

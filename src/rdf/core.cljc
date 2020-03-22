@@ -130,7 +130,9 @@
   ([t] (cond
          (instance? Triple t) t
 
-         (satisfies? ITripleConvert t) (-as-triple t)))
+         (satisfies? ITripleConvert t) (-as-triple t)
+
+         :else (throw (ex-info "can not cast to triple" t))))
 
   ([s p o] (->Triple
             ;; attempt to cast subject

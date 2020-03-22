@@ -32,7 +32,7 @@
   "Returns a channel holding the content of the public timeline"
   (-> server-url
       (public-timeline-url)
-      (get-rdf)))
+      (get-rdf {:with-credentials? false})))
 
 
 ;; (defn post-rdf [data url auth]

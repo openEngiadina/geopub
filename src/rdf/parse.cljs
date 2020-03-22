@@ -13,11 +13,12 @@
 ;; Helpers to get data between streams and core.async
  
 (defn put-stream!
-  "Reads values from a readable stream and puts them on a channel. When the stream ends, the channel is closed."
+  "Reads values from a readable stream and puts them on a channel. When the stream ends, the channel is closed. Errors will also be put on the channel."
   [ch stream]
   (.on stream "data" (fn [data]
                        (.pause stream)
                        (async/put! ch data #(.resume stream))))
+  (.on stream "error" #(async/put! ch %))
   (.on stream "end" #(async/close! ch))
   ch)
 
@@ -58,8 +59,8 @@
   [input-channel & {:keys [content-type base-iri]}]
   (let
       [input-stream (new (.-PassThrough stream))
-       ;; cast to rdf/triple by transducing output channel
-       output-channel (async/chan 1 (map rdf/triple))
+       ;; cast to rdf/triple by transducing output channel, pass errors trough
+       output-channel (async/chan 1 (map rdf/triple) identity)
        opts (clj->js {:contentType (or content-type "text/turtle")
                       :baseIRI (or base-iri "")})]
 
@@ -73,25 +74,12 @@
       ;; Return the output-channel
       output-channel))
 
-;; (defn print-channel
-;;   "Prints anything that is put in the channel" []
-;;   (let [c (async/chan)]
-;;     (go-loop []
-;;       (let [x (<! c)]
-;;         (println x)
-;;         (if x (recur))))
-;;     c))
 
-
-;; (def turtle-string "<a> <b> <c>, <d>, <e>.")
-
-;; (go
-
-;;   (let [printer (print-channel)
-;;         input-channel (async/chan)]
-
-;;     (async/pipe (parse input-channel) printer)
-
-;;     (async/put! input-channel turtle-string)
-
-;;     (async/close! input-channel)))
+(defn parse-string
+  "Parse string to triples. Returns a channel containing triples."
+  [input & {:keys [content-type base-iri]}]
+  (let [input-chan (async/chan)]
+    (async/put! input-chan input #(async/close! input-chan))
+    (parse input-chan
+           :content-type content-type
+           :base-iri base-iri)))
