@@ -109,7 +109,7 @@
       [:span
        {:class class}
        [:a
-        {:href (rfe/href :geopub.core/browse
+        {:href (rfe/href :geopub.routes/description
                          {:iri (goog.string.urlEncode (rdf/iri-value iri))})}
         (rdf/iri-value iri)]]
 

@@ -4,21 +4,46 @@
             [reagent.core :as r]
             [goog.string]
             [geopub.state]
-            [geopub.data.rdf :refer [description-header-component
+            [geopub.ns :as ns]
+            [geopub.data.rdf :refer [rdf-term-component
+                                     description-header-component
                                      description-component]]
-            [reitit.frontend.easy :as rfe]))
+            [cljs.core.logic :as l]
+            [rdf.logic :as rdf-logic]
+            [reitit.frontend.easy :as rfe])
+  (:require-macros [cljs.core.logic :refer [run* fresh]]))
+
+
+(defn browse-href [type]
+  (rfe/href :geopub.routes/browse {} {:type (goog.string.urlEncode
+                                             (rdf/iri-value type))}))
+
+(defn go-to-url []
+  (let [input (r/atom "")]
+    (fn []
+      [:div
+       [:input {:type "text"
+                :on-change #(reset! input (-> % .-target .-value))}]
+       [:button
+        {:on-click #(rfe/push-state :geopub.routes/description
+                                    {:iri (goog.string.urlEncode @input)})}
+        "Go"]])))
 
 (defn sidebar []
   [:div.sidebar
    [:nav
     [:h3 "Types"]
-    [:p "TODO Here you can select type of data to browse."]
     [:ul
-     [:li [:a {:href "#"} "Notes"]]
-     [:li [:a {:href "#"} "Events"]]
-     [:li [:a {:href "#"} "Websites"]]
-     [:li [:a {:href "#"} "Actors"]]
-     [:li [:a {:href "#"} "Ontologies"]]]]])
+     [:li [:a {:href (browse-href (ns/as "Note"))} "Notes"]]
+     [:li [:a {:href (browse-href (ns/as "Article"))} "Articles"]]
+     [:li [:a {:href (browse-href (ns/as "Person"))} "Person"]]
+     [:li [:a {:href (browse-href (ns/as "Like"))} "Likes"]]
+     [:li [:a {:href (browse-href (ns/schema "Event"))} "Events"]]
+     [:li [:a {:href (browse-href (ns/schema "WebPage"))} "Web Page"]]]
+
+    [:h3 "Enter URL"]
+    [go-to-url]
+    ]])
 
 (defn get-iri [state]
   (-> @state
@@ -26,22 +51,10 @@
       (goog.string.urlDecode)
       (rdf/iri)))
 
-(defn go-to-url []
-  (let [input (r/atom "")]
-    (fn []
-      [:span
-       [:input {:type "text"
-                :on-change #(reset! input (-> % .-target .-value))}]
-       [:button
-        {:on-click #(rfe/push-state :geopub.core/browse
-                                    {:iri (goog.string.urlEncode @input)})}
-        "Go"]])))
 
 
 (defn toolbar [state]
   [:div.toolbar
-
-   [go-to-url]
 
    [:button
     {:on-click
@@ -61,8 +74,33 @@
       [:main
        [description-component @description]]]]))
 
+(defn get-type [state]
+  (-> @state
+      (get-in [:current-route :query-params :type] "")
+      (goog.string.urlDecode)
+      (rdf/iri)))
 
-(defn type-view [state]
-  [:div.ui-page
-   [sidebar]
-   [:main "ylo"]])
+(defn get-descriptions
+  "Returns sequence of descriptions that have the specified type."
+  [graph type]
+  ;; TODO implement RDFs subClass
+  (map
+   #(rdf-description/description % graph)
+   (run* [subject] (rdf-logic/graph-typeo graph subject type))))
+
+(defn browse-view [state]
+  (let [type (get-type state)]
+    [:div.ui-page
+     [sidebar]
+     [:div.main-container
+      [:main
+       [:h1 [rdf-term-component type]]
+       [:table
+        [:tbody
+         (for [desc (get-descriptions (:graph @state) type)]
+           ^{:key (hash desc)}
+           [:tr
+            [:td [rdf-term-component
+                  (rdf-description/description-subject desc)]]]
+           )]]
+       ]]]))

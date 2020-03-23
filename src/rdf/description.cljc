@@ -28,3 +28,8 @@
   (run* [o]
     (rl/graph-tripleo (:graph description)
                       (rdf/triple (:subject description) key o))))
+
+(defn description-predications [description]
+  (run* [p o]
+    (rl/graph-tripleo (:graph description)
+                      (rdf/triple (:subject description) p o))))

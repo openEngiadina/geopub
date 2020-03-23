@@ -25,6 +25,7 @@
             [geopub.ui.browse]
             [geopub.data.rdf :refer [get-rdf]]
             [geopub.cpub :as cpub]
+            [geopub.routes]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
@@ -78,30 +79,6 @@
 
 (def default-view geopub.ui.activity/view)
 
-(def routes
-  [["activity"
-    {:name ::activity
-     :view geopub.ui.activity/view}]
-
-
-   ["browse/description/:iri"
-    {:name ::browse
-     :view geopub.ui.browse/description-view
-     :parameters {:path {:iri string?}}}]
-
-   ["browse/type/:iri"
-    {:name ::browse-type
-     :view geopub.ui.browse/type-view
-     :parameters {:path {:iri string?}}}]
-
-   ["store"
-    {:name ::store
-     :view geopub.ui.store/view}]
-
-   ["map"
-    {:name ::map
-     :view geopub.ui.map/view}]])
-
 (defn ui [state]
   [:div#container
 
@@ -112,9 +89,10 @@
 
     [:nav
      [:ul
-      [:li [:a {:href (rfe/href ::activity)} "Activity"]]
-      [:li [:a {:href (rfe/href ::store)} "Store"]]
-      [:li [:a {:href (rfe/href ::map)} "Map"]]]]]
+      [:li [:a {:href (rfe/href :geopub.routes/activity)} "Activity"]]
+      [:li [:a {:href (rfe/href :geopub.routes/browse)} "Browse"]]
+      [:li [:a {:href (rfe/href :geopub.routes/store)} "Store"]]
+      [:li [:a {:href (rfe/href :geopub.routes/map)} "Map"]]]]]
 
     (let [view (get-in @state [:current-route :data :view])]
       (if view
@@ -124,7 +102,7 @@
 (defn init! []
   (load-ontologies)
   (rfe/start!
-   (rf/router routes)
+   (rf/router geopub.routes/routes)
    (fn [match]
      (swap! state #(assoc % :current-route match)))
     ;; set to false to enable HistoryAPI
