@@ -177,10 +177,8 @@
   [:dl
    (for
        [triple (rdf/triple-seq object)]
-     ;; TODO add unique key
-     ^{:key (prn-str (rdf/triple-predicate triple))}
+     ^{:key (hash triple)}
      [:div.object-property-list
-      ;; TODO: add key
       [:dt [rdf-term-component (rdf/triple-predicate triple)]]
       [:dd [rdf-term-component (rdf/triple-object triple)]]])])
 
