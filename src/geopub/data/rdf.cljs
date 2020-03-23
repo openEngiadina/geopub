@@ -96,6 +96,14 @@
         ;; HTTP request failed. Return an error.
         (ex-info "HTTP request failed" response)))))
 
+;; Data posting
+ 
+(defn post-rdf [data url & [opts]]
+  (go
+    (let [body (<! (n3/encode data))]
+      (http/post url (merge
+                      {:headers {"Content-type" "text/turtle"}
+                       :body body} opts)))))
 
 ;; Reagent components
 

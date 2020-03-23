@@ -5,6 +5,7 @@
             [goog.string]
             [geopub.state]
             [geopub.ns :as ns]
+            [geopub.cpub]
             [geopub.data.rdf :refer [rdf-term-component
                                      description-header-component
                                      description-component]]
@@ -39,7 +40,9 @@
      [:li [:a {:href (browse-href (ns/as "Person"))} "Person"]]
      [:li [:a {:href (browse-href (ns/as "Like"))} "Likes"]]
      [:li [:a {:href (browse-href (ns/schema "Event"))} "Events"]]
-     [:li [:a {:href (browse-href (ns/schema "WebPage"))} "Web Page"]]]
+     [:li [:a {:href (browse-href (ns/schema "WebPage"))} "Web Page"]]
+     [:li [:a {:href (browse-href (ns/rdfs "Class"))} "Class"]]
+     ]
 
     [:h3 "Enter URL"]
     [go-to-url]
@@ -55,6 +58,10 @@
 
 (defn toolbar [state]
   [:div.toolbar
+
+   [:button
+    {:on-click
+     #(geopub.cpub/like! (get-iri state))} "Like"]
 
    [:button
     {:on-click

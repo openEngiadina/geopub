@@ -21,7 +21,7 @@
             [geopub.data.rdf :refer [iri-component
                                      literal-component
                                      description-component]]
-            [activitypub.core :as activitypub]
+            [geopub.activitypub :as activitypub]
             [rdf.core :as rdf]
             [rdf.description :as rd]
             [rdf.ns :as ns]
