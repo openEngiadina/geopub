@@ -17,6 +17,7 @@
 
 (ns geopub.core
   (:require [reagent.core :as r]
+            [reagent.dom]
             [goog.Uri :as uri]
             [geopub.state]
             [geopub.ui.map]
@@ -30,6 +31,8 @@
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
 
+(defn ^:dev/after-load start []
+  (reagent.dom/force-update-all))
 
 ;; ====================== Config =================
 
