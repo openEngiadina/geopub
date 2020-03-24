@@ -21,7 +21,7 @@
   (:require [cljs.core.async :refer [<!]]
             [rdf.core :as rdf]
             [geopub.data.rdf :refer [get-rdf]]
-            [geopub.activitypub :as activitypub]
+            [geopub.data.activity :as activity]
             [goog.Uri :as uri]))
 
 (defn public-timeline-url [server-url]
@@ -37,6 +37,6 @@
 
 
 (defn like! [what]
-  (-> (activitypub/like what)
+  (-> (activity/like what)
       (geopub.data.rdf/post-rdf "http://localhost:4000/users/alice/outbox"
                                 {:basic-auth {:username "alice" :password "123"}})))

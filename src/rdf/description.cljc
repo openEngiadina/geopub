@@ -21,15 +21,22 @@
 (defn description-subject [description]
   (:subject description))
 
+(defn description-graph [description]
+  (:graph description))
+
 (defn description-move [description new-subject]
   (->Description new-subject (:graph description)))
 
+(defn description-tripleo
+  [desc p o]
+  (rl/graph-tripleo (description-graph desc)
+                 (rdf/triple (description-subject desc) p o)))
+
 (defn description-get [description key]
   (run* [o]
-    (rl/graph-tripleo (:graph description)
-                      (rdf/triple (:subject description) key o))))
+    (description-tripleo description key o)))
 
 (defn description-predications [description]
   (run* [p o]
-    (rl/graph-tripleo (:graph description)
-                      (rdf/triple (:subject description) p o))))
+    (description-tripleo description p o)))
+

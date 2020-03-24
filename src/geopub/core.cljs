@@ -128,5 +128,25 @@
 ;; (geopub.state/add-triples! state (get-rdf "https://inqlab.net/"
 ;;                                           {:with-credentials? false}))
 
-;; (geopub.state/add-triples! state (get-rdf "https://ruben.verborgh.org"
-;;                                           {:with-credentials? false}))
+;; Load some stuff to play around
+
+(geopub.state/add-triples! state (get-rdf "https://ruben.verborgh.org"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-triples! state (get-rdf "https://chaos.social/users/pukkamustard"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-triples! state (get-rdf "https://chaos.social/users/bumbleblue"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-triples! state (get-rdf "https://mastodon.social/users/sl007"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-triples! state (get-rdf "https://framapiaf.org/users/srosset"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-triples! state (get-rdf "https://literatur.social/users/buechergefahr"
+                                          {:with-credentials? false}))
+
+
+

@@ -21,7 +21,7 @@
             [geopub.data.rdf :refer [iri-component
                                      literal-component
                                      description-component]]
-            [geopub.activitypub :as activitypub]
+            [geopub.data.activity :as activity]
             [rdf.core :as rdf]
             [rdf.description :as rd]
             [rdf.ns :as ns]
@@ -46,6 +46,7 @@
 (defn sidebar []
   [:div.sidebar
    [:nav
+    [:p "TODO here you can filter activities"]
     [:ul
      [:li [:a {:href "#"} "you"]]
      [:li [:a {:href "#"} "people you follow"]]
@@ -58,6 +59,6 @@
    [sidebar]
    [:main
     [:h1 "Activity"]
-    (for [activity (activitypub/get-activities (:graph @state))]
-      ^{:key (prn-str (rd/description-subject activity))}
+    (for [activity (activity/get-activities (:graph @state))]
+      ^{:key (hash activity)}
       [activity-component activity])]])

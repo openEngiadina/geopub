@@ -7,7 +7,6 @@
             [geopub.ns :as ns]
             [geopub.cpub]
             [geopub.data.rdf :refer [rdf-term-component
-                                     description-header-component
                                      description-component]]
             [cljs.core.logic :as l]
             [rdf.logic :as rdf-logic]

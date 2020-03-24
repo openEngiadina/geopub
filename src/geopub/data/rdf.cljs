@@ -149,37 +149,28 @@
 
 (defn- description-type
   "Helper to get type of subject being described. This defines what multimethod is used to render the description."
-  [object]
+  [object & [opts]]
   ;; TODO the described object can have multiple types. Currently we use the first type. Allow a preference to be given.
   (first (description-get object (rdf-ns/rdf :type))))
 
-(defmulti description-header-component
-  "Render an appropriate title for a description"
-  (fn [object] (description-type object)))
+(defmulti description-label-term
+  "Returns an appropriate short label for the description."
+  (fn [object & [opts]] (description-type object opts)))
 
-(defmethod description-header-component
+(defmethod description-label-term
   :default
-  [object]
-  [:header [:h1 (rdf-term-component (description-subject object))]])
+  [object & [opts]]
+  (description-subject object))
 
-(defmethod description-header-component
-  (rdfs "Class")
-  [object]
-  (let [title (or (first (description-get object (rdfs "label")))
-                  (description-subject object))
-        sub-title (first (description-get object (rdfs "comment")))]
-    [:header
-     [:h1 [rdf-term-component title]
-      [:span.raw-id "(" (rdf-term-component (description-subject object)) ")"]]
-     (if sub-title [:p.subtitle [rdf-term-component sub-title]])]
-    ))
+(defn description-label-component [object & [opts]]
+  [rdf-term-component (description-label-term object opts)])
 
 (defn description-turtle-component [object]
   (let [as-turtle (r/atom "")]
     (fn []
       ;; encode description as RDF/Turtle
       (go (swap! as-turtle (constantly (<! (n3/encode object)))))
-       [:code.turtle [:pre @as-turtle]])))
+      [:code.turtle [:pre @as-turtle]])))
 
 (defn description-property-list-component [object]
   [:dl
@@ -190,36 +181,9 @@
       [:dt [rdf-term-component (rdf/triple-predicate triple)]]
       [:dd [rdf-term-component (rdf/triple-object triple)]]])])
 
-(defmulti description-body-component
-  "Takes an rdf description and tries to create a nice view."
-  (fn [object] (description-type object)))
-
-(defmethod description-body-component
-  :default
-  [object]
-  [:div.object-body
-   [description-property-list-component object]
-   ;; [:details
-   ;;  [:summary "Turtle"]
-   ;;  [description-turtle-component object]]
-   ])
-
 (defn description-component
   [object]
   [:section.object
-   [description-header-component object]
-   [description-body-component object]])
-
-;; (defmethod description-component
-;;   (as :Note)
-;;   [object]
-;;   [:div.object
-;;    (for [content (description-get object (as :content))]
-;;      [:p [literal-component content]])])
-
-;; (defmethod description-component
-;;   (schema "Event")
-;;   [object]
-;;   [:div.object "I'm an event"])
-
-
+   [:h1 [description-label-component object]]
+   [:div.object-body
+    [description-property-list-component object]]])
