@@ -19,8 +19,8 @@
   (:require [geopub.ns :refer [as rdfs schema]]
             [geopub.state]
             [geopub.data.rdf :refer [iri-component
-                                     literal-component
-                                     description-component]]
+                                     description-component
+                                     description-label-component]]
             [geopub.data.activity :as activity]
             [rdf.core :as rdf]
             [rdf.description :as rd]
@@ -28,20 +28,37 @@
             [rdf.graph.map]))
 
 (defn activity-component [activity]
-  [:div.activity
-   ;; render object
-   (for
-    [object
-     (map (partial rd/description-move activity)
-          (rd/description-get activity (as :object)))]
+  (let
+      [object (rd/description-move
+               activity
+               (first (rd/description-get activity (as "object"))))
+       actor (rd/description-move
+              activity
+              (first (rd/description-get activity (as "actor"))))
 
-     ^{:key (prn-str (rd/description-subject object))}
-     [description-component object])
+       activity-type (rd/description-move
+                      activity
+                      (first (rd/description-get activity (ns/rdf :type))))
+       ]
+      [:div.activity
+       ;; render object
+       ;; (for
+       ;;  [object
+       ;;   (map (partial rd/description-move activity)
+       ;;        (rd/description-get activity (as :object)))]
 
-   [:div.meta
-    [iri-component (rd/description-get activity (as :actor))]
-    [:br]
-    [iri-component (rd/description-get activity (ns/rdf :type))]]])
+       ;;   ^{:key (prn-str (rd/description-subject object))}
+       ;;   [description-component object])
+
+       [:span.actor [description-label-component actor]]
+       [:span.activity-type [description-label-component activity-type]]
+       [:span.object [description-label-component object]]
+
+       ;; [:div.meta
+       ;;  [iri-component (rd/description-get activity (as :actor))]
+       ;;  [:br]
+       ;;  [iri-component (rd/description-get activity (ns/rdf :type))]]
+       ]))
 
 (defn sidebar []
   [:div.sidebar

@@ -36,8 +36,7 @@
       (map-content-types)))
 
 (defn wrap-request
-  "Returns a batteries-included HTTP request function coresponding to the given
-   core client. See client/request"
+  "Per default cljs-http parses JSON. We do not want this."
   [request]
   (-> cljs-http.core/request
       cljs-http.client/wrap-accept
@@ -107,6 +106,10 @@
 
 ;; Reagent components
 
+(defn- iri-href [iri]
+  (rfe/href :geopub.routes/description
+            {:iri (goog.string.urlEncode (rdf/iri-value iri))}))
+
 (defn iri-component
   "Render an IRI as a link that can be followed in the internal browser."
   [iri & {:keys [class]}]
@@ -117,8 +120,7 @@
       [:span
        {:class class}
        [:a
-        {:href (rfe/href :geopub.routes/description
-                         {:iri (goog.string.urlEncode (rdf/iri-value iri))})}
+        {:href (iri-href iri)}
         (rdf/iri-value iri)]]
 
       (seq? iri)
@@ -155,7 +157,9 @@
 
 (defmulti description-label-term
   "Returns an appropriate short label for the description."
-  (fn [object & [opts]] (description-type object opts)))
+  (fn [object & [opts]]
+    ;; (println (description-type object opts))
+    (description-type object opts)))
 
 (defmethod description-label-term
   :default
@@ -163,7 +167,23 @@
   (description-subject object))
 
 (defn description-label-component [object & [opts]]
-  [rdf-term-component (description-label-term object opts)])
+  (let
+      [subject (description-subject object)
+       label-term (description-label-term object opts)]
+
+    (if
+        (and
+         ;; label term is not an iri
+         (not (rdf/iri? label-term))
+         ;; subject is an iri
+         (rdf/iri? subject))
+
+      ;; then make the component a clickable link
+      [:a {:href (iri-href (description-subject object))}
+       [rdf-term-component (description-label-term object opts)]]
+      
+      ;; else just display as rdf-term
+      [rdf-term-component (description-label-term object opts)])))
 
 (defn description-turtle-component [object]
   (let [as-turtle (r/atom "")]

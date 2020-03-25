@@ -130,24 +130,11 @@ body {
     padding: 10px;
     border: 1px solid grey;
     border-radius: 5px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
 }
 
-.activity .meta {
-    color: grey;
-    font-weight: light;
-    font-size: small;
-    margin: 10px;
-}
-
-.activity details {
-    font-weight: light;
-    font-size: small;
-}
-
-.activity .meta .type {
-    margin-left: 10px;
-}
-
-.activity .meta .published {
-    float: right;
+.activity span {
+    margin: 0.2em;
 }
