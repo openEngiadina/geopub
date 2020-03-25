@@ -16,22 +16,29 @@
   "Returns all activities as a lazy sequence of RDF descriptions"
   [graph]
   (let
-      [;; first find all the activity ids
-       activity-ids (run* [id]
+      [activity-ids (run* [id]
                       (fresh [activity-type]
 
                         ;; Get all possible activity types
                         (rdf-logic/graph-tripleo graph
-                                           (rdf/triple activity-type
-                                                       (rdfs "subClassOf")
-                                                       (as "Activity")))
+                                                 (rdf/triple activity-type
+                                                             (rdfs "subClassOf")
+                                                             (as "Activity")))
 
                         ;; Get all activities
-                        (rdf-logic/graph-typeo graph id activity-type))
-                      )]
+                        (rdf-logic/graph-typeo graph id activity-type)))]
 
-    (map #(rdf-description/description % graph) activity-ids)))
-
+    (->> activity-ids
+         (map #(rdf-description/description % graph))
+         (sort-by
+          ;; get the as:published property and cast to js/Date
+          (fn [description]
+            (->> (rdf-description/description-get description (as "published"))
+                 (first)
+                 (rdf/literal-value)
+                 (new js/Date)))
+          ;; reverse the sort order
+          (comp - compare)))))
 
 ;; Helpers for creating an Activity
 
