@@ -1,13 +1,16 @@
 (ns rdf.js.data-model
   "Bindings to the RDF/JS Data model specification (http://rdf.js.org/data-model-spec/).
 
-  Note that the bindings use the explicit class defined in the @rdfjs/data-model library instead of checking the `termType` attribute of values. This means that this binding will only work with libraries that use the @rdfjs/data-model library (i.e. not N3.js)."
+  Note that per RDFJS data model specification the types are strinlgy typed using the `termType` attribute. We do not want to do stringly typing (it doesn't fit into Clojure's polymorphism). We use JavaScript prototypes magic.
 
+  We implement bindings to the explicit classes defined in the @rdfjs/data-model library. Almost everything just works with this. Except N3.js.
+
+  N3.js implments it's own types. We also implement bindings to N3.js types here. "
   (:require [rdf.core :as rdf]
-            ["@rdfjs/data-model" :as rdf-js]))
+            ["n3" :as n3]
+            ["@rdfjs/data-model" :as rdf-js]
+            [goog.date]))
 
-
-;; Note: I understand way too little about the JavaScript prototype thing. But this works...somehow (?!?)
 
 ;; NamedNode (IRI)
  
@@ -17,6 +20,13 @@
     rdf/IIRIConvert
     (-as-iri [x] (rdf/iri (.-value x))))
 
+(def n3-named-node-type
+  (.-NamedNode (.-internal (.-DataFactory n3))))
+
+(extend-type n3-named-node-type
+  rdf/IIRIConvert
+  (-as-iri [x] (rdf/iri (.-value x))))
+
 ;; BlankNode
 
 (def blank-node-type (type (.blankNode rdf-js)))
@@ -25,24 +35,53 @@
   rdf/IBlankNodeConvert
   (-as-blank-node [x] (rdf/blank-node (.-value x))))
 
+(def n3-blank-node-type
+  (.-BlankNode (.-internal (.-DataFactory n3))))
+
+(extend-type n3-blank-node-type
+  rdf/IBlankNodeConvert
+  (-as-blank-node [x] (rdf/blank-node (.-value x))))
+
 ;; Literal
+
+(defn- as-literal [x]
+  (rdf/literal
+   ;; NOTE An attempt was made to cast value to proper types (from string). I.e. cast values with datatype xsd:dateTime to js/Date. This seems to be very opinionated and always incomplete. Better leave value in lexical form and have upper layers cast value to whatever they want.
+   (.-value x)
+   :language (if (not (clojure.string/blank? (.-language x)))
+               (.-language x))
+   :datatype (if (.-datatype x)
+               (rdf/iri (.-datatype x)))))
 
 (def literal-type (type (.literal rdf-js)))
 
 (extend-type literal-type
   rdf/ILiteralConvert
-  (rdf/-as-literal [x]
-    (rdf/literal (.-value x)
-                 :language (if (not (clojure.string/blank? (.-language x)))
-                             (.-language x))
-                 :datatype (if (.-datatype x)
-                             (rdf/iri (.-datatype x))))))
+  (rdf/-as-literal [x] (as-literal x))
+  )
+
+(def n3-literal-type
+  (.-Literal (.-internal (.-DataFactory n3))))
+
+(extend-type n3-literal-type
+  rdf/ILiteralConvert
+  (rdf/-as-literal [x] (as-literal x)))
 
 ;; Quad (Triple)
 
 (def quad-type (type (.quad rdf-js)))
 
 (extend-type quad-type
+  rdf/ITripleConvert
+  (rdf/-as-triple [x]
+    (rdf/triple (.-subject x)
+                (.-predicate x)
+                (.-object x))))
+
+(def n3-quad-type
+  (.-Quad (.-internal (.-DataFactory n3))))
+
+(extend-type n3-quad-type
   rdf/ITripleConvert
   (rdf/-as-triple [x]
     (rdf/triple (.-subject x)

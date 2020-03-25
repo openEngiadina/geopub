@@ -9,13 +9,6 @@
 
 ;; NamedNode
 
-(def n3-named-node-type
-  (.-NamedNode (.-internal data-factory)))
-
-(extend-type n3-named-node-type
-  rdf/IIRIConvert
-  (-as-iri [x] (rdf/iri (.-value x))))
-
 (defprotocol INamedNodeConvert
   "Protocol for types that can be converted to NamedNode"
   (-as-named-node [x]))
@@ -26,13 +19,6 @@
 
 ;; BlankNode
 
-(def n3-blank-node-type
-  (.-BlankNode (.-internal (.-DataFactory n3))))
-
-(extend-type n3-blank-node-type
-  rdf/IBlankNodeConvert
-  (-as-blank-node [x] (rdf/blank-node (.-value x))))
-
 (defprotocol IBlankNodeConvert
   (-as-blank-node [x]))
 
@@ -42,18 +28,6 @@
     (.blankNode data-factory (rdf/blank-node-id x))))
 
 ;; Literal
-
-(def n3-literal-type
-  (.-Literal (.-internal (.-DataFactory n3))))
-
-(extend-type n3-literal-type
-  rdf/ILiteralConvert
-  (rdf/-as-literal [x]
-    (rdf/literal (.-value x)
-                 :language (if (not (clojure.string/blank? (.-language x)))
-                             (.-language x))
-                 :datatype (if (.-datatype x)
-                             (rdf/iri (.-datatype x))))))
 
 (defprotocol ILiteralConvert
   (-as-literal [x]))
@@ -72,16 +46,6 @@
                 :else nil))))
 
 ;; Quad/Triple
-
-(def n3-quad-type
-  (.-Quad (.-internal (.-DataFactory n3))))
-
-(extend-type n3-quad-type
-  rdf/ITripleConvert
-  (rdf/-as-triple [x]
-    (rdf/triple (.-subject x)
-                (.-predicate x)
-                (.-object x))))
 
 (defprotocol IQuadConvert
   (-as-quad [x]))
@@ -108,23 +72,6 @@
                (implements? INamedNodeConvert o) (-as-named-node o)
                (implements? IBlankNodeConvert o) (-as-blank-node o)
                (implements? ILiteralConvert o) (-as-literal o))))))
-
-;; Parsing
-;;
-
-(defn parse
-  "Parse RDF/Turtle to a sequence of Triples. Returns a transducer if no input is given."
-  ([]
-   (fn [rf]
-     (fn
-       ([] (rf))
-       ([result] (rf result))
-       ([result input] (rf result (parse input))))))
-  ([input]
-   (map rdf/triple
-        ;; convert to Clojure list before mapping
-        (js->clj (.parse (new n3/Parser) input)))))
-
 
 ;; Encoding
  
