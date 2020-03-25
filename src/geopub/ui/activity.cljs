@@ -25,7 +25,18 @@
             [rdf.core :as rdf]
             [rdf.description :as rd]
             [rdf.ns :as ns]
-            [rdf.graph.map]))
+            [rdf.graph.map]
+            ["date-fns" :as date-fns]))
+
+
+(defn published-component [activity]
+  (let [published (new js/Date (-> activity
+                                   (rd/description-get (as "published"))
+                                   (first)
+                                   (rdf/literal-value)))
+        ]
+    [:span (.formatDistance date-fns published (new js/Date)
+                            (clj->js {:addSuffix true}))]))
 
 (defn activity-component [activity]
   (let
@@ -53,12 +64,16 @@
        [:span.actor [description-label-component actor]]
        [:span.activity-type [description-label-component activity-type]]
        [:span.object [description-label-component object]]
+       [published-component activity]
+       ;; [:span [description-label-component activity]]
 
        ;; [:div.meta
        ;;  [iri-component (rd/description-get activity (as :actor))]
        ;;  [:br]
        ;;  [iri-component (rd/description-get activity (ns/rdf :type))]]
        ]))
+
+
 
 (defn sidebar []
   [:div.sidebar
