@@ -59,7 +59,7 @@
 
    [:button
     {:on-click
-     #(geopub.cpub/like! (get-iri state))} "Like"]
+     #(geopub.cpub/like! state (get-iri state))} "Like"]
 
    [:button
     {:on-click

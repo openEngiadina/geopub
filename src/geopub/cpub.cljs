@@ -17,11 +17,15 @@
 
 (ns geopub.cpub
   "Helpers for interacting with CPub server"
-  (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [cljs.core.async :refer [<!]]
+  (:require-macros [cljs.core.async.macros :refer [go]]
+                   [async-error.core :refer [<? go-try]])
+  (:require [cljs.core.async :as async :refer [<!]]
+            [async-error.core]
             [rdf.core :as rdf]
+            [geopub.state]
             [geopub.data.rdf :refer [get-rdf]]
             [geopub.data.activity :as activity]
+            [geopub.ns :refer [ldp as]]
             [goog.Uri :as uri]))
 
 (defn public-timeline-url [server-url]
@@ -35,8 +39,31 @@
       (public-timeline-url)
       (get-rdf {:with-credentials? false})))
 
+(defn login! [state id basic-auth]
+  (go-try
+    (let [id (rdf/iri id)
+          profile (rdf/description
+                   id (<? (get-rdf id {:basic-auth basic-auth})))
+          inbox (<? (get-rdf
+                     (rdf/description-get-first profile (ldp "inbox"))
+                     {:basic-auth basic-auth}))
+          outbox (<? (get-rdf
+                      (rdf/description-get-first profile (as "outbox"))
+                      {:basic-auth basic-auth}))]
 
-(defn like! [what]
+      (swap! state
+             (comp
+              #(assoc % :account
+                      {:basic-auth basic-auth
+                       :profile (rdf/description-subject profile)
+                       :outbox (rdf/description-get-first profile (as "outbox"))})
+              (geopub.state/merge-graphs (rdf/description-graph profile)
+                                         inbox
+                                         outbox))))))
+
+(defn like! [state what]
+  (print (get-in @state [:account :outbox]))
   (-> (activity/like what)
-      (geopub.data.rdf/post-rdf "http://localhost:4000/users/alice/outbox"
-                                {:basic-auth {:username "alice" :password "123"}})))
+      (geopub.data.rdf/post-rdf
+       (get-in @state [:account :outbox])
+       {:basic-auth (get-in @state [:account :basic-auth])})))

@@ -63,7 +63,7 @@
                                {"Accept" (clojure.string/join
                                           ", " (rdf-parse/content-types))}
                                :method :get
-                               :url url}
+                               :url (if (rdf/iri? url) (rdf/iri-value url) url)}
                               opts)
           ;; cljs-http does too much post-processing (such as parsing json)
           request (wrap-request cljs-http.core/request)
@@ -98,9 +98,10 @@
 (defn post-rdf [data url & [opts]]
   (go
     (let [body (<! (n3/encode data))]
-      (http/post url (merge
-                      {:headers {"Content-type" "text/turtle"}
-                       :body body} opts)))))
+      (http/post (if (rdf/iri? url) (rdf/iri-value url) url)
+                 (merge
+                  {:headers {"Content-type" "text/turtle"}
+                   :body body} opts)))))
 
 ;; Reagent components
 

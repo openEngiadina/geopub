@@ -10,6 +10,15 @@
   (r/atom
    {:graph (rdf.graph.map/graph)}))
 
+(defn merge-graphs
+  "Returns a function that will merge in graphs into state graph. Useful when using swap! on the state."
+  [& graphs]
+  (fn [state]
+    (assoc state :graph
+           (reduce rdf/graph-merge
+                   (or (:graph state) (rdf.graph.map/graph))
+                   graphs))))
+
 (defn add-rdf-graph!
   "Takes RDF graph from a channel and merge with stategraph."
   [state chan]
@@ -21,9 +30,7 @@
       (if (rdf/graph? input)
 
         ;; swap state graph with graph merged with input graph
-        (swap! state (fn [state]
-                       (assoc state :graph
-                              (rdf/graph-merge (:graph state) input))))
+        (swap! state (merge-graphs input))
 
         ;; else return whatever input is (probably an error)
         input))))

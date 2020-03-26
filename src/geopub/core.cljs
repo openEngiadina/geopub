@@ -61,21 +61,10 @@
   ;; get public timeline
   (geopub.state/add-rdf-graph! state
                                (cpub/get-public-timeline server-url))
-  ;; get actor profile
-  (geopub.state/add-rdf-graph! state
-                               (get-rdf actor-id
-                                        {:auth auth
-                                         :with-credentials? false}))
-
-  ;; get actor inbox TODO: figure out outbox from actor object
-  (geopub.state/add-rdf-graph! state (get-rdf (str actor-id "/inbox")
-                                              {:basic-auth auth
-                                               :with-credentials? false
-                                               }))
-  ;; get actor outbox
-  (geopub.state/add-rdf-graph! state (get-rdf (str actor-id "/outbox")
-                                              {:basic-auth auth
-                                               :with-credentials? false})))
+  ;; Login
+  (geopub.cpub/login! state
+                      "http://localhost:4000/users/alice"
+                      {:username "alice" :password "123"}))
 
 
 ;; ==================== UI =======================
@@ -148,6 +137,4 @@
 
 (geopub.state/add-rdf-graph! state (get-rdf "https://literatur.social/users/buechergefahr/outbox?page=true"
                                           {:with-credentials? false}))
-
-
 

@@ -204,7 +204,12 @@
 (defn description
   "Make a new description"
   [subject graph]
-  (->Description subject graph))
+  (if (and (iri? subject) (graph? graph))
+    (->Description subject graph)
+    graph))
+
+(defn description? [description]
+  (instance? Description description))
 
 (defn description-subject
   "Get the subject of a description"
@@ -229,3 +234,15 @@
         (:graph description)
         (triple (:subject description) predicate (l/lvar)))))
 
+(defn description-get-first
+  "Get first object for given predicate. Warning: If there are multiple objects the first is note properly defined."
+  [description predicate]
+  (first (description-get description predicate)))
+
+(defn description-map-graph
+  "Returns a description with f applied on the graph. f must return a graph. If not the output of f will be returned."
+  [f description]
+  (let [mapped-graph (f (description-graph description))]
+    (if (graph? mapped-graph)
+      (description (description-subject description) mapped-graph)
+      mapped-graph)))
