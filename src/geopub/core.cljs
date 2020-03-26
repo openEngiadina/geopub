@@ -114,41 +114,39 @@
             (.getElementById js/document "app")
             cpub-get-data!))
 
-
-;; how to like something:
-;; (-> (activitypub/like (rdf/iri "http://openengiadina.net/"))
-;;     (cpub/post-rdf (str actor-id "/outbox") auth))
-
-;; (cpub-get-data!)
-
-;; NOTE: The mystery why the size of the store increases when loading the ontology: Blank Nodes. N3.js gives new ids so blank nodes (and thing refering those blank nodes) are duplicted...need metadata
-;; (load-ontologies)
-
-;; (geopub.state/reset-graph! state)
-;; (geopub.state/add-rdf-graph! state (get-rdf "https://openengiadina.net/"
-;;                                           {:with-credentials? false}))
-
-;; (geopub.state/add-triples! state (get-rdf "https://inqlab.net/"
-;;                                           {:with-credentials? false}))
-
 ;; Load some stuff to play around
 
-(geopub.state/add-triples! state (get-rdf "https://ruben.verborgh.org"
+(geopub.state/add-rdf-graph! state (get-rdf "https://inqlab.net/"
                                           {:with-credentials? false}))
 
-(geopub.state/add-triples! state (get-rdf "https://chaos.social/users/pukkamustard"
+(geopub.state/add-rdf-graph! state (get-rdf "https://openengiadina.net/"
                                           {:with-credentials? false}))
 
-(geopub.state/add-triples! state (get-rdf "https://chaos.social/users/bumbleblue"
+(geopub.state/add-rdf-graph! state (get-rdf "https://ruben.verborgh.org/"
+                                            {:with-credentials? false}))
+
+(geopub.state/add-rdf-graph! state (get-rdf "https://chaos.social/users/pukkamustard"
                                           {:with-credentials? false}))
 
-(geopub.state/add-triples! state (get-rdf "https://mastodon.social/users/sl007"
+(geopub.state/add-rdf-graph! state (get-rdf "https://chaos.social/users/pukkamustard/outbox?page=true"
                                           {:with-credentials? false}))
 
-(geopub.state/add-triples! state (get-rdf "https://framapiaf.org/users/srosset"
+(geopub.state/add-rdf-graph! state (get-rdf "https://mastodon.social/users/sl007"
                                           {:with-credentials? false}))
 
-(geopub.state/add-triples! state (get-rdf "https://literatur.social/users/buechergefahr"
+(geopub.state/add-rdf-graph! state (get-rdf "https://mastodon.social/users/sl007/outbox?page=true"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-rdf-graph! state (get-rdf "https://framapiaf.org/users/framasoft"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-rdf-graph! state (get-rdf "https://framapiaf.org/users/framasoft/outbox?page=true"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-rdf-graph! state (get-rdf "https://literatur.social/users/buechergefahr"
+                                          {:with-credentials? false}))
+
+(geopub.state/add-rdf-graph! state (get-rdf "https://literatur.social/users/buechergefahr/outbox?page=true"
                                           {:with-credentials? false}))
 
 
