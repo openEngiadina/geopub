@@ -1,6 +1,5 @@
 (ns geopub.ui.browse
   (:require [rdf.core :as rdf]
-            [rdf.description :as rdf-description]
             [reagent.core :as r]
             [goog.string]
             [geopub.state]
@@ -55,8 +54,6 @@
       (goog.string.urlDecode)
       (rdf/iri)))
 
-
-
 (defn toolbar [state]
   [:div.toolbar
 
@@ -68,12 +65,13 @@
     {:on-click
      #(geopub.state/add-rdf-graph!
        state
-       (geopub.data.rdf/get-rdf (rdf/iri-value (get-iri state))))}
+       (geopub.data.rdf/get-rdf (rdf/iri-value (get-iri state))
+                                {:with-credentials? false}))}
     "Fetch more data"]])
 
 (defn description-view [state]
   (let [iri (get-iri state)
-        description (r/track #(rdf-description/description iri (:graph @state)))]
+        description (r/track #(rdf/description iri (:graph @state)))]
 
     [:div.ui-page
      [sidebar]
@@ -93,7 +91,7 @@
   [graph type]
   ;; TODO implement RDFs subClass
   (map
-   #(rdf-description/description % graph)
+   #(rdf/description % graph)
    (run* [subject] (rdf-logic/graph-typeo graph subject type))))
 
 (defn browse-view [state]
@@ -109,6 +107,6 @@
            ^{:key (hash desc)}
            [:tr
             [:td [rdf-term-component
-                  (rdf-description/description-subject desc)]]]
+                  (rdf/description-subject desc)]]]
            )]]
        ]]]))

@@ -185,3 +185,8 @@
              (graph-collecto graph (dec n) o t))])
 
     l/fail))
+
+(defn description-tripleo
+  [desc p o]
+  (graph-tripleo (rdf/description-graph desc)
+                 (rdf/triple (rdf/description-subject desc) p o)))

@@ -7,7 +7,6 @@
    [geopub.ns :refer [geo]]
    [rdf.core :as rdf]
    [rdf.logic :as rl]
-   [rdf.description :as rd]
    [cljs.core.logic :as l]))
 
 
@@ -31,7 +30,7 @@
 (defn get-geo-object [state]
   "Returns a list of activities that have a latitude and longitude"
   ;; TODO only store the relevant subgraph in the description
-  (map #(rd/description % (:graph @state))
+  (map #(rdf/description % (:graph @state))
        (run* [s]
          (fresh [x y]
            (rl/graph-tripleo (:graph @state) (rdf/triple s (geo "long") x))
@@ -40,12 +39,12 @@
 (defn get-location [object]
   (let
       [lat (-> object
-               (rd/description-get (geo "lat"))
+               (rdf/description-get (geo "lat"))
                (first)
                (rdf/literal-value))
 
        long (-> object
-                (rd/description-get (geo "long"))
+                (rdf/description-get (geo "long"))
                 (first)
                 (rdf/literal-value))]
     [lat long]))
@@ -68,7 +67,7 @@
       :attribution copy-osm}]
 
     (for [geo-object (get-geo-object state)]
-      ^{:key (prn-str (rd/description-subject geo-object))}
+      ^{:key (prn-str (rdf/description-subject geo-object))}
       [geo-object-component geo-object])
 
     ]])

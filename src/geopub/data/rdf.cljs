@@ -1,8 +1,6 @@
 (ns geopub.data.rdf
   "Helpers for displaying RDF data"
   (:require [rdf.core :as rdf]
-            [rdf.description :refer [description-get
-                                     description-subject]]
             [rdf.ns :as rdf-ns]
             [rdf.n3 :as n3]
             [rdf.parse :as rdf-parse]
@@ -153,7 +151,7 @@
   "Helper to get type of subject being described. This defines what multimethod is used to render the description."
   [object & [opts]]
   ;; TODO the described object can have multiple types. Currently we use the first type. Allow a preference to be given.
-  (first (description-get object (rdf-ns/rdf :type))))
+  (first (rdf/description-get object (rdf-ns/rdf :type))))
 
 (defmulti description-label-term
   "Returns an appropriate short label for the description."
@@ -164,11 +162,11 @@
 (defmethod description-label-term
   :default
   [object & [opts]]
-  (description-subject object))
+  (rdf/description-subject object))
 
 (defn description-label-component [object & [opts]]
   (let
-      [subject (description-subject object)
+      [subject (rdf/description-subject object)
        label-term (description-label-term object opts)]
 
     (if
@@ -179,7 +177,7 @@
          (rdf/iri? subject))
 
       ;; then make the component a clickable link
-      [:a {:href (iri-href (description-subject object))}
+      [:a {:href (iri-href (rdf/description-subject object))}
        [rdf-term-component (description-label-term object opts)]]
       
       ;; else just display as rdf-term

@@ -4,7 +4,6 @@
   (:require [rdf.core :as rdf]
             [rdf.graph.map :as rdf-graph]
             [rdf.logic :as rdf-logic]
-            [rdf.description :as rdf-description]
             [rdf.ns :as ns]
             [cljs.core.logic :as l]
             [geopub.ns :refer [as rdfs]]
@@ -29,11 +28,11 @@
                         (rdf-logic/graph-typeo graph id activity-type)))]
 
     (->> activity-ids
-         (map #(rdf-description/description % graph))
+         (map #(rdf/description % graph))
          (sort-by
           ;; get the as:published property and cast to js/Date
           (fn [description]
-            (->> (rdf-description/description-get description (as "published"))
+            (->> (rdf/description-get description (as "published"))
                  (first)
                  (rdf/literal-value)
                  (new js/Date)))
@@ -58,10 +57,10 @@
    (run* [label]
      (l/conda
       ;; use preferredUsername
-      ((rdf-description/description-tripleo object (as "preferredUsername") label))
+      ((rdf-logic/description-tripleo object (as "preferredUsername") label))
 
       ;; use name
-      ((rdf-description/description-tripleo object (as "name") label))
+      ((rdf-logic/description-tripleo object (as "name") label))
 
       ;; Fall back to using the subject IRI as label
-      ((l/== (rdf-description/description-subject object) label))))))
+      ((l/== (rdf/description-subject object) label))))))

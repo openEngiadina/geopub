@@ -23,7 +23,6 @@
                                      description-label-component]]
             [geopub.data.activity :as activity]
             [rdf.core :as rdf]
-            [rdf.description :as rd]
             [rdf.ns :as ns]
             [rdf.graph.map]
             ["date-fns" :as date-fns]))
@@ -31,7 +30,7 @@
 
 (defn published-component [activity]
   (let [published (new js/Date (-> activity
-                                   (rd/description-get (as "published"))
+                                   (rdf/description-get (as "published"))
                                    (first)
                                    (rdf/literal-value)))
         ]
@@ -40,25 +39,25 @@
 
 (defn activity-component [activity]
   (let
-      [object (rd/description-move
+      [object (rdf/description-move
                activity
-               (first (rd/description-get activity (as "object"))))
-       actor (rd/description-move
+               (first (rdf/description-get activity (as "object"))))
+       actor (rdf/description-move
               activity
-              (first (rd/description-get activity (as "actor"))))
+              (first (rdf/description-get activity (as "actor"))))
 
-       activity-type (rd/description-move
+       activity-type (rdf/description-move
                       activity
-                      (first (rd/description-get activity (ns/rdf :type))))
+                      (first (rdf/description-get activity (ns/rdf :type))))
        ]
       [:div.activity
        ;; render object
        ;; (for
        ;;  [object
-       ;;   (map (partial rd/description-move activity)
-       ;;        (rd/description-get activity (as :object)))]
+       ;;   (map (partial rdf/description-move activity)
+       ;;        (rdf/description-get activity (as :object)))]
 
-       ;;   ^{:key (prn-str (rd/description-subject object))}
+       ;;   ^{:key (prn-str (rdf/description-subject object))}
        ;;   [description-component object])
 
        [:span.actor [description-label-component actor]]
@@ -68,9 +67,9 @@
        ;; [:span [description-label-component activity]]
 
        ;; [:div.meta
-       ;;  [iri-component (rd/description-get activity (as :actor))]
+       ;;  [iri-component (rdf/description-get activity (as :actor))]
        ;;  [:br]
-       ;;  [iri-component (rd/description-get activity (ns/rdf :type))]]
+       ;;  [iri-component (rdf/description-get activity (ns/rdf :type))]]
        ]))
 
 

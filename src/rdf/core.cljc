@@ -1,5 +1,6 @@
 (ns rdf.core
-  "RDF in Clojure")
+  "RDF in Clojure"
+  (:require [clojure.core.logic :as l]))
 
 ;; IRI
 
@@ -12,7 +13,12 @@
 
 (defrecord IRI [value]
   IIRI
-  (iri-value [x] (:value x)))
+  (iri-value [x] (:value x))
+
+  IComparable
+  (-compare [x y] (-compare
+                   (:value x)
+                   (:value y))))
 
 (defn iri? [x] (instance? IRI x))
 
@@ -42,7 +48,12 @@
   ILiteral
   (literal-value [x] (:value x))
   (literal-language [x] (:language x))
-  (literal-datatype [x] (:datatype x)))
+  (literal-datatype [x] (:datatype x))
+
+  IComparable
+  (-compare [x y]
+    ;; TODO sort by datatype, then by language and then by value
+    (-compare (:value x) (:value y))))
 
 (defn literal? [x] (instance? Literal x))
 
@@ -178,4 +189,43 @@
   (graph-add [x triple] "Add a triple to the graph.")
   (graph-merge [x y] "Merge two graphs.")
   (graph-delete [x triple] "Delete a triple from the graph."))
+
+
+;; Description
+;; A description is a pointer to a specific subject in a graph. This is very useful when talking about a certain subject but still allowing full graph accessability. In particular it allows easier relative queries.
+
+(defrecord Description [subject graph]
+  ITripleSeq
+  (triple-seq [description]
+    (graph-match
+     (:graph description)
+     (triple (:subject description) (l/lvar) (l/lvar)))))
+
+(defn description
+  "Make a new description"
+  [subject graph]
+  (->Description subject graph))
+
+(defn description-subject
+  "Get the subject of a description"
+  [description]
+  (:subject description))
+
+(defn description-graph
+  "Get the underlying graph of a description"
+  [description]
+  (:graph description))
+
+(defn description-move
+  "Make a new description pointing to a new-subject with the same graph"
+  [description new-subject]
+  (->Description new-subject (description-graph description)))
+
+(defn description-get
+  "Get objects for given predicate. This always returns a sequence of objects."
+  [description predicate]
+  (map triple-object
+       (graph-match
+        (:graph description)
+        (triple (:subject description) predicate (l/lvar)))))
 
