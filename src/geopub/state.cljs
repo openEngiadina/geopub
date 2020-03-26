@@ -14,29 +14,19 @@
   "Takes RDF graph from a channel and merge with stategraph."
   [state chan]
   (go
-    (let [input-graph (<! chan)
-          ;; merge graph in state with input-graph
-          new-graph (rdf/graph-merge (:graph @state) input-graph)]
-      ;; swap in new graph
-      (swap! state (fn [state]
-                     (assoc state :graph new-graph))))))
+    ;; get the input from channel
+    (let [input (<! chan)]
 
-(defn add-triples!
-  "Takes triples from a channel and adds them to the graph. The input channel must be closed before changes are applied."
-  [state chan]
-  (go
-    (let [input-graph (<! (async/reduce
-                           ;; read sequence of triples and add to graph
-                           (fn [graph input]
-                             (reduce rdf/graph-add graph (rdf/triple-seq input)))
-                           ;; initialize a fresh graph
-                           (rdf.graph.map/graph)
-                           chan))
-          ;; merge graph in state with input-graph
-          new-graph (rdf/graph-merge (:graph @state) input-graph)]
-      ;; swap in new graph
-      (swap! state (fn [state]
-                     (assoc state :graph new-graph))))))
+      ;; if input is a graph
+      (if (rdf/graph? input)
+
+        ;; swap state graph with graph merged with input graph
+        (swap! state (fn [state]
+                       (assoc state :graph
+                              (rdf/graph-merge (:graph state) input))))
+
+        ;; else return whatever input is (probably an error)
+        input))))
 
 (defn reset-graph! [state]
   (swap! state #(assoc % :graph (rdf.graph.map/graph))))
