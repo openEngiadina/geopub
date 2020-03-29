@@ -1,6 +1,6 @@
 (ns geopub.data.actor
   "Helpers to deal with Actors/Agents"
-  (:require-macros [cljs.core.logic :refer [run* fresh]])
+  (:require-macros [cljs.core.logic :refer [run fresh]])
   (:require [rdf.core :as rdf]
             [rdf.logic :as rdf-logic]
             [cljs.core.logic :as l]
@@ -10,7 +10,7 @@
   (as "Person")
   [object & [opts]]
   (first
-   (run* [label]
+   (run 1 [label]
      (l/conda
       ;; use preferredUsername
       ((rdf-logic/description-tripleo object (as "preferredUsername") label))

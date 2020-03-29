@@ -5,12 +5,11 @@
             [rdf.ns :refer [rdf rdfs owl]]
             [cljs.core.logic :as l]
             [geopub.data.rdf])
-  (:require-macros [cljs.core.logic :refer [run*]]
-                   [rdf.core :refer [defns]]))
+  (:require-macros [cljs.core.logic :refer [run]]))
 
 (defn- get-label [object]
   (first
-   (run* [label]
+   (run 1 [label]
      (l/conda
       ;; use rdfs label
       ((rdf-logic/description-tripleo object (rdfs "label") label))

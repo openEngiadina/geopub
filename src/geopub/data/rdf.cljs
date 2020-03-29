@@ -1,19 +1,22 @@
 (ns geopub.data.rdf
   "Helpers for displaying RDF data"
   (:require [rdf.core :as rdf]
+            [rdf.logic :as rdf-logic]
             [rdf.ns :as rdf-ns]
             [rdf.n3 :as n3]
             [rdf.parse :as rdf-parse]
             [rdf.graph.map]
             [reagent.core :as r]
+            [cljs.core.logic :as l]
             [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
             [cljs-http.core]
             [rdf.ns :refer [rdfs]]
-            [geopub.ns :as ns :refer [as schema]]
+            [geopub.ns :as ns :refer [as ogp schema]]
             [goog.string]
             [reitit.frontend.easy :as rfe])
-  (:require-macros [cljs.core.async :refer [go]]))
+  (:require-macros [cljs.core.async :refer [go]]
+                   [cljs.core.logic :refer [run fresh]]))
 
 ;; Data fetching
 
@@ -130,7 +133,7 @@
       [:span.iri "-"])))
 
 (defn literal-component [literal]
-  (rdf/literal-value literal))
+  [:div {:dangerouslySetInnerHTML {:__html (rdf/literal-value literal)}}])
 
 (defn blank-node-component [bnode]
   (str "_:" (rdf/blank-node-id bnode)))
@@ -168,24 +171,48 @@
   [object & [opts]]
   (rdf/description-subject object))
 
+(defn activity-streams-icono [object image]
+  (fresh [image-link]
+    (rdf-logic/description-tripleo object (as "icon") image-link)
+    (rdf-logic/graph-tripleo (rdf/description-graph object)
+                             (rdf/triple image-link (as "url") image))))
+
+(defn description-icon-src
+  [object & [opts]]
+  (->> (run 1 [image]
+         (l/conda
+          ((rdf-logic/description-tripleo object (ogp "image") image))
+
+          ((rdf-logic/description-tripleo object (schema "image") image))
+
+          ((activity-streams-icono object image))
+
+          ((l/== image nil))))
+       (map (fn [image-term]
+              (if (rdf/literal? image-term)
+                ;; for some reason ogp stores image as literal..wtf?
+                (rdf/iri (rdf/literal-value image-term))
+                image-term)))
+       (first)))
+
 (defn description-label-component [object & [opts]]
   (let
       [subject (rdf/description-subject object)
        label-term (description-label-term object opts)]
 
-    (if
-        (and
-         ;; label term is not an iri
-         (not (rdf/iri? label-term))
-         ;; subject is an iri
-         (rdf/iri? subject))
+      (if
+          (and
+           ;; label term is not an iri
+           (not (rdf/iri? label-term))
+           ;; subject is an iri
+           (rdf/iri? subject))
 
-      ;; then make the component a clickable link
-      [:a {:href (iri-href (rdf/description-subject object))}
-       [rdf-term-component (description-label-term object opts)]]
+        ;; then make the component a clickable link
+          [:a {:href (iri-href (rdf/description-subject object))}
+           [rdf-term-component (description-label-term object opts)]]
       
-      ;; else just display as rdf-term
-      [rdf-term-component (description-label-term object opts)])))
+          ;; else just display as rdf-term
+          [rdf-term-component (description-label-term object opts)])))
 
 (defn description-turtle-component [object]
   (let [as-turtle (r/atom "")]
@@ -203,9 +230,40 @@
       [:dt [rdf-term-component (rdf/triple-predicate triple)]]
       [:dd [rdf-term-component (rdf/triple-object triple)]]])])
 
+(defn description-content-term [object]
+  (first
+   (run 1 [content]
+     (l/conda
+      ((rdf-logic/description-tripleo object (as "content") content))
+      ((rdf-logic/description-tripleo object (as "summary") content))
+      ((rdf-logic/description-tripleo object (ogp "description") content))
+      ((rdf-logic/description-tripleo object (rdfs "comment") content))
+      ((l/== content nil))))))
+
+
 (defn description-component
   [object]
   [:section.object
-   [:h1 [description-label-component object]]
-   [:div.object-body
+
+   (let [label-term (description-label-term object)]
+
+     [:header
+
+      ;; Icon
+      (if-let [icon-src (description-icon-src object)]
+        [:img.icon {:src (rdf/iri-value icon-src)}])
+    
+      [:div
+       [:h1 [rdf-term-component label-term]]
+       [:span.raw-id [rdf-term-component (rdf/description-subject object)]]]])
+
+   (if-let [content (description-content-term object)]
+
+     [:div.object-content
+      [rdf-term-component (description-content-term object)]]
+
+     [:p "Nothing"])
+
+   [:details
+    [:summary "All Properties"]
     [description-property-list-component object]]])

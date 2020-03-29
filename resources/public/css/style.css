@@ -97,33 +97,46 @@ body {
 }
 
 .object header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.object header .icon {
+    max-width: 100px;
+    max-height: 100px;
+    margin: 10px;
 }
 
 .object header .raw-id {
     color: grey;
     font-size: medium;
-    margin-left: 10px;
 }
 
 .object header .raw-id a {
     color: grey;
 }
 
-.object header .subtitle {
-    color: grey;
+.object details {
+    border: 0.5px solid lightgrey;
+    border-radius: 5px;
+    margin-top: 30px;
+    padding: 10px;
     font-size: medium;
+    max-width: 80%;
 }
 
-.object pre {
-    overflow: auto;
-    width: 80%;
+.object .object-content {
+    border: 0.5px solid lightgrey;
+    border-radius: 5px;
+    margin-top: 30px;
     padding: 10px;
+    max-width: 80%;
 }
 
 .object .object-property-list dd {
-    margin-bottom: 2em;
+    margin-bottom: 1em;
 }
-
 
 .activity {
     margin: 15px;

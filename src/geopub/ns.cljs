@@ -27,3 +27,4 @@
 (defns schema "http://schema.org/")
 (defns geo "http://www.w3.org/2003/01/geo/wgs84_pos#")
 (defns dc "http://purl.org/dc/terms/")
+(defns ogp "http://ogp.me/ns#")

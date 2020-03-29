@@ -4,7 +4,7 @@
             [rdf.logic :as rdf-logic]
             [cljs.core.logic :as l]
             [geopub.data.rdf]
-            [geopub.ns :refer [schema]])
+            [geopub.ns :refer [schema ogp]])
   (:require-macros [cljs.core.logic :refer [run*]]
                    [rdf.core :refer [defns]]))
 
@@ -14,6 +14,9 @@
      (l/conda
       ;; use rdfs label
       ((rdf-logic/description-tripleo object (schema "name") label))
+
+      ;; use ogp title
+      ((rdf-logic/description-tripleo object (ogp "title") label))
 
       ;; Fall back to using the subject IRI as label
       ((l/== (rdf/description-subject object) label))))))
