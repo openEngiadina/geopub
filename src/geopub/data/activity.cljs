@@ -5,7 +5,7 @@
             [rdf.graph.map :as rdf-graph]
             [rdf.logic :as rdf-logic]
             [rdf.ns :refer [rdf rdfs]]
-            [geopub.ns :refer [as]]
+            [geopub.ns :refer [as dc]]
             [cljs.core.logic :as l]
             [geopub.data.rdf]))
 
@@ -50,17 +50,38 @@
 
 ;; Reagent component
 
-(defmethod geopub.data.rdf/description-label-term
-  (as "Person")
-  [object & [opts]]
+(defn object-label-term [object & [opts]]
   (first
    (run* [label]
      (l/conda
-      ;; use preferredUsername
-      ((rdf-logic/description-tripleo object (as "preferredUsername") label))
-
       ;; use name
       ((rdf-logic/description-tripleo object (as "name") label))
 
+      ;; use dc:title
+      ((rdf-logic/description-tripleo object (dc "title") label))
+
       ;; Fall back to using the subject IRI as label
       ((l/== (rdf/description-subject object) label))))))
+
+(defn creator-label-term [object & [opts]]
+  (first
+   (run* [label]
+     (l/conda
+      ;; use name
+      ((rdf-logic/description-tripleo object (as "attributedTo") label))
+
+      ;; use dc:title
+      ((rdf-logic/description-tripleo object (dc "creator") label))
+
+      ;; Fall back to using the subject IRI as label
+      ((l/== (rdf/description-subject object) label))))))
+
+(defmethod geopub.data.rdf/description-label-term
+  (as "Note")
+  [object & [opts]]
+  (object-label-term object opts))
+
+(defmethod geopub.data.rdf/description-label-term
+  (as "Article")
+  [object & [opts]]
+  (object-label-term object opts))

@@ -148,6 +148,8 @@
     :else "-"))
 
 ;; Description
+;;
+;; NOTE The API for computing a nice rendering of a description is currently based on Clojure multimethods which use the rdf:type property to figure out a suitable render function. I feel this is somewhat limited. Better would be composable logic relations. The top render function would invoke relations to figure out the best data to represent.
 
 (defn- description-type
   "Helper to get type of subject being described. This defines what multimethod is used to render the description."

@@ -22,6 +22,8 @@
 ;; Commonly used namespaces
 
 (defns as "https://www.w3.org/ns/activitystreams#")
+(defns foaf "http://xmlns.com/foaf/0.1/")
 (defns ldp "http://www.w3.org/ns/ldp#")
 (defns schema "http://schema.org/")
 (defns geo "http://www.w3.org/2003/01/geo/wgs84_pos#")
+(defns dc "http://purl.org/dc/terms/")

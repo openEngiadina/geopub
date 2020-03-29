@@ -3,13 +3,15 @@
             [reagent.core :as r]
             [goog.string]
             [geopub.state]
-            [rdf.ns :refer [rdfs]]
+            [rdf.ns :refer [rdfs owl]]
             [geopub.ns :refer [as schema]]
             [geopub.cpub]
             [geopub.data.rdf :refer [rdf-term-component
                                      description-component]]
             [geopub.data.ontology]
             [geopub.data.schema]
+            [geopub.data.actor]
+            [geopub.data.activity]
             [cljs.core.logic :as l]
             [rdf.logic :as rdf-logic]
             [reitit.frontend.easy :as rfe])
@@ -43,6 +45,7 @@
      [:li [:a {:href (browse-href (schema "Event"))} "Events"]]
      [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]
      [:li [:a {:href (browse-href (rdfs "Class"))} "Class"]]
+     [:li [:a {:href (browse-href (owl "Class"))} "Class"]]
      ]
 
     [:h3 "Enter URL"]
@@ -91,9 +94,11 @@
   "Returns sequence of descriptions that have the specified type."
   [graph type]
   ;; TODO implement RDFs subClass
-  (map
-   #(rdf/description % graph)
-   (run* [subject] (rdf-logic/graph-typeo graph subject type))))
+  ;; filter out blank nodes because they cause trouble
+  (filter #(rdf/iri? (rdf/description-subject %))
+          (map
+           #(rdf/description % graph)
+           (run* [subject] (rdf-logic/graph-typeo graph subject type)))))
 
 (defn browse-view [state]
   (let [type (get-type state)]
@@ -106,8 +111,5 @@
         [:tbody
          (for [desc (get-descriptions (:graph @state) type)]
            ^{:key (hash desc)}
-           [:tr
-            [:td [rdf-term-component
-                  (rdf/description-subject desc)]]]
-           )]]
+           [:tr [:td [rdf-term-component (rdf/description-subject desc)]]])]]
        ]]]))
