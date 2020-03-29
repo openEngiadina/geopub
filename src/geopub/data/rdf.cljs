@@ -115,38 +115,37 @@
 
 (defn iri-component
   "Render an IRI as a link that can be followed in the internal browser."
-  [iri & {:keys [class]}]
-  (let [class (or class "iri")]
-    (cond
-
-      (rdf/iri? iri)
-      [:span
-       {:class class}
-       [:a
+  [iri & [opts]]
+  (cond
+    (rdf/iri? iri)
+    [:span.iri
+     [:a
+      (if-not (:external-href opts)
         {:href (iri-href iri)}
-        (rdf/iri-value iri)]]
+        {:href (rdf/iri-value iri) :target "_blank"})
+      (rdf/iri-value iri)]]
 
-      (seq? iri)
-      (iri-component (first iri))
+    (seq? iri)
+    (iri-component (first iri))
 
-      :else
-      [:span.iri "-"])))
+    :else
+    [:span.iri "-"]))
 
-(defn literal-component [literal]
+(defn literal-component [literal & [opts]]
   [:div {:dangerouslySetInnerHTML {:__html (rdf/literal-value literal)}}])
 
-(defn blank-node-component [bnode]
+(defn blank-node-component [bnode & [opts]]
   (str "_:" (rdf/blank-node-id bnode)))
 
-(defn rdf-term-component [term]
+(defn rdf-term-component [term & [opts]]
   (cond
-    (rdf/iri? term) [iri-component term]
+    (rdf/iri? term) [iri-component term opts]
 
-    (rdf/literal? term) [literal-component term]
+    (rdf/literal? term) [literal-component term opts]
 
-    (rdf/blank-node? term) [blank-node-component term]
+    (rdf/blank-node? term) [blank-node-component term opts]
 
-    (seq? term) [rdf-term-component (first term)]
+    (seq? term) [rdf-term-component (first term) opts]
 
     :else "-"))
 
@@ -242,7 +241,7 @@
 
 
 (defn description-component
-  [object]
+  [object & [opts]]
   [:section.object
 
    (let [label-term (description-label-term object)]
@@ -255,7 +254,7 @@
     
       [:div
        [:h1 [rdf-term-component label-term]]
-       [:span.raw-id [rdf-term-component (rdf/description-subject object)]]]])
+       [:span.raw-id [rdf-term-component (rdf/description-subject object) (merge opts {:external-href true})]]]])
 
    (if-let [content (description-content-term object)]
 
