@@ -119,11 +119,19 @@
   (cond
     (rdf/iri? iri)
     [:span.iri
-     [:a
-      (if-not (:external-href opts)
-        {:href (iri-href iri)}
-        {:href (rdf/iri-value iri) :target "_blank"})
-      (rdf/iri-value iri)]]
+     (if-not (:disable-href opts)
+
+       ;; create a href
+       [:a
+        (if-not (:external-href opts)
+          ;; to internal browser
+          {:href (iri-href iri)}
+          ;; or the real (external iri)
+          {:href (rdf/iri-value iri) :target "_blank"})
+        (rdf/iri-value iri)]
+
+       ;; only display the iri
+       (rdf/iri-value iri))]
 
     (seq? iri)
     (iri-component (first iri))
@@ -199,19 +207,21 @@
       [subject (rdf/description-subject object)
        label-term (description-label-term object opts)]
 
-      (if
-          (and
-           ;; label term is not an iri
-           (not (rdf/iri? label-term))
-           ;; subject is an iri
-           (rdf/iri? subject))
+    (if
+        (and
+         ;; label term is not an iri
+         (not (rdf/iri? label-term))
+         ;; subject is an iri
+         (rdf/iri? subject)
+         ;; we are not disabling hrefs in general
+         (not (:disable-href opts)))
 
-        ;; then make the component a clickable link
-          [:a {:href (iri-href (rdf/description-subject object))}
-           [rdf-term-component (description-label-term object opts)]]
+      ;; then make the component a clickable link
+      [:a {:href (iri-href (rdf/description-subject object))}
+       [rdf-term-component (description-label-term object opts)]]
       
-          ;; else just display as rdf-term
-          [rdf-term-component (description-label-term object opts)])))
+      ;; else just display as rdf-term
+      [rdf-term-component (description-label-term object opts)])))
 
 (defn description-turtle-component [object]
   (let [as-turtle (r/atom "")]

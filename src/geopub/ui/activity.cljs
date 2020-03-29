@@ -63,9 +63,14 @@
 
        (if-let [icon-src (description-icon-src actor)]
          [:span.icon [:img {:src (rdf/iri-value icon-src)}]])
+
        [:span.actor [description-label-component actor]]
-       [:span.activity-type [description-label-component activity-type]]
+
+       [:span.activity-type
+        [description-label-component activity-type {:disable-href true}]]
+
        [:span.object [description-label-component object]]
+
        [published-component activity]
        ;; [:span [description-label-component activity]]
 
