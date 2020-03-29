@@ -4,9 +4,9 @@
   (:require [rdf.core :as rdf]
             [rdf.graph.map :as rdf-graph]
             [rdf.logic :as rdf-logic]
-            [rdf.ns :as ns]
+            [rdf.ns :refer [rdf rdfs]]
+            [geopub.ns :refer [as]]
             [cljs.core.logic :as l]
-            [geopub.ns :refer [as rdfs]]
             [geopub.data.rdf]))
 
 ;; Helpers for getting activities from graph
@@ -45,7 +45,7 @@
   "Returns an activity to like an object"
   [object]
   (-> (rdf-graph/graph)
-      (rdf/graph-add (rdf/triple (rdf/iri "") (ns/rdf :type) (as "Like")))
+      (rdf/graph-add (rdf/triple (rdf/iri "") (rdf :type) (as "Like")))
       (rdf/graph-add (rdf/triple (rdf/iri "") (as :object) object))))
 
 ;; Reagent component

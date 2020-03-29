@@ -2,14 +2,11 @@
   "Helpers to deal with ontologies (RDFS and OWL)"
   (:require [rdf.core :as rdf]
             [rdf.logic :as rdf-logic]
+            [rdf.ns :refer [rdf rdfs owl]]
             [cljs.core.logic :as l]
             [geopub.data.rdf])
   (:require-macros [cljs.core.logic :refer [run*]]
                    [rdf.core :refer [defns]]))
-
-(defns rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-(defns rdfs "http://www.w3.org/2000/01/rdf-schema#")
-(defns owl "http://www.w3.org/2002/07/owl#")
 
 (defn- get-label [object]
   (first

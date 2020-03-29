@@ -9,7 +9,8 @@
             [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
             [cljs-http.core]
-            [geopub.ns :as ns :refer [as rdfs schema]]
+            [rdf.ns :refer [rdfs]]
+            [geopub.ns :as ns :refer [as schema]]
             [goog.string]
             [reitit.frontend.easy :as rfe])
   (:require-macros [cljs.core.async :refer [go]]))

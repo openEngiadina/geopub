@@ -16,14 +16,14 @@
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
 (ns geopub.ui.activity
-  (:require [geopub.ns :refer [as rdfs schema]]
+  (:require [geopub.ns :refer [as schema]]
             [geopub.state]
             [geopub.data.rdf :refer [iri-component
                                      description-component
                                      description-label-component]]
             [geopub.data.activity :as activity]
             [rdf.core :as rdf]
-            [rdf.ns :as ns]
+            [rdf.ns :refer [rdf rdfs]]
             [rdf.graph.map]
             ["date-fns" :as date-fns]))
 
@@ -48,7 +48,7 @@
 
        activity-type (rdf/description-move
                       activity
-                      (first (rdf/description-get activity (ns/rdf :type))))
+                      (first (rdf/description-get activity (rdf :type))))
        ]
       [:div.activity
        ;; render object
@@ -69,7 +69,7 @@
        ;; [:div.meta
        ;;  [iri-component (rdf/description-get activity (as :actor))]
        ;;  [:br]
-       ;;  [iri-component (rdf/description-get activity (ns/rdf :type))]]
+       ;;  [iri-component (rdf/description-get activity (rdf :type))]]
        ]))
 
 

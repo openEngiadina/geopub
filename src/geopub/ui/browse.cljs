@@ -3,7 +3,8 @@
             [reagent.core :as r]
             [goog.string]
             [geopub.state]
-            [geopub.ns :as ns]
+            [rdf.ns :refer [rdfs]]
+            [geopub.ns :refer [as schema]]
             [geopub.cpub]
             [geopub.data.rdf :refer [rdf-term-component
                                      description-component]]
@@ -35,13 +36,13 @@
    [:nav
     [:h3 "Types"]
     [:ul
-     [:li [:a {:href (browse-href (ns/as "Note"))} "Notes"]]
-     [:li [:a {:href (browse-href (ns/as "Article"))} "Articles"]]
-     [:li [:a {:href (browse-href (ns/as "Person"))} "Person"]]
-     [:li [:a {:href (browse-href (ns/as "Like"))} "Likes"]]
-     [:li [:a {:href (browse-href (ns/schema "Event"))} "Events"]]
-     [:li [:a {:href (browse-href (ns/schema "WebPage"))} "Web Page"]]
-     [:li [:a {:href (browse-href (ns/rdfs "Class"))} "Class"]]
+     [:li [:a {:href (browse-href (as "Note"))} "Notes"]]
+     [:li [:a {:href (browse-href (as "Article"))} "Articles"]]
+     [:li [:a {:href (browse-href (as "Person"))} "Person"]]
+     [:li [:a {:href (browse-href (as "Like"))} "Likes"]]
+     [:li [:a {:href (browse-href (schema "Event"))} "Events"]]
+     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]
+     [:li [:a {:href (browse-href (rdfs "Class"))} "Class"]]
      ]
 
     [:h3 "Enter URL"]
