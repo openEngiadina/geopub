@@ -20,6 +20,7 @@
             [geopub.state]
             [geopub.data.rdf :refer [iri-component
                                      description-component
+                                     description-icon-src
                                      description-label-component]]
             [geopub.data.activity :as activity]
             [rdf.core :as rdf]
@@ -60,6 +61,8 @@
        ;;   ^{:key (prn-str (rdf/description-subject object))}
        ;;   [description-component object])
 
+       (if-let [icon-src (description-icon-src actor)]
+         [:span.icon [:img {:src (rdf/iri-value icon-src)}]])
        [:span.actor [description-label-component actor]]
        [:span.activity-type [description-label-component activity-type]]
        [:span.object [description-label-component object]]

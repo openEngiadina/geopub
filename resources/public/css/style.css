@@ -146,8 +146,14 @@ body {
     display: flex;
     flex-direction: row;
     justify-content: flex-start;
+    align-items: center;
+}
+
+.activity .icon img {
+    max-width: 40px;
+    max-height: 40px;
 }
 
 .activity span {
-    margin: 0.2em;
+    margin: 0.3em;
 }
