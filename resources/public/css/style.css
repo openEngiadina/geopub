@@ -88,7 +88,6 @@ body {
 
 .ui-page main {
     overflow: auto;
-    margin-top: 20px;
     margin-left: 30px;
     flex-grow: 1;
 }
@@ -106,6 +105,7 @@ body {
     max-width: 100px;
     max-height: 100px;
     margin: 10px;
+    margin-right: 20px;
 }
 
 .object header .raw-id {

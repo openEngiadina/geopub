@@ -279,15 +279,25 @@
       [:dt [rdf-term-component (rdf/triple-predicate triple)]]
       [:dd [rdf-term-component (rdf/triple-object triple)]]])])
 
-(defn description-content-term [object]
+(defn description-comment-term
+  "Returns a short summary or comment of the description"
+  [object]
   (first
    (run 1 [content]
      (l/conda
-      ((rdf-logic/description-tripleo object (as "content") content))
-      ((rdf-logic/description-tripleo object (as "summary") content))
-      ((rdf-logic/description-tripleo object (ogp "description") content))
-      ((rdf-logic/description-tripleo object (rdfs "comment") content))
-      ((l/== content nil))))))
+      [(rdf-logic/description-tripleo object (as "summary") content)]
+      [(rdf-logic/description-tripleo object (ogp "description") content)]
+      [(rdf-logic/description-tripleo object (rdfs "comment") content)]
+      [(l/== content nil)]))))
+
+(defn description-content-term
+  "Returns content of the description"
+  [object]
+  (first
+   (run 1 [content]
+     (l/conda
+      [(rdf-logic/description-tripleo object (as "content") content)]
+      [(l/== content nil)]))))
 
 (defn description-component
   [object & [opts]]
@@ -303,14 +313,14 @@
     
       [:div
        [:h1 [rdf-term-component label-term]]
-       [:span.raw-id [rdf-term-component (rdf/description-subject object) (merge opts {:external-href true})]]]])
+       [:span.raw-id [rdf-term-component (rdf/description-subject object) (merge opts {:external-href true})]]
+       (if-let [comment (description-comment-term object)]
+         [:p.comment
+          [rdf-term-component comment]])]])
 
    (if-let [content (description-content-term object)]
-
      [:div.object-content
-      [rdf-term-component (description-content-term object)]]
-
-     [:p "Nothing"])
+      [rdf-term-component content]])
 
    [:details
     [:summary "All Properties"]
