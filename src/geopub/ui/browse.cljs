@@ -34,17 +34,21 @@
 (defn sidebar []
   [:div.sidebar
    [:nav
-    [:h3 "Types"]
+    [:h4 "ActivityStreams"]
     [:ul
      [:li [:a {:href (browse-href (as "Note"))} "Notes"]]
      [:li [:a {:href (browse-href (as "Article"))} "Articles"]]
      [:li [:a {:href (browse-href (as "Person"))} "Person"]]
-     [:li [:a {:href (browse-href (as "Like"))} "Likes"]]
+     [:li [:a {:href (browse-href (as "Like"))} "Likes"]]]
+
+    [:h4 "schema.org"]
+    [:ul
      [:li [:a {:href (browse-href (schema "Event"))} "Events"]]
-     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]
-     [:li [:a {:href (browse-href (rdfs "Class"))} "Class"]]
-     [:li [:a {:href (browse-href (owl "Class"))} "Class"]]
-     ]
+     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]]
+
+    [:h4 "RDFS"]
+    [:ul
+     [:li [:a {:href (browse-href (rdfs "Class"))} "Class"]]]
 
     [:h3 "Enter URL"]
     [go-to-url]
