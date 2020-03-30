@@ -102,8 +102,8 @@ body {
 }
 
 .object header .icon {
-    max-width: 100px;
-    max-height: 100px;
+    max-width: 150px;
+    max-height: 150px;
     margin: 10px;
     margin-right: 20px;
 }
@@ -114,6 +114,31 @@ body {
 }
 
 .object header .raw-id a {
+    color: grey;
+}
+
+.object .meta {
+    color: grey;
+    font-size: small;
+}
+
+.object .meta .object-property-list dt {
+    float: left;
+    clear: left;
+    width: 100px;
+    overflow: hidden;
+}
+
+.object .meta .object-property-list dd {
+    margin: 0 0 0 110px;
+    padding: 0 0 0.5em 0;
+}
+
+.object .meta .object-property-list dt a {
+    color: grey;
+}
+
+.object .meta .object-property-list dd a {
     color: grey;
 }
 
@@ -136,15 +161,8 @@ body {
 
 
 .object .object-property-list dt {
-    float: left;
-    clear: left;
-    width: 200px;
-    overflow: hidden;
-    text-align: left;
 }
 .object .object-property-list dd {
-    margin: 0 0 2em 220px;
-    padding: 0 0 0 0.5em 0;
 }
 
 .activity {

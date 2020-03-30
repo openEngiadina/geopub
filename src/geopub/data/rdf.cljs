@@ -271,19 +271,27 @@
       (go (swap! as-turtle (constantly (<! (n3/encode object)))))
       [:code.turtle [:pre @as-turtle]])))
 
-(defn description-property-list-component [desc]
+(defn description-property-list-component [desc & [opts]]
   [:dl
    (for
-       [triple (rdf/triple-seq desc)]
+       [triple (cond->> (rdf/triple-seq desc)
+                 (contains? opts :properties)
+                 (filter #(contains? (:properties opts)
+                                     (rdf/triple-predicate %))))]
+     
        ^{:key (hash triple)}
+
        [:div.object-property-list
+
         [:dt [description-label-component
               (rdf/description-move desc (rdf/triple-predicate triple))]]
+
         [:dd
          (let [object (rdf/triple-object triple)]
            (if (or (rdf/iri? object) (rdf/blank-node? object))
              [description-label-component (rdf/description-move desc object)]
              [rdf-term-component object]))]])])
+
 
 (defn description-comment-term
   "Returns a short summary or comment of the description"
@@ -327,29 +335,52 @@
            (first)
            (rdf/description-move object)))
 
+(def default-metadata
+  #{(as "actor")
+    (as "to")
+    (as "cc")
+    (as "inReplyTo")
+    (as "attributedTo")
+    (as "published")
+    (as "outbox")
+    (rdf "type")
+    (schema "url")})
+
 (defn description-component
-  [object & [opts]]
+  [desc & [opts]]
   [:section.object
 
-   (let [label-term (description-label-term object)]
+   (let [label-term (description-label-term desc)]
 
      [:header
 
       ;; Icon
-      (if-let [icon-src (description-icon-src object)]
+      (if-let [icon-src (description-icon-src desc)]
         [:img.icon {:src (rdf/iri-value icon-src)}])
     
       [:div
        [:h1 [rdf-term-component label-term]]
-       [:span.raw-id [rdf-term-component (rdf/description-subject object) (merge opts {:external-href true})]]
-       (if-let [comment (description-comment-term object)]
-         [:p.comment
-          [rdf-term-component comment]])]])
 
-   (if-let [content (description-content-term object)]
+       ;; display the iri
+       [:span.raw-id [rdf-term-component
+                      (rdf/description-subject desc)
+                      (merge opts {:external-href true})]]
+
+       ;; if there is a comment (or short description) display it
+       (if-let [comment (description-comment-term desc)]
+         [:p.comment
+          [rdf-term-component comment]])
+
+       ;; display common meta data
+       [:div.meta
+        [description-property-list-component desc
+         (merge {:properties default-metadata} opts)]]]])
+
+
+   (if-let [content (description-content-term desc)]
      [:div.object-content
       [rdf-term-component content]])
 
    [:details
     [:summary "All Properties"]
-    [description-property-list-component object]]])
+    [description-property-list-component desc]]])
