@@ -11,8 +11,8 @@
             [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
             [cljs-http.core]
-            [rdf.ns :refer [rdfs]]
-            [geopub.ns :as ns :refer [as ogp schema]]
+            [rdf.ns :refer [rdf rdfs owl]]
+            [geopub.ns :as ns :refer [as ogp schema foaf dc]]
             [goog.string]
             [reitit.frontend.easy :as rfe])
   (:require-macros [cljs.core.async :refer [go]]
@@ -165,25 +165,48 @@
     :else "-"))
 
 ;; Description
-;;
-;; NOTE The API for computing a nice rendering of a description is currently based on Clojure multimethods which use the rdf:type property to figure out a suitable render function. I feel this is somewhat limited. Better would be composable logic relations. The top render function would invoke relations to figure out the best data to represent.
 
-(defn- description-type
-  "Helper to get type of subject being described. This defines what multimethod is used to render the description."
+(defn rdfs-type-labelo [graph subject label]
+  (fresh [rdf-type]
+    (rdf-logic/graph-tripleo graph (rdf/triple subject (rdf "type") rdf-type))
+    (rdf-logic/graph-tripleo graph (rdf/triple rdf-type (rdfs "label") label))))
+
+(defn description-label-term
+  "Returns a suitable RDF Term that can be used as a label for the description."
   [object & [opts]]
-  ;; TODO the described object can have multiple types. Currently we use the first type. Allow a preference to be given.
-  (first (rdf/description-get object (rdf-ns/rdf :type))))
+  (first
+   (run 1 [label]
+     (l/conda
 
-(defmulti description-label-term
-  "Returns an appropriate short label for the description."
-  (fn [object & [opts]]
-    ;; (println (description-type object opts))
-    (description-type object opts)))
+      ;; use Activitystreams preferredUsername
+      ((rdf-logic/description-tripleo object (as "preferredUsername") label))
 
-(defmethod description-label-term
-  :default
-  [object & [opts]]
-  (rdf/description-subject object))
+      ;; use foaf nick
+      ((rdf-logic/description-tripleo object (foaf "nick") label))
+
+      ;; use Activitystreams name
+      [(rdf-logic/description-tripleo object (as "name") label)]
+      
+      ;; use dc:title
+      [(rdf-logic/description-tripleo object (dc "title") label)]
+
+      ;; use schema.org name
+      ((rdf-logic/description-tripleo object (schema "name") label))
+
+      ;; use ogp title
+      ((rdf-logic/description-tripleo object (ogp "title") label))
+
+      ;; use rdfs label
+      ((rdf-logic/description-tripleo object (rdfs "label") label))
+
+      ;; use the rdfs label of the type
+      [(rdfs-type-labelo (rdf/description-graph object)
+                         (rdf/description-subject object)
+                         label)]
+
+      ;; Fall back to using the subject IRI as label
+      [(l/== (rdf/description-subject object) label)]))))
+
 
 (defn activity-streams-icono [object image]
   (fresh [image-link]
@@ -192,6 +215,7 @@
                              (rdf/triple image-link (as "url") image))))
 
 (defn description-icon-src
+  "Returns a string that can be used as src for an icon."
   [object & [opts]]
   (->> (run 1 [image]
          (l/conda

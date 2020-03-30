@@ -8,9 +8,6 @@
             [geopub.cpub]
             [geopub.data.rdf :refer [rdf-term-component
                                      description-component]]
-            [geopub.data.ontology]
-            [geopub.data.schema]
-            [geopub.data.actor]
             [geopub.data.activity]
             [cljs.core.logic :as l]
             [rdf.logic :as rdf-logic]
