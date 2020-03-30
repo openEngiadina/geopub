@@ -41,15 +41,16 @@
 
 (defn login! [state id basic-auth]
   (go-try
-    (let [id (rdf/iri id)
-          profile (rdf/description
-                   id (<? (get-rdf id {:basic-auth basic-auth})))
-          inbox (<? (get-rdf
-                     (rdf/description-get-first profile (ldp "inbox"))
-                     {:basic-auth basic-auth}))
-          outbox (<? (get-rdf
-                      (rdf/description-get-first profile (as "outbox"))
-                      {:basic-auth basic-auth}))]
+   (let [req-opts {:basic-auth basic-auth
+                   ;; Required to allow a authenticated request with CORS. See: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials
+                   :with-credentials? false}
+         id (rdf/iri id)
+         profile (rdf/description
+                  id (<? (get-rdf id req-opts)))
+         inbox (<? (get-rdf
+                    (rdf/description-get-first profile (ldp "inbox")) req-opts))
+         outbox (<? (get-rdf
+                     (rdf/description-get-first profile (as "outbox")) req-opts))]
 
       (swap! state
              (comp
