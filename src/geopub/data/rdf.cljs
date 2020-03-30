@@ -271,14 +271,19 @@
       (go (swap! as-turtle (constantly (<! (n3/encode object)))))
       [:code.turtle [:pre @as-turtle]])))
 
-(defn description-property-list-component [object]
+(defn description-property-list-component [desc]
   [:dl
    (for
-       [triple (rdf/triple-seq object)]
-     ^{:key (hash triple)}
-     [:div.object-property-list
-      [:dt [rdf-term-component (rdf/triple-predicate triple)]]
-      [:dd [rdf-term-component (rdf/triple-object triple)]]])])
+       [triple (rdf/triple-seq desc)]
+       ^{:key (hash triple)}
+       [:div.object-property-list
+        [:dt [description-label-component
+              (rdf/description-move desc (rdf/triple-predicate triple))]]
+        [:dd
+         (let [object (rdf/triple-object triple)]
+           (if (or (rdf/iri? object) (rdf/blank-node? object))
+             [description-label-component (rdf/description-move desc object)]
+             [rdf-term-component object]))]])])
 
 (defn description-comment-term
   "Returns a short summary or comment of the description"

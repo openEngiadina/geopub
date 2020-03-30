@@ -134,8 +134,17 @@ body {
     max-width: 80%;
 }
 
+
+.object .object-property-list dt {
+    float: left;
+    clear: left;
+    width: 200px;
+    overflow: hidden;
+    text-align: left;
+}
 .object .object-property-list dd {
-    margin-bottom: 1em;
+    margin: 0 0 2em 220px;
+    padding: 0 0 0 0.5em 0;
 }
 
 .activity {
