@@ -14,6 +14,7 @@
             [rdf.ns :refer [rdf rdfs owl]]
             [geopub.ns :as ns :refer [as ogp schema foaf dc]]
             [goog.string]
+            ["date-fns" :as date-fns]
             [reitit.frontend.easy :as rfe])
   (:require-macros [cljs.core.async :refer [go]]
                    [cljs.core.logic :refer [run fresh]]))
@@ -298,6 +299,28 @@
      (l/conda
       [(rdf-logic/description-tripleo object (as "content") content)]
       [(l/== content nil)]))))
+
+(defn description-created-at
+  "Return a date that describes when the object was created"
+  [object]
+  (some->> (run 1 [c]
+             (l/conda
+              [(rdf-logic/description-tripleo object (as "published") c)]
+              [(l/== c nil)]))
+           (first)
+           (rdf/literal-value)
+           (new js/Date)))
+
+(defn description-creator
+  "Returns a description of who created the description"
+  [object]
+  (some->> (run 1 [c]
+             (l/conda
+              [(rdf-logic/description-tripleo object (as "actor") c)]
+              [(rdf-logic/description-tripleo object (as "attributedTo") c)]
+              [(l/== c nil)]))
+           (first)
+           (rdf/description-move object)))
 
 (defn description-component
   [object & [opts]]

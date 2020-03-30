@@ -21,7 +21,8 @@
             [geopub.data.rdf :refer [iri-component
                                      description-component
                                      description-icon-src
-                                     description-label-component]]
+                                     description-label-component
+                                     description-created-at]]
             [geopub.data.activity :as activity]
             [rdf.core :as rdf]
             [rdf.ns :refer [rdf rdfs]]
@@ -30,11 +31,7 @@
 
 
 (defn published-component [activity]
-  (let [published (new js/Date (-> activity
-                                   (rdf/description-get (as "published"))
-                                   (first)
-                                   (rdf/literal-value)))
-        ]
+  (let [published (description-created-at activity)]
     [:span (.formatDistance date-fns published (new js/Date)
                             (clj->js {:addSuffix true}))]))
 
