@@ -53,10 +53,13 @@
 
 (defn load-ontologies []
   (geopub.state/add-rdf-graph! state
-                             (get-rdf "activitystreams2.ttl"
-                                      {:content-type "text/turtle"}))
+                               (get-rdf "activitystreams2.ttl"
+                                        {:content-type "text/turtle"}))
   (geopub.state/add-rdf-graph! state
-                             (get-rdf "schema.ttl" {:content-type "text/turtle"})))
+                               (get-rdf "schema.ttl" {:content-type "text/turtle"}))
+
+  (geopub.state/add-rdf-graph! state
+                               (get-rdf "rdf.ttl" {:content-type "text/turtle"})))
 
 
 (defn load-public-data [srcs]
