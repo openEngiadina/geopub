@@ -96,3 +96,18 @@
   (as "Article")
   [object & [opts]]
   (object-label-term object opts))
+
+(defmethod geopub.data.rdf/description-label-term
+  (as "Create")
+  [object & [opts]]
+  (object-label-term object opts))
+
+(defmethod geopub.data.rdf/description-label-term
+  (as "Like")
+  [object & [opts]]
+  (object-label-term object opts))
+
+(defmethod geopub.data.rdf/description-label-term
+  (as "Announce")
+  [object & [opts]]
+  (object-label-term object opts))

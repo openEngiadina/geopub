@@ -49,8 +49,7 @@
 
        activity-type (rdf/description-move
                       activity
-                      (first (rdf/description-get activity (rdf :type))))
-       ]
+                      (first (rdf/description-get activity (rdf :type))))]
       [:div.activity
        ;; render object
        ;; (for
@@ -67,7 +66,7 @@
        [:span.actor [description-label-component actor]]
 
        [:span.activity-type
-        [description-label-component activity-type {:disable-href true}]]
+        [description-label-component activity]]
 
        [:span.object [description-label-component object]]
 
