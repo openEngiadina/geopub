@@ -29,7 +29,7 @@
        [:input {:type "text"
                 :on-change #(reset! input (-> % .-target .-value))}]
        [:button
-        {:on-click #(rfe/push-state :geopub.routes/description
+        {:on-click #(rfe/push-state :geopub.routes/browse-iri
                                     {:iri (goog.string.urlEncode @input)})}
         "Go"]])))
 
@@ -52,31 +52,36 @@
     [go-to-url]
     ]])
 
-(defn get-iri [state]
-  (-> @state
-      (get-in [:current-route :path-params :iri])
-      (goog.string.urlDecode)
-      (rdf/iri)))
+(defn get-subject-from-route [state]
+  (condp = (get-in @state [:current-route :data :name])
+    :geopub.routes/browse-iri (-> @state
+                                  (get-in [:current-route :path-params :iri])
+                                  (goog.string.urlDecode)
+                                  (rdf/iri))
+
+    :geopub.routes/browse-blank-node (-> @state
+                                         (get-in [:current-route :path-params :blank-node])
+                                         (goog.string.urlDecode)
+                                         (rdf/blank-node))))
 
 (defn toolbar [state]
-  [:div.toolbar
+  (let [subject (get-subject-from-route state)]
+    [:div.toolbar
+       [:button
+        {:on-click
+         #(geopub.cpub/like! state subject)} "Like"]
 
-   [:button
-    {:on-click
-     #(geopub.cpub/like! state (get-iri state))} "Like"]
-
-   [:button
-    {:on-click
-     #(geopub.state/add-rdf-graph!
-       state
-       (geopub.data.rdf/get-rdf (rdf/iri-value (get-iri state))
-                                {:with-credentials? false}))}
-    "Fetch more data"]])
+       [:button
+        {:on-click
+         #(geopub.state/add-rdf-graph!
+           state
+           (geopub.data.rdf/get-rdf (rdf/iri-value subject)
+                                    {:with-credentials? false}))}
+        "Fetch more data"]]))
 
 (defn description-view [state]
-  (let [iri (get-iri state)
-        description (r/track #(rdf/description iri (:graph @state)))]
-
+  (let [subject (get-subject-from-route state)
+        description (r/track #(rdf/description subject (:graph @state)))]
     [:div.ui-page
      [sidebar]
      [:div.main-container
@@ -94,11 +99,8 @@
   "Returns sequence of descriptions that have the specified type."
   [graph type]
   ;; TODO implement RDFs subClass
-  ;; filter out blank nodes because they cause trouble
-  (filter #(rdf/iri? (rdf/description-subject %))
-          (map
-           #(rdf/description % graph)
-           (run* [subject] (rdf-logic/graph-typeo graph subject type)))))
+  (map #(rdf/description % graph)
+       (run* [subject] (rdf-logic/graph-typeo graph subject type))))
 
 (defn browse-view [state]
   (let [type (get-type state)]

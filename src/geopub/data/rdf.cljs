@@ -110,8 +110,12 @@
 ;; Reagent components
 
 (defn- iri-href [iri]
-  (rfe/href :geopub.routes/description
+  (rfe/href :geopub.routes/browse-iri
             {:iri (goog.string.urlEncode (rdf/iri-value iri))}))
+
+(defn- blank-node-href [blank-node]
+  (rfe/href :geopub.routes/browse-blank-node
+            {:blank-node (goog.string.urlEncode (rdf/blank-node-id blank-node))}))
 
 (defn iri-component
   "Render an IRI as a link that can be followed in the internal browser."
@@ -143,7 +147,10 @@
   [:div {:dangerouslySetInnerHTML {:__html (rdf/literal-value literal)}}])
 
 (defn blank-node-component [bnode & [opts]]
-  (str "_:" (rdf/blank-node-id bnode)))
+  (if-not (:disable-href opts)
+    [:a {:href (blank-node-href bnode)}
+     (str "_:" (rdf/blank-node-id bnode))]
+    (str "_:" (rdf/blank-node-id bnode))))
 
 (defn rdf-term-component [term & [opts]]
   (cond

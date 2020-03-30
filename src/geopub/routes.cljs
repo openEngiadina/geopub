@@ -11,10 +11,15 @@
     {:name ::activity
      :view geopub.ui.activity/view}]
 
-   ["browse/description/:iri"
-    {:name ::description
+   ["browse/iri/:iri"
+    {:name ::browse-iri
      :view geopub.ui.browse/description-view
      :parameters {:path {:iri string?}}}]
+
+   ["browse/blank-node/:blank-node"
+    {:name ::browse-blank-node
+     :view geopub.ui.browse/description-view
+     :parameters {:path {:blank-node string?}}}]
 
    ["browse"
     {:name ::browse

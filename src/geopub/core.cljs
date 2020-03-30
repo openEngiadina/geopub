@@ -111,7 +111,9 @@
    "https://framapiaf.org/users/framasoft"
    "https://framapiaf.org/users/framasoft/outbox?page=true"
    "https://literatur.social/users/buechergefahr"
-   "https://literatur.social/users/buechergefahr/outbox?page=true"])
+   "https://literatur.social/users/buechergefahr/outbox?page=true"
+   "https://radar.squat.net/en/event/anarchist-bookfairs/2020-05-16/montreal-anarchist-bookfair-2020"
+   ])
 
 (defn init! []
   (load-ontologies)

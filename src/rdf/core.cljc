@@ -204,7 +204,10 @@
 (defn description
   "Make a new description"
   [subject graph]
-  (if (and (iri? subject) (graph? graph))
+  (if (and
+       (or (iri? subject)
+           (blank-node? subject))
+       (graph? graph))
     (->Description subject graph)
     graph))
 
