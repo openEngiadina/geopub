@@ -20,6 +20,7 @@
             [reagent.dom]
             [goog.Uri :as uri]
             [geopub.state]
+            [geopub.ns :as ns]
             [geopub.ui.map]
             [geopub.ui.store]
             [geopub.ui.activity]
@@ -90,7 +91,7 @@
     [:nav
      [:ul
       [:li [:a {:href (rfe/href :geopub.routes/activity)} "Activity"]]
-      [:li [:a {:href (rfe/href :geopub.routes/browse)} "Browse"]]
+      [:li [:a {:href (geopub.ui.browse/browse-href (ns/as "Note"))} "Browse"]]
       [:li [:a {:href (rfe/href :geopub.routes/store)} "Store"]]
       [:li [:a {:href (rfe/href :geopub.routes/map)} "Map"]]]]]
 

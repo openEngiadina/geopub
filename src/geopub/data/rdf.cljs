@@ -107,8 +107,8 @@
                   {:headers {"Content-type" "text/turtle"}
                    :body body} opts)))))
 
-;; Reagent components
-
+;; Links to the internal browser
+ 
 (defn- iri-href [iri]
   (rfe/href :geopub.routes/browse-iri
             {:iri (goog.string.urlEncode (rdf/iri-value iri))}))
@@ -116,6 +116,14 @@
 (defn- blank-node-href [blank-node]
   (rfe/href :geopub.routes/browse-blank-node
             {:blank-node (goog.string.urlEncode (rdf/blank-node-id blank-node))}))
+
+(defn- term-href [term]
+  (cond
+    (rdf/iri? term) (iri-href term)
+    (rdf/blank-node? term) (blank-node-href term)
+    :else ""))
+
+;; Reagent components
 
 (defn iri-component
   "Render an IRI as a link that can be followed in the internal browser."
@@ -144,7 +152,7 @@
     [:span.iri "-"]))
 
 (defn literal-component [literal & [opts]]
-  [:div {:dangerouslySetInnerHTML {:__html (rdf/literal-value literal)}}])
+  [:span {:dangerouslySetInnerHTML {:__html (rdf/literal-value literal)}}])
 
 (defn blank-node-component [bnode & [opts]]
   (if-not (:disable-href opts)
@@ -242,17 +250,18 @@
         (and
          ;; label term is not an iri
          (not (rdf/iri? label-term))
-         ;; subject is an iri
-         (rdf/iri? subject)
+         ;; subject is an iri or blank-node
+         (or (rdf/iri? subject)
+             (rdf/blank-node? subject))
          ;; we are not disabling hrefs in general
          (not (:disable-href opts)))
 
       ;; then make the component a clickable link
-      [:a {:href (iri-href (rdf/description-subject object))}
-       [rdf-term-component (description-label-term object opts)]]
+      [:a {:href (term-href (rdf/description-subject object))}
+       [rdf-term-component label-term opts]]
       
       ;; else just display as rdf-term
-      [rdf-term-component (description-label-term object opts)])))
+      [rdf-term-component label-term])))
 
 (defn description-turtle-component [object]
   (let [as-turtle (r/atom "")]
@@ -279,7 +288,6 @@
       ((rdf-logic/description-tripleo object (ogp "description") content))
       ((rdf-logic/description-tripleo object (rdfs "comment") content))
       ((l/== content nil))))))
-
 
 (defn description-component
   [object & [opts]]

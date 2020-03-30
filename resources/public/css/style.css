@@ -157,3 +157,13 @@ body {
 .activity span {
     margin: 0.3em;
 }
+
+table.browse-list thead {
+    font-weight: bold;
+}
+
+table.browse-list td {
+    padding: 0.3em;
+}
+
+

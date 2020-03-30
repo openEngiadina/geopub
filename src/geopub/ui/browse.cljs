@@ -7,6 +7,7 @@
             [geopub.ns :refer [as schema]]
             [geopub.cpub]
             [geopub.data.rdf :refer [rdf-term-component
+                                     description-label-component
                                      description-component]]
             [geopub.data.activity]
             [cljs.core.logic :as l]
@@ -100,15 +101,21 @@
        (run* [subject] (rdf-logic/graph-typeo graph subject type))))
 
 (defn browse-view [state]
-  (let [type (get-type state)]
+  (let [type (get-type state)
+        type-description (rdf/description type (:graph @state))]
     [:div.ui-page
      [sidebar]
      [:div.main-container
       [:main
-       [:h1 [rdf-term-component type]]
-       [:table
+       [:h1 "Browse: " [description-label-component type-description]]
+       [:table.browse-list
+        [:thead
+         [:tr
+          [:td "Name"]
+          [:td "IRI"]]]
         [:tbody
          (for [desc (get-descriptions (:graph @state) type)]
            ^{:key (hash desc)}
-           [:tr [:td [rdf-term-component (rdf/description-subject desc)]]])]]
-       ]]]))
+           [:tr
+            [:td [description-label-component desc]]
+            [:td [rdf-term-component (rdf/description-subject desc)]]])]]]]]))
