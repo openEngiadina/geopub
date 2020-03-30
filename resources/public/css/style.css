@@ -141,7 +141,7 @@ body {
 .activity {
     margin: 15px;
     padding: 10px;
-    border: 1px solid grey;
+    border: 0.5px solid lightgrey;
     border-radius: 5px;
     display: flex;
     flex-direction: row;
