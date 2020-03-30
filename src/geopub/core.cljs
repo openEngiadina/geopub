@@ -27,6 +27,7 @@
             [geopub.data.rdf :refer [get-rdf]]
             [geopub.cpub :as cpub]
             [geopub.routes]
+            [cljs.core.async :as async]
             [reitit.core :as rc]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
@@ -55,6 +56,13 @@
                                       {:content-type "text/turtle"}))
   (geopub.state/add-rdf-graph! state
                              (get-rdf "schema.ttl" {:content-type "text/turtle"})))
+
+
+(defn load-public-data [srcs]
+  (async/merge
+   (map #(geopub.state/add-rdf-graph!
+          state (get-rdf % {:with-credentials? false}))
+        srcs)))
 
 (defn cpub-get-data! []
   "Get data from CPub server"
@@ -91,8 +99,24 @@
         [view state]
         [default-view state]))])
 
+;; Some public accessible data that is loaded on init
+(def sample-data
+  ["https://inqlab.net/"
+   "https://openengiadina.net/"
+   "https://ruben.verborgh.org/"
+   "https://chaos.social/users/pukkamustard"
+   "https://chaos.social/users/pukkamustard/outbox?page=true"
+   "https://mastodon.social/users/sl007"
+   "https://mastodon.social/users/sl007/outbox?page=true"
+   "https://framapiaf.org/users/framasoft"
+   "https://framapiaf.org/users/framasoft/outbox?page=true"
+   "https://literatur.social/users/buechergefahr"
+   "https://literatur.social/users/buechergefahr/outbox?page=true"])
+
 (defn init! []
   (load-ontologies)
+  (cpub-get-data!)
+  (load-public-data sample-data)
   (rfe/start!
    (rf/router geopub.routes/routes)
    (fn [match]
@@ -101,40 +125,4 @@
    {:use-fragment true})
   (r/render [ui state]
             (.getElementById js/document "app")
-            cpub-get-data!))
-
-;; Load some stuff to play around
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://inqlab.net/"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://openengiadina.net/"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://ruben.verborgh.org/"
-                                            {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://chaos.social/users/pukkamustard"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://chaos.social/users/pukkamustard/outbox?page=true"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://mastodon.social/users/sl007"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://mastodon.social/users/sl007/outbox?page=true"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://framapiaf.org/users/framasoft"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://framapiaf.org/users/framasoft/outbox?page=true"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://literatur.social/users/buechergefahr"
-                                          {:with-credentials? false}))
-
-(geopub.state/add-rdf-graph! state (get-rdf "https://literatur.social/users/buechergefahr/outbox?page=true"
-                                          {:with-credentials? false}))
-
+            #(print "UI mounted.")))
