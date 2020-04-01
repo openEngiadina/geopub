@@ -46,12 +46,14 @@
     [:h4 "schema.org"]
     [:ul
      [:li [:a {:href (browse-href (schema "Event"))} "Events"]]
-     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]
-     [:li [:a {:href (browse-href (schema "Thing"))} "Thing"]]]
+     [:li [:a {:href (browse-href (schema "Organization"))} "Organization"]]
+     [:li [:a {:href (browse-href (schema "Person"))} "Person"]]
+     [:li [:a {:href (browse-href (schema "Place"))} "Place"]]
+     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]]
 
-    [:h4 "RDFS"]
-    [:ul
-     [:li [:a {:href (browse-href (rdfs "Class"))} "Class"]]]
+    ;; [:h4 "RDFS"]
+    ;; [:ul
+    ;;  [:li [:a {:href (browse-href (rdfs "Class"))} "Class"]]]
 
     [:h3 "Enter URL"]
     [go-to-url]

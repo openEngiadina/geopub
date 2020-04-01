@@ -108,6 +108,7 @@
   ["https://inqlab.net/"
    "https://openengiadina.net/"
    "https://ruben.verborgh.org/"
+   "https://www.rubensworks.net/"
    "https://chaos.social/users/pukkamustard"
    "https://chaos.social/users/pukkamustard/outbox?page=true"
    "https://mastodon.social/users/sl007"
