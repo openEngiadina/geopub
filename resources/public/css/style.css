@@ -92,57 +92,56 @@ body {
     flex-grow: 1;
 }
 
-.object {
-}
+/* Description */
 
-.object header {
+.description header {
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
-.object header .icon {
+.description header .icon {
     max-width: 150px;
     max-height: 150px;
     margin: 10px;
     margin-right: 20px;
 }
 
-.object header .raw-id {
+.description header .raw-id {
     color: grey;
     font-size: medium;
 }
 
-.object header .raw-id a {
+.description header .raw-id a {
     color: grey;
 }
 
-.object .meta {
+.description .meta {
     color: grey;
     font-size: small;
 }
 
-.object .meta .object-property-list dt {
+.description .meta .description-property-list dt {
     float: left;
     clear: left;
     width: 100px;
     overflow: hidden;
 }
 
-.object .meta .object-property-list dd {
+.description .meta .description-property-list dd {
     margin: 0 0 0 110px;
     padding: 0 0 0.5em 0;
 }
 
-.object .meta .object-property-list dt a {
+.description .meta .description-property-list dt a {
     color: grey;
 }
 
-.object .meta .object-property-list dd a {
+.description .meta .description-property-list dd a {
     color: grey;
 }
 
-.object details {
+.description details {
     border: 0.5px solid lightgrey;
     border-radius: 5px;
     margin-top: 30px;
@@ -151,7 +150,7 @@ body {
     max-width: 80%;
 }
 
-.object .object-content {
+.description .description-content {
     border: 0.5px solid lightgrey;
     border-radius: 5px;
     margin-top: 30px;
@@ -160,10 +159,12 @@ body {
 }
 
 
-.object .object-property-list dt {
+.description .description-property-list dt {
 }
-.object .object-property-list dd {
+.description .description-property-list dd {
 }
+
+/* Activity */
 
 .activity {
     margin: 15px;
@@ -184,6 +185,7 @@ body {
 .activity span {
     margin: 0.3em;
 }
+
 
 table.browse-list thead {
     font-weight: bold;

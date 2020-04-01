@@ -182,57 +182,57 @@
 
 (defn description-label-term
   "Returns a suitable RDF Term that can be used as a label for the description."
-  [object & [opts]]
+  [desc & [opts]]
   (first
    (run 1 [label]
      (l/conda
 
       ;; use Activitystreams preferredUsername
-      ((rdf-logic/description-tripleo object (as "preferredUsername") label))
+      ((rdf-logic/description-tripleo desc (as "preferredUsername") label))
 
       ;; use foaf nick
-      ((rdf-logic/description-tripleo object (foaf "nick") label))
+      ((rdf-logic/description-tripleo desc (foaf "nick") label))
 
       ;; use Activitystreams name
-      [(rdf-logic/description-tripleo object (as "name") label)]
+      [(rdf-logic/description-tripleo desc (as "name") label)]
       
       ;; use dc:title
-      [(rdf-logic/description-tripleo object (dc "title") label)]
+      [(rdf-logic/description-tripleo desc (dc "title") label)]
 
       ;; use schema.org name
-      ((rdf-logic/description-tripleo object (schema "name") label))
+      ((rdf-logic/description-tripleo desc (schema "name") label))
 
       ;; use ogp title
-      ((rdf-logic/description-tripleo object (ogp "title") label))
+      ((rdf-logic/description-tripleo desc (ogp "title") label))
 
       ;; use rdfs label
-      ((rdf-logic/description-tripleo object (rdfs "label") label))
+      ((rdf-logic/description-tripleo desc (rdfs "label") label))
 
       ;; use the rdfs label of the type
-      [(rdfs-type-labelo (rdf/description-graph object)
-                         (rdf/description-subject object)
+      [(rdfs-type-labelo (rdf/description-graph desc)
+                         (rdf/description-subject desc)
                          label)]
 
       ;; Fall back to using the subject IRI as label
-      [(l/== (rdf/description-subject object) label)]))))
+      [(l/== (rdf/description-subject desc) label)]))))
 
 
-(defn activity-streams-icono [object image]
+(defn activity-streams-icono [desc image]
   (fresh [image-link]
-    (rdf-logic/description-tripleo object (as "icon") image-link)
-    (rdf-logic/graph-tripleo (rdf/description-graph object)
+    (rdf-logic/description-tripleo desc (as "icon") image-link)
+    (rdf-logic/graph-tripleo (rdf/description-graph desc)
                              (rdf/triple image-link (as "url") image))))
 
 (defn description-icon-src
   "Returns a string that can be used as src for an icon."
-  [object & [opts]]
+  [desc & [opts]]
   (->> (run 1 [image]
          (l/conda
-          ((rdf-logic/description-tripleo object (ogp "image") image))
+          ((rdf-logic/description-tripleo desc (ogp "image") image))
 
-          ((rdf-logic/description-tripleo object (schema "image") image))
+          ((rdf-logic/description-tripleo desc (schema "image") image))
 
-          ((activity-streams-icono object image))
+          ((activity-streams-icono desc image))
 
           ((l/== image nil))))
        (map (fn [image-term]
@@ -242,10 +242,10 @@
                 image-term)))
        (first)))
 
-(defn description-label-component [object & [opts]]
+(defn description-label-component [desc & [opts]]
   (let
-      [subject (rdf/description-subject object)
-       label-term (description-label-term object opts)]
+      [subject (rdf/description-subject desc)
+       label-term (description-label-term desc opts)]
 
     (if
         (and
@@ -258,17 +258,17 @@
          (not (:disable-href opts)))
 
       ;; then make the component a clickable link
-      [:a {:href (term-href (rdf/description-subject object))}
+      [:a {:href (term-href (rdf/description-subject desc))}
        [rdf-term-component label-term opts]]
       
       ;; else just display as rdf-term
       [rdf-term-component label-term])))
 
-(defn description-turtle-component [object]
+(defn description-turtle-component [desc]
   (let [as-turtle (r/atom "")]
     (fn []
       ;; encode description as RDF/Turtle
-      (go (swap! as-turtle (constantly (<! (n3/encode object)))))
+      (go (swap! as-turtle (constantly (<! (n3/encode desc)))))
       [:code.turtle [:pre @as-turtle]])))
 
 (defn description-property-list-component [desc & [opts]]
@@ -281,7 +281,7 @@
      
        ^{:key (hash triple)}
 
-       [:div.object-property-list
+       [:div.desc-property-list
 
         [:dt [description-label-component
               (rdf/description-move desc (rdf/triple-predicate triple))]]
@@ -295,30 +295,30 @@
 
 (defn description-comment-term
   "Returns a short summary or comment of the description"
-  [object]
+  [desc]
   (first
    (run 1 [content]
      (l/conda
-      [(rdf-logic/description-tripleo object (as "summary") content)]
-      [(rdf-logic/description-tripleo object (ogp "description") content)]
-      [(rdf-logic/description-tripleo object (rdfs "comment") content)]
+      [(rdf-logic/description-tripleo desc (as "summary") content)]
+      [(rdf-logic/description-tripleo desc (ogp "description") content)]
+      [(rdf-logic/description-tripleo desc (rdfs "comment") content)]
       [(l/== content nil)]))))
 
 (defn description-content-term
   "Returns content of the description"
-  [object]
+  [desc]
   (first
    (run 1 [content]
      (l/conda
-      [(rdf-logic/description-tripleo object (as "content") content)]
+      [(rdf-logic/description-tripleo desc (as "content") content)]
       [(l/== content nil)]))))
 
 (defn description-created-at
-  "Return a date that describes when the object was created"
-  [object]
+  "Return a date that describes when the description was created"
+  [desc]
   (some->> (run 1 [c]
              (l/conda
-              [(rdf-logic/description-tripleo object (as "published") c)]
+              [(rdf-logic/description-tripleo desc (as "published") c)]
               [(l/== c nil)]))
            (first)
            (rdf/literal-value)
@@ -326,14 +326,14 @@
 
 (defn description-creator
   "Returns a description of who created the description"
-  [object]
+  [desc]
   (some->> (run 1 [c]
              (l/conda
-              [(rdf-logic/description-tripleo object (as "actor") c)]
-              [(rdf-logic/description-tripleo object (as "attributedTo") c)]
+              [(rdf-logic/description-tripleo desc (as "actor") c)]
+              [(rdf-logic/description-tripleo desc (as "attributedTo") c)]
               [(l/== c nil)]))
            (first)
-           (rdf/description-move object)))
+           (rdf/description-move desc)))
 
 (def default-metadata
   #{(as "actor")
@@ -348,7 +348,7 @@
 
 (defn description-component
   [desc & [opts]]
-  [:section.object
+  [:section.description
 
    (let [label-term (description-label-term desc)]
 
@@ -378,7 +378,7 @@
 
 
    (if-let [content (description-content-term desc)]
-     [:div.object-content
+     [:div.description-content
       [rdf-term-component content]])
 
    [:details
