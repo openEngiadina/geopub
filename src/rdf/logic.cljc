@@ -88,7 +88,7 @@
         (l/-reify* (:predicate v))
         (l/-reify* (:object v)))))
 
-;; Logic helpers
+;; Basic Triple relations.
 
 (defn tripleo
   "Relation to match triple"
@@ -96,25 +96,6 @@
   (fn [a]
     (l/unify a (rdf/triple s p o) t)))
 
-(defn graph-tripleo
- "Relation to match triples in a graph"
- [graph q]
- (fn [a]
-   (let [q (l/-walk* a q)]
-     (cond
-       (rdf/triple? q)
-       (l/to-stream
-        (map #(l/unify a % q)
-             (rdf/graph-match graph q)))
-
-       ;; dump all triples
-       (l/lvar? q)
-       (l/to-stream (map #(l/unify a % q)
-                         (rdf/graph-match graph
-                                          (rdf/triple (l/lvar) (l/lvar) (l/lvar)))))
-
-       ;; will not match with anything else
-       :else (l/to-stream '())))))
 
 (defn triple-subjecto
   "Relation between triple and subject"
@@ -134,17 +115,61 @@
   (l/fresh [s p]
            (tripleo s p o t)))
 
-(defn typeo
-  "Relationship between subject and type"
-  [s rdf-type t]
-  (tripleo s (ns/rdf :type) rdf-type t))
+
+;; Graph
+
+(defn graph-tripleo
+  "Relation to match triples in a graph"
+  ([graph q]
+   (fn [a]
+     (let [q (l/-walk* a q)]
+       (cond
+         (rdf/triple? q)
+         (l/to-stream
+          (map #(l/unify a % q)
+               (rdf/graph-match graph q)))
+
+         ;; dump all triples
+         (l/lvar? q)
+         (l/to-stream (map #(l/unify a % q)
+                           (rdf/graph-match graph
+                                            (rdf/triple (l/lvar) (l/lvar) (l/lvar)))))
+
+         ;; will not match with anything else
+         :else (l/to-stream '())))))
+  ([graph s p o]
+   (graph-tripleo graph (rdf/triple s p o))))
+
+;; RDFS
+;; See "Simple and efficient minimal RDFS" -  Muñoz, J Pérez, C Gutierrez - Journal of web semantics, 2009
+ 
+(defn- rdfs-subclass-ao
+  "Rule (3) (a)"
+  [graph a c]
+  (fresh [b]
+    (l/conda
+     ;; a is directly subClassOf c
+     [(graph-tripleo graph a (ns/rdfs "subClassOf") c)]
+     ;; b is directly subClass of c
+     [(graph-tripleo graph b (ns/rdfs "subClassOf") c)
+      ;; and a is subclass of b
+      (rdfs-subclass-ao graph a b)]
+     ;; cond requires at least one non-failing line. TODO: why?
+     [l/s# l/u#])))
+
+(defn- rdfs-subclass-bo
+  "Rule (3) (b)"
+  [graph x b]
+  (fresh [a]
+    (rdfs-subclass-ao graph a b)
+    (graph-tripleo graph x (ns/rdf "type") a)))
 
 (defn graph-typeo
-  "Run typeo on a graph. This is useful for quickly getting the type of an object from a graph"
+  "Relation between subject and type using rdf:type. Implements subclassing."
   [graph s rdf-type]
-  (fresh [t]
-    (typeo s rdf-type t)
-    (graph-tripleo graph t)))
+  (l/conde
+   [(graph-tripleo graph s (ns/rdf "type") rdf-type)]
+   [(rdfs-subclass-bo graph s rdf-type)]))
 
 (defn reachableo
   "Is z reachable from a in graph withing n steps?"
@@ -186,7 +211,9 @@
 
     l/fail))
 
+;; Description
+ 
 (defn description-tripleo
   [desc p o]
   (graph-tripleo (rdf/description-graph desc)
-                 (rdf/triple (rdf/description-subject desc) p o)))
+                 (rdf/description-subject desc) p o))

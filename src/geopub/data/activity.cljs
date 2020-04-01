@@ -16,28 +16,19 @@
   [graph]
   (let
       [activity-ids (run* [id]
-                      (fresh [activity-type]
+                      (rdf-logic/graph-typeo graph id (as "Activity")))]
 
-                        ;; Get all possible activity types
-                        (rdf-logic/graph-tripleo graph
-                                                 (rdf/triple activity-type
-                                                             (rdfs "subClassOf")
-                                                             (as "Activity")))
-
-                        ;; Get all activities
-                        (rdf-logic/graph-typeo graph id activity-type)))]
-
-    (->> activity-ids
-         (map #(rdf/description % graph))
-         (sort-by
-          ;; get the as:published property and cast to js/Date
-          (fn [description]
-            (->> (rdf/description-get description (as "published"))
-                 (first)
-                 (rdf/literal-value)
-                 (new js/Date)))
-          ;; reverse the sort order
-          (comp - compare)))))
+      (->> activity-ids
+           (map #(rdf/description % graph))
+           (sort-by
+            ;; get the as:published property and cast to js/Date
+            (fn [description]
+              (->> (rdf/description-get description (as "published"))
+                   (first)
+                   (rdf/literal-value)
+                   (new js/Date)))
+            ;; reverse the sort order
+            (comp - compare)))))
 
 ;; Helpers for creating an Activity
 
