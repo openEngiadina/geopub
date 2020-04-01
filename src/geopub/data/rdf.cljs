@@ -232,6 +232,8 @@
 
           ((rdf-logic/description-tripleo desc (schema "image") image))
 
+          ((rdf-logic/description-tripleo desc (rdf/iri "http://rdfs.org/sioc/ns#avatar") image))
+
           ((activity-streams-icono desc image))
 
           ((l/== image nil))))
