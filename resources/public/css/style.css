@@ -73,6 +73,12 @@ body {
     font-size: 1.2em;
 }
 
+.ui-page .activity-bar {
+    padding-left: 20px;
+    flex-basis: 60rem;
+    border-left: 0.2px solid lightgrey;
+}
+
 .main-container {
     display: flex;
     flex-direction: column;

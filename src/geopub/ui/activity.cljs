@@ -48,31 +48,20 @@
                       activity
                       (first (rdf/description-get activity (rdf :type))))]
       [:div.activity
-       ;; render object
-       ;; (for
-       ;;  [object
-       ;;   (map (partial rdf/description-move activity)
-       ;;        (rdf/description-get activity (as :object)))]
-
-       ;;   ^{:key (prn-str (rdf/description-subject object))}
-       ;;   [description-component object])
-
        (if-let [icon-src (description-icon-src actor)]
          [:span.icon [:img {:src (rdf/iri-value icon-src)}]])
 
        [:span.actor [description-label-component actor]]
        [:span.activity-type [description-label-component activity]]
        [:span.object [description-label-component object]]
-       [published-component activity]
-       ;; [:span [description-label-component activity]]
-
-       ;; [:div.meta
-       ;;  [iri-component (rdf/description-get activity (as :actor))]
-       ;;  [:br]
-       ;;  [iri-component (rdf/description-get activity (rdf :type))]]
-       ]))
+       [published-component activity]]))
 
 
+(defn activity-timeline-component [activities]
+  [:div.timeline
+   (for [activity activities]
+     ^{:key (hash activity)}
+     [activity-component activity])])
 
 (defn sidebar []
   [:div.sidebar
@@ -87,9 +76,8 @@
 
 (defn view [state]
   [:div.ui-page
-   [sidebar]
+   ;; [sidebar]
    [:main
     [:h1 "Activity"]
-    (for [activity (activity/get-activities (:graph @state))]
-      ^{:key (hash activity)}
-      [activity-component activity])]])
+    [activity-timeline-component
+     (activity/get-activities (:graph @state))]]])

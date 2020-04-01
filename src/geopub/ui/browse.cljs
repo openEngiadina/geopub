@@ -10,6 +10,7 @@
                                      description-label-component
                                      description-component]]
             [geopub.data.activity]
+            [geopub.ui.activity]
             [cljs.core.logic :as l]
             [rdf.logic :as rdf-logic]
             [reitit.frontend.easy :as rfe])
@@ -39,12 +40,14 @@
      [:li [:a {:href (browse-href (as "Note"))} "Notes"]]
      [:li [:a {:href (browse-href (as "Article"))} "Articles"]]
      [:li [:a {:href (browse-href (as "Person"))} "Person"]]
-     [:li [:a {:href (browse-href (as "Like"))} "Likes"]]]
+     [:li [:a {:href (browse-href (as "Like"))} "Likes"]]
+     [:li [:a {:href (browse-href (as "Object"))} "Object"]]]
 
     [:h4 "schema.org"]
     [:ul
      [:li [:a {:href (browse-href (schema "Event"))} "Events"]]
-     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]]
+     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]
+     [:li [:a {:href (browse-href (schema "Thing"))} "Thing"]]]
 
     [:h4 "RDFS"]
     [:ul
@@ -81,6 +84,12 @@
                                     {:with-credentials? false}))}
         "Fetch more data"]]))
 
+(defn activity-bar [graph subject]
+  [:div.activity-bar
+   [:h3 "Related Activity"]
+   [geopub.ui.activity/activity-timeline-component
+    (geopub.data.activity/get-related-activities graph subject)]])
+
 (defn description-view [state]
   (let [subject (get-subject-from-route state)
         description (r/track #(rdf/description subject (:graph @state)))]
@@ -89,7 +98,8 @@
      [:div.main-container
       [toolbar state]
       [:main
-       [description-component @description]]]]))
+       [description-component @description]]]
+     [activity-bar (:graph @state) subject]]))
 
 (defn get-type [state]
   (-> @state

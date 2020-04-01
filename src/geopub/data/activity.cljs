@@ -11,24 +11,39 @@
 
 ;; Helpers for getting activities from graph
 
+;; TODO: move this to some other place and generalize to other properties other than as:published (such as dc:createdAt)
+(defn- sort-by-date [descriptions]
+  (sort-by
+   ;; get the as:published property and cast to js/Date
+   (fn [description]
+     (->> (rdf/description-get description (as "published"))
+          (first)
+          (rdf/literal-value)
+          (new js/Date)))
+   ;; reverse the sort order
+   (comp - compare)
+   descriptions))
+
+(defn- related-activityo [graph related-to activity]
+  (l/conda
+   ;; there is a triple with any property with activity as subject and related-to as object
+   [(fresh [p] (rdf-logic/graph-tripleo graph activity p related-to))]
+   [l/s# l/u#]))
+
+(defn get-related-activities
+  [graph related-to]
+  (->> (run* [activity]
+         (rdf-logic/graph-typeo graph activity (as "Activity"))
+         (related-activityo graph related-to activity))
+       (map #(rdf/description % graph))
+       (sort-by-date)))
+
 (defn get-activities
   "Returns all activities as a lazy sequence of RDF descriptions"
   [graph]
-  (let
-      [activity-ids (run* [id]
-                      (rdf-logic/graph-typeo graph id (as "Activity")))]
-
-      (->> activity-ids
-           (map #(rdf/description % graph))
-           (sort-by
-            ;; get the as:published property and cast to js/Date
-            (fn [description]
-              (->> (rdf/description-get description (as "published"))
-                   (first)
-                   (rdf/literal-value)
-                   (new js/Date)))
-            ;; reverse the sort order
-            (comp - compare)))))
+  (->> (run* [id] (rdf-logic/graph-typeo graph id (as "Activity")))
+       (map #(rdf/description % graph))
+       (sort-by-date)))
 
 ;; Helpers for creating an Activity
 
