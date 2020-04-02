@@ -50,9 +50,10 @@
 (defn like
   "Returns an activity to like an object"
   [object]
-  (-> (rdf-graph/graph)
-      (rdf/graph-add (rdf/triple (rdf/iri "") (rdf :type) (as "Like")))
-      (rdf/graph-add (rdf/triple (rdf/iri "") (as :object) object))))
+  (-> (rdf/description (rdf/iri "") (rdf-graph/graph))
+      (rdf/description-add (rdf "type") (as "Like"))
+      (rdf/description-add (as "object") object)
+      (rdf/description-add (as "to") (as "Public"))))
 
 ;; Reagent component
 

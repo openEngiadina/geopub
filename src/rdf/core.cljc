@@ -244,8 +244,15 @@
 
 (defn description-map-graph
   "Returns a description with f applied on the graph. f must return a graph. If not the output of f will be returned."
-  [f description]
-  (let [mapped-graph (f (description-graph description))]
+  [f desc]
+  (let [mapped-graph (f (description-graph desc))]
     (if (graph? mapped-graph)
-      (description (description-subject description) mapped-graph)
+      (description (description-subject desc) mapped-graph)
       mapped-graph)))
+
+(defn description-add
+  "Add a triple to the description"
+  [description p o]
+  (description-map-graph
+   #(graph-add % (triple (description-subject description) p o))
+   description))

@@ -72,7 +72,6 @@
                                          outbox))))))
 
 (defn like! [state what]
-  (print (get-in @state [:account :outbox]))
   (-> (activity/like what)
       (geopub.data.rdf/post-rdf
        (get-in @state [:account :outbox])
