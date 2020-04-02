@@ -12,6 +12,7 @@
             [geopub.data.activity]
             [geopub.ui.activity]
             [cljs.core.logic :as l]
+            [cljs.core.async :as async]
             [rdf.logic :as rdf-logic]
             [reitit.frontend.easy :as rfe])
   (:require-macros [cljs.core.logic :refer [run* fresh]]))
@@ -71,23 +72,27 @@
                                          (goog.string.urlDecode)
                                          (rdf/blank-node))))
 
-(defn toolbar [state]
-  (let [subject (get-subject-from-route state)]
-    [:div.toolbar
+(defn load-more-data [state subject loading]
+  (reset! loading true)
+  (async/take!
+   (geopub.state/add-rdf-graph! state
+                                (geopub.data.rdf/get-rdf (rdf/iri-value subject)
+                                                         {:with-credentials? false}))
+   #(reset! loading false)))
 
-     
-     (if (:account @state)
-       [:button
-        {:on-click
-         #(geopub.cpub/like! state subject)} "Like"])
+(defn toolbar [state subject loading]
+  [:div.toolbar
 
+   (if (:account @state)
      [:button
       {:on-click
-       #(geopub.state/add-rdf-graph!
-         state
-         (geopub.data.rdf/get-rdf (rdf/iri-value subject)
-                                  {:with-credentials? false}))}
-      "Fetch more data"]]))
+       #(geopub.cpub/like! state subject)} "Like"])
+
+   (if @loading
+     [:span "Loading more data ..."]
+     [:button
+      {:on-click #(load-more-data state subject loading)}
+      "Load more data"])])
 
 (defn activity-bar [graph subject]
   [:div.activity-bar
@@ -95,13 +100,21 @@
    [geopub.ui.activity/activity-timeline-component
     (geopub.data.activity/get-related-activities graph subject)]])
 
+
 (defn description-view [state]
+
   (let [subject (get-subject-from-route state)
-        description (r/track #(rdf/description subject (:graph @state)))]
+        description (r/track #(rdf/description subject (:graph @state)))
+        loading (r/atom false)]
+
+    ;; Auto load some more data if description is empty
+    (if (rdf/description-empty? @description)
+      (load-more-data state subject loading))
+
     [:div.ui-page
      [sidebar]
      [:div.main-container
-      [toolbar state]
+      [toolbar state subject loading]
       [:main
        [description-component @description]]]
      [activity-bar (:graph @state) subject]]))

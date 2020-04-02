@@ -214,6 +214,11 @@
 (defn description? [description]
   (instance? Description description))
 
+(defn description-empty?
+  "Returns true if the description has no triples."
+  [description]
+  (empty? (triple-seq description)))
+
 (defn description-subject
   "Get the subject of a description"
   [description]

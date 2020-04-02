@@ -122,7 +122,7 @@
       ]]
     ]
 
-   (if (:loading @state)
+   (if (:loading-initial @state)
      [:div.ui-page
       "Loading some initial data ... "]
      (let [view (get-in @state [:current-route :data :view])]
@@ -134,7 +134,7 @@
 (defn init! []
 
   ;; set the loading bit
-  (swap! state #(assoc % :loading true))
+  (swap! state #(assoc % :loading-initial true))
   
   (async/take!
    (async/reduce (constantly :done) :blups
@@ -142,7 +142,7 @@
                                (load-public-data sample-data)]))
    (fn []
      (print "Finished loading init/sample data.")
-     (swap! state #(dissoc % :loading))))
+     (swap! state #(dissoc % :loading-initial))))
 
   (rfe/start!
    (rf/router geopub.routes/routes)
