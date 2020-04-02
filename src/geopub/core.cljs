@@ -130,4 +130,4 @@
    {:use-fragment true})
   (r/render [ui state]
             (.getElementById js/document "app")
-            #(print "UI mounted.")))
+            #(print "GeoPub mounted.")))
