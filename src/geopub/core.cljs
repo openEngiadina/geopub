@@ -44,7 +44,7 @@
 
 ;; Some public accessible data that is loaded on init
 (def sample-data
-  [;; Some websites that have RDFa markup
+  [ ;; Some websites that have RDFa markup
    "https://inqlab.net/"
    "https://openengiadina.net/"
    "https://ruben.verborgh.org/"
@@ -53,6 +53,12 @@
    ;; Get some ActivityPub actors and some activities from their outboxes
    "https://chaos.social/users/pukkamustard"
    "https://chaos.social/users/pukkamustard/outbox?page=true"
+
+   "https://mastodon.xyz/users/NGIZero"
+   "https://mastodon.xyz/users/NGIZero/outbox?page=true"
+
+   "https://mastodon.social/users/eff"
+   "https://mastodon.social/users/eff/outbox?page=true"
 
    "https://mastodon.social/users/sl007"
    "https://mastodon.social/users/sl007/outbox?page=true"
