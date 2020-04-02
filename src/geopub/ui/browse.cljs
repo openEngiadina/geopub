@@ -50,7 +50,8 @@
      [:li [:a {:href (browse-href (schema "Organization"))} "Organization"]]
      [:li [:a {:href (browse-href (schema "Person"))} "Person"]]
      [:li [:a {:href (browse-href (schema "Place"))} "Place"]]
-     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]]
+     [:li [:a {:href (browse-href (schema "WebPage"))} "Web Page"]]
+     [:li [:a {:href (browse-href (schema "CreativeWork"))} "CreativeWork"]]]
 
     ;; [:h4 "RDFS"]
     ;; [:ul
