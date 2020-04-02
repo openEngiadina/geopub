@@ -5,7 +5,8 @@
             [geopub.ui.browse]
             [geopub.ui.store]
             [geopub.ui.map]
-            [geopub.ui.settings]))
+            [geopub.ui.settings]
+            [geopub.ui.about]))
 
 (def routes
   [["activity"
@@ -38,4 +39,8 @@
    ["settings"
     {:name ::settings
      :view geopub.ui.settings/view}]
+
+   ["about"
+    {:name ::about
+     :view geopub.ui.about/view}]
    ])

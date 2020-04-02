@@ -117,7 +117,7 @@
       ]
 
      [:ul.nav-right
-      [:li [:a {:href (rfe/href :geopub.routes/settings)} "About"]]
+      [:li [:a {:href (rfe/href :geopub.routes/about)} "About"]]
       [:li [:a {:href (rfe/href :geopub.routes/settings)} "Settings"]]
       ]]
     ]
