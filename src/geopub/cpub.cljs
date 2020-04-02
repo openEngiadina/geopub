@@ -39,14 +39,23 @@
       (public-timeline-url)
       (get-rdf {:with-credentials? false})))
 
-(defn login! [state id basic-auth]
+(defn login! [state id password]
   (go-try
-   (let [req-opts {:basic-auth basic-auth
+   (let [id (rdf/iri id)
+
+         profile (rdf/description
+                  id (<? (get-rdf id {:with-credentials? false})))
+
+         basic-auth {:username
+                     (->> (as "preferredUsername")
+                          (rdf/description-get-first profile)
+                          (rdf/literal-value))
+                     :password password}
+
+         req-opts {:basic-auth basic-auth
                    ;; Required to allow a authenticated request with CORS. See: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials
                    :with-credentials? false}
-         id (rdf/iri id)
-         profile (rdf/description
-                  id (<? (get-rdf id req-opts)))
+
          inbox (<? (get-rdf
                     (rdf/description-get-first profile (ldp "inbox")) req-opts))
          outbox (<? (get-rdf

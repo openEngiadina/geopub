@@ -74,17 +74,20 @@
 (defn toolbar [state]
   (let [subject (get-subject-from-route state)]
     [:div.toolbar
-       [:button
-        {:on-click
-         #(geopub.cpub/like! state subject)} "Like"]
 
+     
+     (if (:account @state)
        [:button
         {:on-click
-         #(geopub.state/add-rdf-graph!
-           state
-           (geopub.data.rdf/get-rdf (rdf/iri-value subject)
-                                    {:with-credentials? false}))}
-        "Fetch more data"]]))
+         #(geopub.cpub/like! state subject)} "Like"])
+
+     [:button
+      {:on-click
+       #(geopub.state/add-rdf-graph!
+         state
+         (geopub.data.rdf/get-rdf (rdf/iri-value subject)
+                                  {:with-credentials? false}))}
+      "Fetch more data"]]))
 
 (defn activity-bar [graph subject]
   [:div.activity-bar

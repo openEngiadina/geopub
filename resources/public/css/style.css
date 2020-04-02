@@ -27,7 +27,10 @@ body {
 }
 
 #topbar nav {
-    margin: 0 0 0 50px;
+    margin: 0 10px 0 50px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
 }
 
 #topbar nav ul {
@@ -47,7 +50,6 @@ body {
     font-size: 1.4em;
 }
 
-
 .ui-page {
     display: flex;
     align-items: stretch;
@@ -56,7 +58,7 @@ body {
 }
 
 .ui-page .sidebar {
-    flex-basis: 15rem;
+    flex-basis: 20rem;
     border-right: 0.2px solid lightgrey;
     padding: 20px;
     display: flex;

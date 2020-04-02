@@ -41,10 +41,6 @@
 (def server-url
   (uri/parse "http://localhost:4000/"))
 
-;; Currently the actor and auth is hardcoded.
-(def actor-id (str server-url "users/alice"))
-(def auth {:username "alice" :password "123"})
-
 ;; ============== State and helpers ==============
 
 (defonce state (geopub.state/init))
@@ -72,11 +68,7 @@
   "Get data from CPub server"
   ;; get public timeline
   (geopub.state/add-rdf-graph! state
-                               (cpub/get-public-timeline server-url))
-  ;; Login
-  (geopub.cpub/login! state
-                      "http://localhost:4000/users/alice"
-                      {:username "alice" :password "123"}))
+                               (cpub/get-public-timeline server-url)))
 
 
 ;; ==================== UI =======================
@@ -95,8 +87,15 @@
      [:ul
       [:li [:a {:href (rfe/href :geopub.routes/activity)} "Activity"]]
       [:li [:a {:href (geopub.ui.browse/browse-href (ns/as "Note"))} "Browse"]]
-      [:li [:a {:href (rfe/href :geopub.routes/store)} "Store"]]
-      [:li [:a {:href (rfe/href :geopub.routes/map)} "Map"]]]]]
+      ;; [:li [:a {:href (rfe/href :geopub.routes/store)} "Store"]]
+      ;; [:li [:a {:href (rfe/href :geopub.routes/map)} "Map"]]
+      ]
+
+     [:ul.nav-right
+      [:li [:a {:href (rfe/href :geopub.routes/settings)} "About"]]
+      [:li [:a {:href (rfe/href :geopub.routes/settings)} "Settings"]]
+      ]]
+    ]
 
     (let [view (get-in @state [:current-route :data :view])]
       (if view

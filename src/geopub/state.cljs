@@ -37,3 +37,6 @@
 
 (defn reset-graph! [state]
   (swap! state #(assoc % :graph (rdf.graph.map/graph))))
+
+(defn logout! [state]
+  (swap! state #(dissoc % :account)))
