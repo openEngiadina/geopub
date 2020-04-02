@@ -253,9 +253,13 @@
         (and
          ;; label term is not an iri
          (not (rdf/iri? label-term))
+         ;; or blank-node
+         (not (rdf/blank-node? label-term))
+
          ;; subject is an iri or blank-node
          (or (rdf/iri? subject)
              (rdf/blank-node? subject))
+
          ;; we are not disabling hrefs in general
          (not (:disable-href opts)))
 
@@ -264,7 +268,7 @@
        [rdf-term-component label-term opts]]
       
       ;; else just display as rdf-term
-      [rdf-term-component label-term])))
+      [rdf-term-component label-term opts])))
 
 (defn description-turtle-component [desc]
   (let [as-turtle (r/atom "")]
