@@ -72,7 +72,14 @@
                                          outbox))))))
 
 (defn like! [state what]
-  (-> (activity/like what)
-      (geopub.data.rdf/post-rdf
-       (get-in @state [:account :outbox])
-       {:basic-auth (get-in @state [:account :basic-auth])})))
+  (go-try
+   (let [like-post (<? (-> (activity/like what)
+                           (geopub.data.rdf/post-rdf
+                            (get-in @state [:account :outbox])
+                            {:basic-auth (get-in @state [:account :basic-auth])
+                             :with-credentials? false})))
+         like-activity (<?
+                        (get-rdf (get-in like-post [:headers "location"])
+                                 {:with-credentials? false}))]
+     (swap! state
+            (geopub.state/merge-graphs like-activity)))))
