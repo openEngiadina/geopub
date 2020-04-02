@@ -36,27 +36,41 @@
 (defn ^:dev/after-load start []
   (reagent.dom/force-update-all))
 
-;; ====================== Config =================
-
-(def server-url
-  (uri/parse "http://localhost:4000/"))
-
-;; ============== State and helpers ==============
+;; ============== Initialize state ===============
 
 (defonce state (geopub.state/init))
 
 ;; ============== Start fetching data ============
 
-(defn load-ontologies []
-  (geopub.state/add-rdf-graph! state
-                               (get-rdf "activitystreams2.ttl"
-                                        {:content-type "text/turtle"}))
-  (geopub.state/add-rdf-graph! state
-                               (get-rdf "schema.ttl" {:content-type "text/turtle"}))
+;; Some public accessible data that is loaded on init
+(def sample-data
+  [;; Some websites that have RDFa markup
+   "https://inqlab.net/"
+   "https://openengiadina.net/"
+   "https://ruben.verborgh.org/"
+   "https://www.rubensworks.net/"
 
-  (geopub.state/add-rdf-graph! state
-                               (get-rdf "rdf.ttl" {:content-type "text/turtle"})))
+   ;; Get some ActivityPub actors and some activities from their outboxes
+   "https://chaos.social/users/pukkamustard"
+   "https://chaos.social/users/pukkamustard/outbox?page=true"
 
+   "https://mastodon.social/users/sl007"
+   "https://mastodon.social/users/sl007/outbox?page=true"
+
+   "https://framapiaf.org/users/framasoft"
+   "https://framapiaf.org/users/framasoft/outbox?page=true"
+
+   "https://literatur.social/users/buechergefahr"
+   "https://literatur.social/users/buechergefahr/outbox?page=true"
+
+   ;; Events, organizations and places are available from radar.squat.net
+   "https://radar.squat.net/en"
+
+   ;; local development instance of CPub
+   "http://localhost:4000/public"
+
+   ;; CPub instance on openengiadina.net
+   "https://openengiadina.net/public"])
 
 (defn load-public-data [srcs]
   (async/merge
@@ -64,12 +78,17 @@
           state (get-rdf % {:with-credentials? false}))
         srcs)))
 
-(defn cpub-get-data! []
-  "Get data from CPub server"
-  ;; get public timeline
-  (geopub.state/add-rdf-graph! state
-                               (cpub/get-public-timeline server-url)))
+;; Ontologies that are bundled with GeoPub
+(def default-ontologies
+  ["activitystreams2.ttl" 
+   "schema.ttl"
+   "rdf.ttl"])
 
+(defn load-ontologies []
+  (async/merge
+   (map #(geopub.state/add-rdf-graph!
+          state (get-rdf % {:content-type "text/turtle"}))
+        default-ontologies)))
 
 ;; ==================== UI =======================
 
@@ -97,36 +116,33 @@
       ]]
     ]
 
-    (let [view (get-in @state [:current-route :data :view])]
-      (if view
-        [view state]
-        [default-view state]))])
+   (if (:loading @state)
+     [:div.ui-page
+      "Loading some initial data ... "]
+     (let [view (get-in @state [:current-route :data :view])]
+       (if view
+         [view state]
+         [default-view state])))])
 
-;; Some public accessible data that is loaded on init
-(def sample-data
-  ["https://inqlab.net/"
-   "https://openengiadina.net/"
-   "https://ruben.verborgh.org/"
-   "https://www.rubensworks.net/"
-   "https://chaos.social/users/pukkamustard"
-   "https://chaos.social/users/pukkamustard/outbox?page=true"
-   "https://mastodon.social/users/sl007"
-   "https://mastodon.social/users/sl007/outbox?page=true"
-   "https://framapiaf.org/users/framasoft"
-   "https://framapiaf.org/users/framasoft/outbox?page=true"
-   "https://literatur.social/users/buechergefahr"
-   "https://literatur.social/users/buechergefahr/outbox?page=true"
-   "https://radar.squat.net/en"])
 
 (defn init! []
-  (load-ontologies)
-  (cpub-get-data!)
-  (load-public-data sample-data)
+
+  ;; set the loading bit
+  (swap! state #(assoc % :loading true))
+  
+  (async/take!
+   (async/reduce (constantly :done) :blups
+                 (async/merge [(load-ontologies)
+                               (load-public-data sample-data)]))
+   (fn []
+     (print "Finished loading init/sample data.")
+     (swap! state #(dissoc % :loading))))
+
   (rfe/start!
    (rf/router geopub.routes/routes)
    (fn [match]
      (swap! state #(assoc % :current-route match)))
-    ;; set to false to enable HistoryAPI
+   ;; set to false to enable HistoryAPI
    {:use-fragment true})
   (r/render [ui state]
             (.getElementById js/document "app")
