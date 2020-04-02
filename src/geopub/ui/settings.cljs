@@ -13,9 +13,10 @@
 (defn login-component [state]
   (let [input (r/atom {})]
     (fn []
-      [:form
+      [:form.login
        [:label {:for :actor-url} "Actor URL"] [:br]
        [:input {:type "url" :id :actor-url
+                :placeholder "https://openengiadina.net/users/guest"
                 :required true
                 :on-change (fn [e]
                              (swap! input

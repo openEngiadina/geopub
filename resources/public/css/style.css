@@ -195,6 +195,12 @@ body {
 }
 
 
+.login input {
+    width: 400px;
+    margin: 10px;
+}
+
+
 table.browse-list thead {
     font-weight: bold;
 }
