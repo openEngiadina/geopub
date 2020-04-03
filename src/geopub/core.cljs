@@ -76,7 +76,10 @@
    "http://localhost:4000/public"
 
    ;; CPub instance on openengiadina.net
-   "https://openengiadina.net/public"])
+   "https://openengiadina.net/public"
+   "https://openengiadina.net/users/pukkamustard"
+   "https://openengiadina.net/users/openengiadina"
+   ])
 
 (defn load-public-data [srcs]
   (async/merge
