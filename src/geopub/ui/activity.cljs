@@ -31,7 +31,8 @@
 
 
 (defn published-component [activity]
-  (let [published (description-created-at activity)]
+  (if-some
+      [published (description-created-at activity)]
     [:span (.formatDistance date-fns published (new js/Date)
                             (clj->js {:addSuffix true}))]))
 
