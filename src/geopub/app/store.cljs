@@ -1,7 +1,7 @@
 (ns geopub.app.store
   (:require [rdf.core :as rdf]
             [clojure.core.logic :as l]
-            [geopub.data.rdf :refer [rdf-term-component]]))
+            [geopub.rdf.view :refer [rdf-term-component]]))
 
 (defn triple-table [triples]
   [:table

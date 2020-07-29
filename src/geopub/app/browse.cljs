@@ -6,7 +6,7 @@
             [rdf.ns :refer [rdfs owl]]
             [geopub.ns :refer [as schema]]
             [geopub.cpub]
-            [geopub.data.rdf :refer [rdf-term-component
+            [geopub.rdf.view :refer [rdf-term-component
                                      description-label-component
                                      description-component]]
             [geopub.data.activity]

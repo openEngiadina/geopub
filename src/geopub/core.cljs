@@ -23,78 +23,23 @@
             [geopub.ns :as ns]
             [geopub.db :as db]
             [geopub.router :as router]
-            [geopub.view :as view]))
+            [geopub.view :as view]
+            [geopub.rdf]))
 
-;; (defn ^:dev/after-load start []
-;;   (reagent.dom/force-update-all))
+(defn load-ontologies []
+  "load some ontologies that are bundled with GeoPub"
+  (map
+   #(re-frame/dispatch-sync [:geopub.rdf/get % {:content-type "text/turtle"
+                                           :on-success [::db/add-rdf-graph]}])
+   ["activitystreams2.ttl" "schema.ttl" "rdf.ttl"]))
 
-;; ============== Initialize state ===============
+(defn load-init-data []
+  (map
+   #(re-frame/dispatch-sync [:geopub.rdf/get % {:with-credentials? false
+                                           :on-success [::db/add-rdf-graph]}])
+   ["http://localhost:4000/public"]))
 
-;; (defonce state (geopub.state/init))
-
-;; ============== Start fetching data ============
-
-;; Some public accessible data that is loaded on init
-(comment
-  (def sample-data
-    [ ;; Some websites that have RDFa markup
-     "https://inqlab.net/"
-     "https://openengiadina.net/"
-     "https://ruben.verborgh.org/"
-     "https://www.rubensworks.net/"
-
-     ;; Get some ActivityPub actors and some activities from their outboxes
-     "https://chaos.social/users/pukkamustard"
-     "https://chaos.social/users/pukkamustard/outbox?page=true"
-
-     "https://mastodon.xyz/users/NGIZero"
-     "https://mastodon.xyz/users/NGIZero/outbox?page=true"
-
-     "https://mastodon.social/users/eff"
-     "https://mastodon.social/users/eff/outbox?page=true"
-
-     "https://mastodon.social/users/sl007"
-     "https://mastodon.social/users/sl007/outbox?page=true"
-
-     "https://framapiaf.org/users/framasoft"
-     "https://framapiaf.org/users/framasoft/outbox?page=true"
-
-     "https://literatur.social/users/buechergefahr"
-     "https://literatur.social/users/buechergefahr/outbox?page=true"
-
-     ;; Events, organizations and places are available from radar.squat.net
-     "https://radar.squat.net/en"
-
-     ;; local development instance of CPub
-     "http://localhost:4000/public"
-
-     ;; CPub instance on openengiadina.net
-     "https://openengiadina.net/public"
-     "https://openengiadina.net/users/pukkamustard"
-     "https://openengiadina.net/users/openengiadina"
-     ]))
-
-;; (defn load-public-data [srcs]
-;;   (async/merge
-;;    (map #(geopub.state/add-rdf-graph!
-;;           state (get-rdf % {:with-credentials? false}))
-;;         srcs)))
-
-;; Ontologies that are bundled with GeoPub
-;; (def default-ontologies
-;;   ["activitystreams2.ttl" 
-;;    "schema.ttl"
-;;    "rdf.ttl"])
-
-;; (defn load-ontologies []
-;;   (async/merge
-;;    (map #(geopub.state/add-rdf-graph!
-;;           state (get-rdf % {:content-type "text/turtle"}))
-;;         default-ontologies)))
-
-;; ==================== UI =======================
-
-
+;; Setup
 
 (defn dev-setup []
   (when goog.DEBUG
@@ -105,23 +50,16 @@
 (defn ^:dev/after-load mount-app []
   ;; clear subscription cache
   (re-frame/clear-subscription-cache!)
-  (reagent/render [view/app]
-                  (.getElementById js/document "app")))
+
+  ;; force reagent update (updates everything that does not depend on data)
+  (reagent.dom/force-update-all)
+
+  (let [root-el (.getElementById js/document "app")]
+    (reagent.dom/unmount-component-at-node root-el)
+    (reagent/render [view/app] root-el)))
 
 (defn init! []
 
-  ;; set the loading bit
-  ;; (swap! state #(assoc % :loading-initial true))
-  
-  ;; (async/take!
-  ;;  (async/reduce (constantly :done) :blups
-  ;;                (async/merge [(load-ontologies)
-  ;;                              (load-public-data sample-data)]))
-  ;;  (fn []
-  ;;    (print "Finished loading init/sample data.")
-  ;;    (swap! state #(dissoc % :loading-initial))))
-  ;;
-  
   ;; set up dev helpers
   (dev-setup)
 
@@ -137,6 +75,10 @@
        (re-frame/dispatch [::router/navigate router/default-route])))
    ;; set to false to enable HistoryAPI
    {:use-fragment false})
+
+  ;; load ontologies and initial data
+  (load-ontologies)
+  (load-init-data)
 
   ;; mount the app
   (mount-app))

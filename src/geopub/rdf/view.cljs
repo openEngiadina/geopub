@@ -1,123 +1,39 @@
-(ns geopub.data.rdf
-  "Helpers for displaying RDF data"
+(ns geopub.rdf.view
+  "Reagent components for displaying RDF data"
   (:require [rdf.core :as rdf]
             [rdf.logic :as rdf-logic]
-            [rdf.ns :as rdf-ns]
-            [rdf.n3 :as n3]
-            [rdf.parse :as rdf-parse]
             [rdf.graph.map]
-            [reagent.core :as r]
-            [cljs.core.logic :as l]
-            [cljs.core.async :as async :refer [<!]]
-            [cljs-http.client :as http]
-            [cljs-http.core]
             [rdf.ns :refer [rdf rdfs owl]]
+            [cljs.core.logic :as l]
+
+            [reagent.core :as r]
+            [re-frame.core :as re-frame]
+            [reitit.frontend.easy :as rfe]
+
             [geopub.ns :as ns :refer [as ogp schema foaf dc]]
-            [goog.string]
-            ["date-fns" :as date-fns]
-            [reitit.frontend.easy :as rfe])
-  (:require-macros [cljs.core.async :refer [go]]
-                   [cljs.core.logic :refer [run fresh]]))
 
-;; Data fetching
-
-;; TODO Parser is capable of parsing streams, but cljs-http returns entire body in one go. Explore using the Streams API (https://developer.mozilla.org/en-US/docs/Web/API/Streams_API).
-
-(defn- map-content-types
-  "Some projects and services do not use standard content-types for some reason or an other."
-  [ct]
-  (condp = ct
-    ;; https://www.w3.org/TR/activitystreams-core/#media-type
-    "application/activity+json" "application/ld+json"
-    ct))
-
-(defn- get-content-type [response]
-  (-> response
-      (get-in [:headers "content-type"])
-      (clojure.string/split ";")
-      (first)
-      (map-content-types)))
-
-(defn wrap-request
-  "Per default cljs-http parses JSON. We do not want this."
-  [request]
-  (-> cljs-http.core/request
-      cljs-http.client/wrap-accept
-      cljs-http.client/wrap-form-params
-      cljs-http.client/wrap-multipart-params
-      cljs-http.client/wrap-edn-params
-      cljs-http.client/wrap-edn-response
-      cljs-http.client/wrap-transit-params
-      cljs-http.client/wrap-transit-response
-      cljs-http.client/wrap-json-params
-      ;; wrap-json-response
-      cljs-http.client/wrap-content-type
-      cljs-http.client/wrap-query-params
-      cljs-http.client/wrap-basic-auth
-      cljs-http.client/wrap-oauth
-      cljs-http.client/wrap-method
-      cljs-http.client/wrap-url
-      cljs-http.client/wrap-channel-from-request-map
-      cljs-http.client/wrap-default-headers))
-
-(defn get-rdf
-  "Do a HTTP Get request and attempt to parse respose as RDF. Returns a channel holding an RDF graph or an error."
-  [url & [opts]]
-  (go
-    (let [request-opts (merge {:headers
-                               {"Accept" (clojure.string/join
-                                          ", " (rdf-parse/content-types))}
-                               :method :get
-                               :url (if (rdf/iri? url) (rdf/iri-value url) url)}
-                              opts)
-          ;; cljs-http does too much post-processing (such as parsing json)
-          request (wrap-request cljs-http.core/request)
-
-          response (<! (request request-opts))]
-
-      (if (:success response )
-
-        ;; Parse RDF triples and add to a new graph
-        (<! (async/reduce
-
-             (fn [graph triple]
-               (cond
-                 ;; handle errors
-                 (instance? js/Error triple) triple
-                 (instance? js/Error graph) graph
-                 :else (rdf/graph-add graph triple)))
-             ;; initialize a fresh graph
-             (rdf.graph.map/graph)
-             ;; receive parsed triples in  channel
-             (rdf-parse/parse-string (:body response)
-                                     :content-type (or (:content-type opts)
-                                                       (get-content-type response))
-                                     :base-iri (str url)
-                                     :path (str url))))
-
-        ;; HTTP request failed. Return an error.
-        (ex-info "HTTP request failed" response)))))
-
-;; Data posting
- 
-(defn post-rdf [data url & [opts]]
-  (go
-    (let [body (<! (n3/encode data))]
-      (<! (http/post (if (rdf/iri? url) (rdf/iri-value url) url)
-                     (merge
-                      {:headers {"Content-type" "text/turtle"
-                                 "Access-Control-Expose-Headers" "Location"}
-                       :body body} opts))))))
+            ["date-fns" :as date-fns])
+  (:require-macros [cljs.core.logic :refer [run fresh]]))
 
 ;; Links to the internal browser
  
+(defn link-component [body & route]
+  [:a {:href (apply rfe/href route)
+            :on-click (fn [e]
+                        ;; prevent browser from loading the href
+                        (.preventDefault e)
+                        (re-frame/dispatch
+                         (vec (cons :geopub.router/navigate route))))}
+        body])
+
 (defn- iri-href [iri]
-  (rfe/href :geopub.routes/browse-iri
+  (rfe/href :geopub.router/browse-iri
             {:iri (goog.string.urlEncode (rdf/iri-value iri))}))
 
 (defn- blank-node-href [blank-node]
-  (rfe/href :geopub.routes/browse-blank-node
-            {:blank-node (goog.string.urlEncode (rdf/blank-node-id blank-node))}))
+  (rfe/href :geopub.router/browse-blank-node
+            {:blank-node (goog.string.urlEncode (rdf/blank-node-id blank-node))}
+            ))
 
 (defn- term-href [term]
   (cond
@@ -136,13 +52,10 @@
      (if-not (:disable-href opts)
 
        ;; create a href
-       [:a
-        (if-not (:external-href opts)
-          ;; to internal browser
-          {:href (iri-href iri)}
-          ;; or the real (external iri)
-          {:href (rdf/iri-value iri) :target "_blank"})
-        (rdf/iri-value iri)]
+       [link-component
+        (rdf/iri-value iri)
+        :geopub.router/browse-iri
+        {:iri (goog.string.urlEncode (rdf/iri-value iri))}]
 
        ;; only display the iri
        (rdf/iri-value iri))]
@@ -158,8 +71,10 @@
 
 (defn blank-node-component [bnode & [opts]]
   (if-not (:disable-href opts)
-    [:a {:href (blank-node-href bnode)}
-     (str "_:" (rdf/blank-node-id bnode))]
+    [link-component
+     (str "_:" (rdf/blank-node-id bnode))
+     :geopub.router/browse-blank-node
+     {:blank-node (goog.string.urlEncode (rdf/blank-node-id blank-node))}]
     (str "_:" (rdf/blank-node-id bnode))))
 
 (defn rdf-term-component [term & [opts]]
@@ -265,18 +180,18 @@
          (not (:disable-href opts)))
 
       ;; then make the component a clickable link
-      [:a {:href (term-href (rdf/description-subject desc))}
-       [rdf-term-component label-term opts]]
+      [link-component
+       [rdf-term-component label-term opts]
+       :geopub.router/browse-iri
+       {:iri
+        (-> desc
+            (rdf/description-subject)
+            (rdf/iri-value)
+            (goog.string.urlEncode))}]
       
       ;; else just display as rdf-term
       [rdf-term-component label-term opts])))
 
-(defn description-turtle-component [desc]
-  (let [as-turtle (r/atom "")]
-    (fn []
-      ;; encode description as RDF/Turtle
-      (go (swap! as-turtle (constantly (<! (n3/encode desc)))))
-      [:code.turtle [:pre @as-turtle]])))
 
 (defn description-property-list-component [desc & [opts]]
   [:dl

@@ -1,8 +1,7 @@
 (ns geopub.app.settings
   (:require [cljs.core.async :as async]
             [reagent.core :as r]
-            [geopub.data.rdf :refer [description-turtle-component
-                                     iri-component]]
+            [geopub.rdf.view :refer [iri-component]]
             [geopub.state]
             [geopub.cpub]))
 

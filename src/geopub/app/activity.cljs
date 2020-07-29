@@ -16,9 +16,10 @@
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
 (ns geopub.app.activity
-  (:require [geopub.ns :refer [as schema]]
-            [geopub.state]
-            [geopub.data.rdf :refer [iri-component
+  (:require [re-frame.core :as re-frame]
+            [geopub.ns :refer [as dc schema]]
+            [geopub.db :as db]
+            [geopub.rdf.view :refer [iri-component
                                      description-component
                                      description-icon-src
                                      description-label-component
@@ -27,14 +28,56 @@
             [rdf.core :as rdf]
             [rdf.ns :refer [rdf rdfs]]
             [rdf.graph.map]
-            ["date-fns" :as date-fns]))
+            [rdf.logic :as rdf-logic]
+            [cljs.core.logic :as l]
+            ["date-fns" :as date-fns])
+  (:require-macros [cljs.core.logic :refer [run* run fresh]]))
 
+
+;; TODO: move this to some other place and generalize to other properties other than as:published (such as dc:createdAt)
+(defn- sort-by-date [descriptions]
+  (sort-by
+   ;; get the as:published property and cast to js/Date
+   (fn [description]
+     (->> (rdf/description-get description (as "published"))
+          (first)
+          (rdf/literal-value)
+          (new js/Date)))
+   ;; reverse the sort order
+   (comp - compare)
+   descriptions))
+
+(defn- related-activityo [graph related-to activity]
+  (l/conda
+   ;; there is a triple with any property with activity as subject and related-to as object
+   [(fresh [p] (rdf-logic/graph-tripleo graph activity p related-to))]
+   [l/s# l/u#]))
+
+(defn get-related-activities
+  [graph related-to]
+  (->> (run* [activity]
+         (rdf-logic/graph-typeo graph activity (as "Activity"))
+         (related-activityo graph related-to activity))
+       (map #(rdf/description % graph))
+       (sort-by-date)))
+
+(re-frame/reg-sub
+ ::activities
+ (fn [_] (re-frame/subscribe [::db/graph]))
+ (fn [graph _]
+   (->> (run* [id] (rdf-logic/graph-typeo graph id (as "Activity")))
+         (map #(rdf/description % graph))
+         (sort-by-date))))
+
+(comment
+  (let [a (re-frame/subscribe [::activities])]
+    (count @a)))
 
 (defn published-component [activity]
   (if-some
       [published (description-created-at activity)]
-    [:span (.formatDistance date-fns published (new js/Date)
-                            (clj->js {:addSuffix true}))]))
+      [:span (.formatDistance date-fns published (new js/Date)
+                              (clj->js {:addSuffix true}))]))
 
 (defn activity-component [activity]
   (let
@@ -76,10 +119,10 @@
      ]]])
 
 (defn view []
-  [:div.ui-page
-   ;; [sidebar]
-   [:main
-    [:h1 "Activity"]
-    ;; [activity-timeline-component
-     ;; (activity/get-activities (:graph @state))]
-    ]])
+  (let [activities (re-frame/subscribe [::activities])]
+    [:div.ui-page
+     ;; [sidebar]
+     [:main
+      [:h1 "Activity"]
+      ;; [:span (count @activities)]
+      [activity-timeline-component @activities]]]))

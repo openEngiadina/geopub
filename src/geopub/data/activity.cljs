@@ -6,8 +6,7 @@
             [rdf.logic :as rdf-logic]
             [rdf.ns :refer [rdf rdfs]]
             [geopub.ns :refer [as dc]]
-            [cljs.core.logic :as l]
-            [geopub.data.rdf]))
+            [cljs.core.logic :as l]))
 
 ;; Helpers for getting activities from graph
 

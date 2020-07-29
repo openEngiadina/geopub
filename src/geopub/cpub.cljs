@@ -23,7 +23,6 @@
             [async-error.core]
             [rdf.core :as rdf]
             [geopub.state]
-            [geopub.data.rdf :refer [get-rdf]]
             [geopub.data.activity :as activity]
             [geopub.ns :refer [ldp as]]
             [goog.Uri :as uri]))
