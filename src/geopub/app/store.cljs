@@ -1,4 +1,4 @@
-(ns geopub.ui.store
+(ns geopub.app.store
   (:require [rdf.core :as rdf]
             [clojure.core.logic :as l]
             [geopub.data.rdf :refer [rdf-term-component]]))

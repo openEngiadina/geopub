@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GeoPub.  If not, see <https://www.gnu.org/licenses/>.
 
-(ns geopub.ui.activity
+(ns geopub.app.activity
   (:require [geopub.ns :refer [as schema]]
             [geopub.state]
             [geopub.data.rdf :refer [iri-component
@@ -75,10 +75,11 @@
      [:li [:a {:href "#"} "all"]]
      ]]])
 
-(defn view [state]
+(defn view []
   [:div.ui-page
    ;; [sidebar]
    [:main
     [:h1 "Activity"]
-    [activity-timeline-component
-     (activity/get-activities (:graph @state))]]])
+    ;; [activity-timeline-component
+     ;; (activity/get-activities (:graph @state))]
+    ]])

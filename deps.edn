@@ -1,6 +1,7 @@
 {:paths ["src" "resources" "target"]
  
  :deps {reagent {:mvn/version "0.9.1"}
+        re-frame {:mvn/version "1.0.0"}
         cljs-http {:mvn/version "0.1.46"}
         metosin/reitit-core {:mvn/version "0.4.2"}
         metosin/reitit-frontend {:mvn/version "0.4.2"}

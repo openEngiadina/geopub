@@ -1,4 +1,4 @@
-(ns geopub.ui.browse
+(ns geopub.app.browse
   (:require [rdf.core :as rdf]
             [reagent.core :as r]
             [goog.string]
@@ -10,7 +10,7 @@
                                      description-label-component
                                      description-component]]
             [geopub.data.activity]
-            [geopub.ui.activity]
+            [geopub.app.activity]
             [cljs.core.logic :as l]
             [cljs.core.async :as async]
             [rdf.logic :as rdf-logic]
@@ -98,8 +98,9 @@
 (defn activity-bar [graph subject]
   [:div.activity-bar
    [:h3 "Related Activity"]
-   [geopub.ui.activity/activity-timeline-component
-    (geopub.data.activity/get-related-activities graph subject)]])
+   ;; [geopub.ui.activity/activity-timeline-component
+    ;; (geopub.data.activity/get-related-activities graph subject)]
+   ])
 
 
 (defn description-view [state]

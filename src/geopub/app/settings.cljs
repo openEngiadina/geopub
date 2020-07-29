@@ -1,4 +1,4 @@
-(ns geopub.ui.settings
+(ns geopub.app.settings
   (:require [cljs.core.async :as async]
             [reagent.core :as r]
             [geopub.data.rdf :refer [description-turtle-component
@@ -47,16 +47,18 @@
          [:pre.error (prn-str (:result @input))])])))
 
 
-(defn view [state]
+(defn view []
   [:div.ui-page
    [:main
     [:h1 "Settings"]
     [:h2 "Account"]
-    (if (:account @state)
-      [:div
-       [:p "Logged in as " [iri-component (get-in @state [:account :profile])]]
-       [:button
-        {:on-click #(geopub.state/logout! state)} "Logout"]]
+    ;; (if (:account @state)
+    ;;   [:div
+    ;;    [:p "Logged in as " [iri-component (get-in @state [:account :profile])]]
+    ;;    [:button
+    ;;     {:on-click #(geopub.state/logout! state)} "Logout"]]
 
-      [login-component state])]])
+    ;;   ;; [login-component state]
+    ;;   )
+    ]])
 
