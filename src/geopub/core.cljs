@@ -35,7 +35,8 @@
     (map (fn [url] [:geopub.rdf/get url {:with-credentials? false
                                :on-success [::db/add-rdf-graph]}])
          ["http://localhost:4000/public"
-          "https://openengiadina.net/public"])}))
+          ;; "https://openengiadina.net/public"
+          ])}))
 
 ;; Setup
 
@@ -43,8 +44,7 @@
   (when goog.DEBUG
     (println "dev mode")
     (enable-console-print!)
-    ;; (re-frame/reg-global-interceptor re-frame/debug)
-    ))
+    (re-frame/reg-global-interceptor re-frame/debug)))
 
 (defn ^:dev/after-load mount-app []
   ;; clear subscription cache
@@ -90,7 +90,10 @@
       (rdf.core/graph-match (rdf.core/triple (l/lvar)
                                              (l/lvar)
                                              (l/lvar)))
-      (count)))
+      (count))
+
+
+  (re-frame/dispatch [::ontology/load]))
 
 (comment
   (re-frame/dispatch [::db/initialize])

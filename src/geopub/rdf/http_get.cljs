@@ -1,6 +1,7 @@
 (ns geopub.rdf.http-get
   (:require [rdf.core :as rdf]
             [rdf.parse :as rdf-parse]
+            [async-error.core]
             [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
             [re-frame.core :as re-frame])

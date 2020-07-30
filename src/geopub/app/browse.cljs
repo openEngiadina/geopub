@@ -8,7 +8,6 @@
             [rdf.logic :as rdf-logic]
             [cljs.core.logic :as l]
 
-            [geopub.cpub]
             [geopub.ns :refer [as schema]]
             [geopub.rdf.view :refer [rdf-term-component
                                      description-label-component

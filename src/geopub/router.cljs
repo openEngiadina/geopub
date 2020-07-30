@@ -46,21 +46,6 @@
    ["browse"
     geopub.app.browse/routes]
 
-   ;; ["browse/iri/:iri"
-   ;;  {:name ::browse-iri
-   ;;   :view geopub.app.browse/description-view
-   ;;   :parameters {:path {:iri string?}}}]
-
-   ;; ["browse/blank-node/:blank-node"
-   ;;  {:name ::browse-blank-node
-   ;;   :view geopub.app.browse/description-view
-   ;;   :parameters {:path {:blank-node string?}}}]
-
-   ;; ["browse"
-   ;;  {:name ::browse
-   ;;   :view geopub.app.browse/browse-view
-   ;;   :parameters {:query {:type string?}}}]
-
    ["store"
     {:name ::store
      :view geopub.app.store/view}]
@@ -70,10 +55,8 @@
      :view geopub.app.map/view}]
 
    ["settings"
-    {:name ::settings
-     :view geopub.app.settings/view}]
+    geopub.app.settings/routes]
 
    ["about"
     {:name ::about
-     :view geopub.app.about/view}]
-   ])
+     :view geopub.app.about/view}]])

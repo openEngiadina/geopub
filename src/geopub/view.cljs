@@ -26,7 +26,7 @@
      
      [:ul.nav-right
       [:li [link-component "About" ::router/about]]
-      [:li [link-component "Settings" ::router/settings]]]]]
+      [:li [link-component "Settings" :geopub.app.settings/main]]]]]
    [router-component]
    ])
 

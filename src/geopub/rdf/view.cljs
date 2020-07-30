@@ -220,7 +220,7 @@
               [(rdf-logic/description-tripleo desc (as "published") c)]
 
               ;; use dcterms createdAt
-              [(rdf-logic/description-tripleo desc (dc "createdAt") created)]
+              [(rdf-logic/description-tripleo desc (dc "createdAt") c)]
 
               [(l/== c nil)]))
            (first)
