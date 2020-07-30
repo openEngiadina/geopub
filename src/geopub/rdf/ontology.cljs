@@ -12,6 +12,6 @@
  ::load
  (fn [_ _]
    {:dispatch-n
-    (map (fn [url] [:geopub.rdf/get url
-                    {:content-type "text/turtle" :on-success [::db/add-rdf-graph]}])
+    (map (fn [url] [:geopub.rdf/get url {:content-type "text/turtle"
+                                         :on-success [::db/add-rdf-graph]}])
          ["/activitystreams2.ttl" "/schema.ttl" "/rdf.ttl"])}))

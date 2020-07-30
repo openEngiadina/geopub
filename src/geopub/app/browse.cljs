@@ -13,6 +13,7 @@
             [geopub.rdf.view :refer [rdf-term-component
                                      description-label-component
                                      description-component]]
+            [geopub.db :as db]
             [geopub.data.activity]
             [geopub.app.activity]
             [geopub.view.link :refer [link-component]]
@@ -95,8 +96,11 @@
   [:div.toolbar
    [:button
     {:on-click #(re-frame/dispatch
-                 [:geopub.rdf/get (rdf/description-subject description)
-                  {:with-credentials? false}])}
+                 [:geopub.rdf/get (-> description
+                                      (rdf/description-subject)
+                                      (rdf/iri-value))
+                  {:with-credentials? false
+                   :on-success [::db/add-rdf-graph]}])}
     "Load more data"]])
 
 (defn view-description []
