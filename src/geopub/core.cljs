@@ -56,7 +56,12 @@
 
   (let [root-el (.getElementById js/document "app")]
     (reagent.dom/unmount-component-at-node root-el)
-    (reagent/render [view/app] root-el)))
+    (reagent/render [view/app] root-el
+                    (fn []
+                      (doall
+                       (load-ontologies)
+                       (load-init-data))))))
+
 
 (defn init! []
 
@@ -76,9 +81,6 @@
    ;; set to false to enable HistoryAPI
    {:use-fragment false})
 
-  ;; load ontologies and initial data
-  (load-ontologies)
-  (load-init-data)
 
   ;; mount the app
   (mount-app))

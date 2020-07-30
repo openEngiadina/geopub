@@ -9,6 +9,16 @@
             [geopub.app.settings]
             [geopub.app.about]))
 
+(defn link-component [body & route]
+  "Link to internal route"
+  [:a {:href (apply rfe/href route)
+            :on-click (fn [e]
+                        ;; prevent browser from loading the href
+                        (.preventDefault e)
+                        (re-frame/dispatch
+                         (vec (cons ::navigate route))))}
+        body])
+
 ;; event to navigate to another route
 (re-frame/reg-event-fx
  ::navigate
@@ -38,24 +48,28 @@
 (def default-route ::activity)
 
 (def routes
-  [["/activity"
+  ["/"
+   ["activity"
     {:name ::activity
      :view geopub.app.activity/view}]
 
-   ["browse/iri/:iri"
-    {:name ::browse-iri
-     :view geopub.app.browse/description-view
-     :parameters {:path {:iri string?}}}]
-
-   ["browse/blank-node/:blank-node"
-    {:name ::browse-blank-node
-     :view geopub.app.browse/description-view
-     :parameters {:path {:blank-node string?}}}]
-
    ["browse"
-    {:name ::browse
-     :view geopub.app.browse/browse-view
-     :parameters {:query {:type string?}}}]
+    geopub.app.browse/routes]
+
+   ;; ["browse/iri/:iri"
+   ;;  {:name ::browse-iri
+   ;;   :view geopub.app.browse/description-view
+   ;;   :parameters {:path {:iri string?}}}]
+
+   ;; ["browse/blank-node/:blank-node"
+   ;;  {:name ::browse-blank-node
+   ;;   :view geopub.app.browse/description-view
+   ;;   :parameters {:path {:blank-node string?}}}]
+
+   ;; ["browse"
+   ;;  {:name ::browse
+   ;;   :view geopub.app.browse/browse-view
+   ;;   :parameters {:query {:type string?}}}]
 
    ["store"
     {:name ::store
@@ -65,11 +79,11 @@
     {:name ::map
      :view geopub.app.map/view}]
 
-   ["/settings"
+   ["settings"
     {:name ::settings
      :view geopub.app.settings/view}]
 
-   ["/about"
+   ["about"
     {:name ::about
      :view geopub.app.about/view}]
    ])

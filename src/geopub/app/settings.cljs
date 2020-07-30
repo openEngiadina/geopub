@@ -2,7 +2,6 @@
   (:require [cljs.core.async :as async]
             [reagent.core :as r]
             [geopub.rdf.view :refer [iri-component]]
-            [geopub.state]
             [geopub.cpub]))
 
 (defn channel?

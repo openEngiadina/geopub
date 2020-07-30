@@ -17,14 +17,6 @@
 
 ;; Links to the internal browser
  
-(defn link-component [body & route]
-  [:a {:href (apply rfe/href route)
-            :on-click (fn [e]
-                        ;; prevent browser from loading the href
-                        (.preventDefault e)
-                        (re-frame/dispatch
-                         (vec (cons :geopub.router/navigate route))))}
-        body])
 
 (defn- iri-href [iri]
   (rfe/href :geopub.router/browse-iri
@@ -52,9 +44,9 @@
      (if-not (:disable-href opts)
 
        ;; create a href
-       [link-component
+       [geopub.router/link-component
         (rdf/iri-value iri)
-        :geopub.router/browse-iri
+        :geopub.app.browse/browse-description
         {:iri (goog.string.urlEncode (rdf/iri-value iri))}]
 
        ;; only display the iri
@@ -70,12 +62,7 @@
   [:span {:dangerouslySetInnerHTML {:__html (rdf/literal-value literal)}}])
 
 (defn blank-node-component [bnode & [opts]]
-  (if-not (:disable-href opts)
-    [link-component
-     (str "_:" (rdf/blank-node-id bnode))
-     :geopub.router/browse-blank-node
-     {:blank-node (goog.string.urlEncode (rdf/blank-node-id blank-node))}]
-    (str "_:" (rdf/blank-node-id bnode))))
+  (str "_:" (rdf/blank-node-id bnode)))
 
 (defn rdf-term-component [term & [opts]]
   (cond
@@ -180,9 +167,9 @@
          (not (:disable-href opts)))
 
       ;; then make the component a clickable link
-      [link-component
+      [geopub.router/link-component
        [rdf-term-component label-term opts]
-       :geopub.router/browse-iri
+       :geopub.app.browse/browse-description
        {:iri
         (-> desc
             (rdf/description-subject)

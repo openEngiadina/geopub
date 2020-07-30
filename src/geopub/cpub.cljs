@@ -22,7 +22,7 @@
   (:require [cljs.core.async :as async :refer [<!]]
             [async-error.core]
             [rdf.core :as rdf]
-            [geopub.state]
+            ;; [geopub.state]
             [geopub.data.activity :as activity]
             [geopub.ns :refer [ldp as]]
             [goog.Uri :as uri]))
