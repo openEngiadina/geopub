@@ -23,7 +23,8 @@
                                      description-component
                                      description-icon-src
                                      description-label-component
-                                     description-created-at]]
+                                     description-created-at
+                                     sort-descriptions-by-date]]
             [geopub.data.activity :as activity]
             [rdf.core :as rdf]
             [rdf.ns :refer [rdf rdfs]]
@@ -33,38 +34,13 @@
             ["date-fns" :as date-fns])
   (:require-macros [cljs.core.logic :refer [run* run fresh]]))
 
-
-(defn- sort-by-date [descriptions]
-  (sort-by
-   ;; get the as:published property and cast to js/Date
-   (fn [description]
-     (when description
-       (description-created-at description)))
-   ;; reverse the sort order
-   (comp - compare)
-   descriptions))
-
-(defn- related-activityo [graph related-to activity]
-  (l/conda
-   ;; there is a triple with any property with activity as subject and related-to as object
-   [(fresh [p] (rdf-logic/graph-tripleo graph activity p related-to))]
-   [l/s# l/u#]))
-
-(defn get-related-activities
-  [graph related-to]
-  (->> (run* [activity]
-         (rdf-logic/graph-typeo graph activity (as "Activity"))
-         (related-activityo graph related-to activity))
-       (map #(rdf/description % graph))
-       (sort-by-date)))
-
 (re-frame/reg-sub
  ::activities
  (fn [_] (re-frame/subscribe [::db/graph]))
  (fn [graph _]
    (->> (run* [id] (rdf-logic/graph-typeo graph id (as "Activity")))
         (map #(rdf/description % graph))
-        (sort-by-date))))
+        (sort-descriptions-by-date))))
 
 (comment
   (let [a (re-frame/subscribe [::activities])]

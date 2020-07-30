@@ -12,7 +12,8 @@
             [geopub.ns :refer [as schema]]
             [geopub.rdf.view :refer [rdf-term-component
                                      description-label-component
-                                     description-component]]
+                                     description-component
+                                     sort-descriptions-by-date]]
             [geopub.db :as db]
             [geopub.data.activity]
             [geopub.app.activity]
@@ -103,6 +104,33 @@
                    :on-success [::db/add-rdf-graph]}])}
     "Load more data"]])
 
+(defn- related-activityo [graph related-to activity]
+  (l/conda
+   ;; there is a triple with any property with activity as subject and related-to as object
+   [(fresh [p] (rdf-logic/graph-tripleo graph activity p related-to))]
+   [l/s# l/u#]))
+
+(defn- get-related-activities
+  [graph related-to]
+  (->> (run* [activity]
+         (rdf-logic/graph-typeo graph activity (as "Activity"))
+         (related-activityo graph related-to activity))
+       (map #(rdf/description % graph))
+       (sort-descriptions-by-date)))
+
+(re-frame/reg-sub
+ ::related-activities
+ (fn [_] (re-frame/subscribe [:geopub.db/graph]))
+ (fn [graph [_ to]]
+   (get-related-activities graph to)))
+
+(defn activity-bar [description]
+  (let [related-activities (re-frame/subscribe
+                             [::related-activities (rdf/description-subject description)])]
+    [:div.activity-bar
+     [:h3 "Related Activity"]
+     [geopub.app.activity/activity-timeline-component @related-activities]]))
+
 (defn view-description []
   (let [description (re-frame/subscribe [::current-description])
         loading (r/atom false)]
@@ -114,11 +142,8 @@
      [sidebar]
      [:div.main-container
       [toolbar @description]
-      [:main
-       [description-component @description]
-       ]]
-     ;; [activity-bar (:graph @state) subject]
-     ]))
+      [:main [description-component @description]]]
+     [activity-bar @description]]))
 
 ;; Type view
 
@@ -180,17 +205,5 @@
     {:name ::browse-type
      :view view-type
      :parameters {:path {:type string?}}}]])
-
-
-
-
-
-(defn activity-bar [subject]
-  [:div.activity-bar
-   [:h3 "Related Activity"]
-   ;; [geopub.ui.activity/activity-timeline-component
-    ;; (geopub.data.activity/get-related-activities graph subject)]
-   ])
-
 
 
