@@ -40,6 +40,7 @@
 
 ;; Setup
 
+
 (defn dev-setup []
   (when goog.DEBUG
     (println "dev mode")
@@ -56,6 +57,10 @@
   (let [root-el (.getElementById js/document "app")]
     (reagent.dom/unmount-component-at-node root-el)
     (reagent/render [view/app] root-el)))
+
+(defn reload! []
+  (println "reload!")
+  (mount-app))
 
 (defn init! []
 

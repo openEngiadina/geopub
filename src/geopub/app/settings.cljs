@@ -5,7 +5,9 @@
 
             [geopub.rdf.view :refer [iri-component]]
             [geopub.cpub.oauth :as oauth]
-            [geopub.local-storage :as local-storage]))
+            [geopub.local-storage :as local-storage]
+
+            [goog.Uri :as uri]))
 
 (defn authentication-form-component []
   (let [server-url (r/atom "http://localhost:4000/")]
@@ -27,31 +29,38 @@
  [(local-storage/persist :oauth-clients)
   (local-storage/persist :auth-state)]
  (fn [coeffects [_ server-url]]
-   (print (get-in coeffects [:db :oauth-clients]))
+   (print "oauth-clients: ")
+   (println (get-in coeffects [:db :oauth-clients]))
+
+   (print "server-url: ")
    (print server-url)
+
    (let [client (get-in coeffects [:db :oauth-clients server-url])]
-     (print (nil? client))
      (cond
        ;; attempt to register a client and retry
-       (nil? client) {:dispatch [::oauth/register-client server-url [::authenticate server-url]]
-                      :db (assoc-in coeffects [:db :auth-state]
-                                    {:state :registering-client
-                                     :server-url server-url})}
+       (nil? client) {:dispatch [::oauth/register-client server-url
+                                 ;; after attempted client registration authenticate again
+                                 {:callback [::authenticate server-url]}]
+                      :db (assoc (:db coeffects) :auth-state
+                                 {:state :registering-client
+                                  :server-url server-url})}
 
-       (= :error client) {:db (assoc-in coeffects [:db :auth-state]
-                                        {:state :error
-                                         :server-url server-url})}
+       (= :error client) {:db (assoc (:db coeffects) :auth-state
+                                     {:state :error
+                                      :server-url server-url})}
 
-       :else {:db (assoc-in coeffects [:db :auth-state]
-                            {:state :external-auth
-                             :server-url server-url})}))))
+       :else {:db (assoc (:db coeffects) :auth-state
+                         {:state :external-auth
+                          :server-url server-url})
+              :dispatch [:geopub.router/navigate-external (authorize-url server-url client)]}))))
 
-(re-frame/reg-event-fx
- :test
- (fn [coeffects _]
-   {:geopub.router/navigate! ["http://localhost:4000/oauth/authorize"]}))
 
-(re-frame/dispatch [:test])
+(defn authorize-url [server-url client]
+  (-> (uri/parse server-url)
+      (.setPath "/oauth/authorize")
+      (.setQuery (str "response_type=code&"
+                      "client_id=" (:client_id client)))
+      (.toString)))
 
 (defn view []
   [:div.ui-page

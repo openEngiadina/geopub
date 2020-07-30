@@ -11,16 +11,19 @@
              (let [value (-> (str "geopub-" key)
                              (js/window.localStorage.getItem)
                              (cljs.reader/read-string))]
-               (when value
-                 (assoc-in context [:coeffects :db key] value))))
+               (if value
+                 (assoc-in context [:coeffects :db key] value)
+                 context)))
 
    :after (fn [context]
             (when-let [value (get-in context [:effects :db key])]
               (js/window.localStorage.setItem (str "geopub-" key)
-                                              (prn-str value))
-              context))))
+                                              (prn-str value)))
+            context)))
+
 
 (comment
+
   (re-frame/reg-event-db
    ::test-event
    (persist :blups)
@@ -29,4 +32,4 @@
 
   (:blups @re-frame.db/app-db)
 
-  (re-frame/dispatch [::test-event "hyoasdf"]))
+  (re-frame/dispatch [::test-event nil]))

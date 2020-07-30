@@ -30,26 +30,28 @@
 
 (re-frame/reg-event-fx
  ::register-client
- (fn [coeffects [_ server-url cb]]
+ (fn [coeffects [_ server-url opts]]
    {::http-post [(str server-url "/oauth/clients")
                  {:with-credentials? false
                   :json-params {"client_name" "GeoPub"
                                 "scope" ["openid" "read" "write"]
                                 "redirect_uris" [(redirect-uri)]}
-                  :on-response [::register-client-response server-url cb]}]
+                  :on-response [::register-client-response server-url opts]}]
     :db (assoc-in (:db coeffects) [:oauth-clients server-url] :loading)}))
 
 (re-frame/reg-event-fx
  ::register-client-response
  (local-storage/persist :oauth-clients)
- (fn [coeffects [_ server-url cb response]]
-   (print server-url)
-   (print response)
-   (if (:success response)
-     {:db (assoc-in coeffects [:db :oauth-clients server-url] (:body response))
-      :dispatch cb}
-     {:db (assoc-in coeffects [:db :oauth-clients server-url] :error)
-      :dispatch cb})))
+ (fn [coeffects [_ server-url opts response]]
+   (let [
+         client-or-error (if (and (:success response) (= (:status response) 201))
+                           (:body response)
+                           :error)
+         db-effect {:db (assoc-in (:db coeffects) [:oauth-clients server-url]
+                                  client-or-eror)}
+         dispatch-effect (when (:callback opts)
+                           {:dispatch (:callback opts)})])
+   (merge db-effects dispatch-effects)))
 
 (comment
   (re-frame/dispatch [::register-client "http://localhost:4000/"]))

@@ -21,6 +21,17 @@
  (fn [route]
    (apply rfe/push-state route)))
 
+(re-frame/reg-event-fx
+ ::navigate-external
+ (fn [_ [_ url]]
+   (print url)
+   {::navigate-external! url}))
+
+(re-frame/reg-fx
+ ::navigate-external!
+ (fn [url]
+   (js/window.location.assign url)))
+
 ;; swap current-route in db after succesfull navigation
 (re-frame/reg-event-db
  ::navigated
@@ -34,6 +45,9 @@
  ::current-route
  (fn [db]
    (:current-route db)))
+
+
+;; (re-frame/dispatch [:test])
 
 (def default-route ::activity)
 
