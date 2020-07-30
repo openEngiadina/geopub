@@ -121,6 +121,5 @@
      ;; [sidebar]
      [:main
       [:h1 "Activity"]
-      ;; [:span (count @activities)]
       [activity-timeline-component @activities]
       ]]))

@@ -142,9 +142,8 @@
          ;; or blank-node
          (not (rdf/blank-node? label-term))
 
-         ;; subject is an iri or blank-node
-         (or (rdf/iri? subject)
-             (rdf/blank-node? subject))
+         ;; subject is an iri
+         (rdf/iri? subject)
 
          ;; we are not disabling hrefs in general
          (not (:disable-href opts)))
