@@ -24,20 +24,18 @@
             [geopub.db :as db]
             [geopub.router :as router]
             [geopub.view :as view]
-            [geopub.rdf]))
+            [geopub.rdf]
+            [geopub.rdf.ontology :as ontology]
+            [clojure.core.logic :as l]))
 
-(defn load-ontologies []
-  "load some ontologies that are bundled with GeoPub"
-  (map
-   #(re-frame/dispatch-sync [:geopub.rdf/get % {:content-type "text/turtle"
-                                           :on-success [::db/add-rdf-graph]}])
-   ["activitystreams2.ttl" "schema.ttl" "rdf.ttl"]))
-
-(defn load-init-data []
-  (map
-   #(re-frame/dispatch-sync [:geopub.rdf/get % {:with-credentials? false
-                                           :on-success [::db/add-rdf-graph]}])
-   ["http://localhost:4000/public"]))
+(re-frame/reg-event-fx
+ ::load-init-data
+ (fn [_ _]
+   {:dispatch-n
+    (map (fn [url] [:geopub.rdf/get url {:with-credentials? false
+                               :on-success [::db/add-rdf-graph]}])
+         ["http://localhost:4000/public"
+          "https://openengiadina.net/public"])}))
 
 ;; Setup
 
@@ -45,7 +43,8 @@
   (when goog.DEBUG
     (println "dev mode")
     (enable-console-print!)
-    (re-frame/reg-global-interceptor re-frame/debug)))
+    ;; (re-frame/reg-global-interceptor re-frame/debug)
+    ))
 
 (defn ^:dev/after-load mount-app []
   ;; clear subscription cache
@@ -56,12 +55,7 @@
 
   (let [root-el (.getElementById js/document "app")]
     (reagent.dom/unmount-component-at-node root-el)
-    (reagent/render [view/app] root-el
-                    (fn []
-                      (doall
-                       (load-ontologies)
-                       (load-init-data))))))
-
+    (reagent/render [view/app] root-el)))
 
 (defn init! []
 
@@ -70,6 +64,12 @@
 
   ;; initialize the application database
   (re-frame/dispatch-sync [::db/initialize])
+
+  ;; load initial ontologies
+  (re-frame/dispatch [::ontology/load])
+
+  ;; load init data
+  (re-frame/dispatch [::load-init-data])
 
   ;; start the reitit router
   (rfe/start!
@@ -81,10 +81,16 @@
    ;; set to false to enable HistoryAPI
    {:use-fragment false})
 
-
   ;; mount the app
   (mount-app))
 
+(comment
+  (-> @re-frame.db/app-db
+      (:graph)
+      (rdf.core/graph-match (rdf.core/triple (l/lvar)
+                                             (l/lvar)
+                                             (l/lvar)))
+      (count)))
 
 (comment
   (re-frame/dispatch [::db/initialize])

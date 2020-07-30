@@ -210,7 +210,13 @@
   [desc]
   (some->> (run 1 [c]
              (l/conda
+
+              ;; use Activitystreams published
               [(rdf-logic/description-tripleo desc (as "published") c)]
+
+              ;; use dcterms createdAt
+              [(rdf-logic/description-tripleo desc (dc "createdAt") created)]
+
               [(l/== c nil)]))
            (first)
            (rdf/literal-value)

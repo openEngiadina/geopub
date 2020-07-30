@@ -20,6 +20,62 @@
             [cljs.core.async :as async])
   (:require-macros [cljs.core.logic :refer [run* fresh]]))
 
+;; common components
+
+(defn- go-to-url []
+  (let [input (r/atom "")]
+    (fn []
+      [:div
+       [:input {:type "text"
+                :on-change #(reset! input (-> % .-target .-value))}]
+       [:button
+        {:on-click #(rfe/push-state ::browse-description
+                                    {:iri (goog.string.urlEncode @input)})}
+        "Go"]])))
+
+(defn- url-encode [iri]
+  (-> iri
+      (rdf/iri-value)
+      (goog.string.urlEncode)))
+
+(defn- sidebar []
+  [:div.sidebar
+   [:nav
+    [:h4 "ActivityStreams"]
+    [:ul
+     [:li [link-component "Note" ::browse-type
+           {:type (url-encode (as "Note"))}]]
+     [:li [link-component "Article" ::browse-type
+           {:type (url-encode (as "Article"))}]]
+     [:li [link-component "Actor" ::browse-type
+           {:type (url-encode (as "Actor"))}]]
+     [:li [link-component "Like" ::browse-type
+           {:type (url-encode (as "Like"))}]]
+     [:li [link-component "Object" ::browse-type
+           {:type (url-encode (as "Object"))}]]]
+
+    [:h4 "schema.org"]
+    [:ul
+     [:li [link-component "Event" ::browse-type
+           {:type (url-encode (schema "Event"))}]]
+     [:li [link-component "Organization" ::browse-type
+           {:type (url-encode (schema "Organization"))}]]
+     [:li [link-component "Place" ::browse-type
+           {:type (url-encode (schema "Place"))}]]
+     [:li [link-component "Thing" ::browse-type
+           {:type (url-encode (schema "Thing"))}]]]
+    
+    [:h4 "RDFS / OWL"]
+    [:ul
+     [:li [link-component "Class" ::browse-type
+           {:type (url-encode (rdfs "Class"))}]]
+     [:li [link-component "Ontology" ::browse-type
+           {:type (url-encode (owl "Ontology"))}]]]
+
+    [:h3 "Enter URL"]
+    [go-to-url]
+    ]])
+
 ;; Description view
 
 (re-frame/reg-sub
@@ -35,6 +91,14 @@
      (when subject
        (rdf/description subject graph)))))
 
+(defn toolbar [description]
+  [:div.toolbar
+   [:button
+    {:on-click #(re-frame/dispatch
+                 [:geopub.rdf/get (rdf/description-subject description)
+                  {:with-credentials? false}])}
+    "Load more data"]])
+
 (defn view-description []
   (let [description (re-frame/subscribe [::current-description])
         loading (r/atom false)]
@@ -45,7 +109,7 @@
     [:div.ui-page
      [sidebar]
      [:div.main-container
-      ;; [toolbar state subject loading]
+      [toolbar @description]
       [:main
        [description-component @description]
        ]]
@@ -114,89 +178,10 @@
      :parameters {:path {:type string?}}}]])
 
 
-(defn browse-href [type]
-  (rfe/href :geopub.routes/browse {} {:type (goog.string.urlEncode
-                                             (rdf/iri-value type))}))
 
-(defn go-to-url []
-  (let [input (r/atom "")]
-    (fn []
-      [:div
-       [:input {:type "text"
-                :on-change #(reset! input (-> % .-target .-value))}]
-       [:button
-        {:on-click #(rfe/push-state :geopub.routes/browse-iri
-                                    {:iri (goog.string.urlEncode @input)})}
-        "Go"]])))
 
-(defn- url-encode [iri]
-  (-> iri
-      (rdf/iri-value)
-      (goog.string.urlEncode)))
 
-(url-encode (as "Note"))
-
-(defn sidebar []
-  [:div.sidebar
-   [:nav
-    [:h4 "ActivityStreams"]
-    [:ul
-     [:li [link-component "Note" ::browse-type
-           {:type (url-encode (as "Note"))}]]
-     [:li [link-component "Article" ::browse-type
-           {:type (url-encode (as "Article"))}]]
-     [:li [link-component "Actor" ::browse-type
-           {:type (url-encode (as "Actor"))}]]
-     [:li [link-component "Like" ::browse-type
-           {:type (url-encode (as "Like"))}]]
-     [:li [link-component "Object" ::browse-type
-           {:type (url-encode (as "Object"))}]]]
-
-    [:h4 "schema.org"]
-    [:ul
-     [:li [link-component "Event" ::browse-type
-           {:type (url-encode (schema "Event"))}]]
-     [:li [link-component "Organization" ::browse-type
-           {:type (url-encode (schema "Organization"))}]]
-     [:li [link-component "Place" ::browse-type
-           {:type (url-encode (schema "Place"))}]]
-     [:li [link-component "Thing" ::browse-type
-           {:type (url-encode (schema "Thing"))}]]]
-    
-    [:h4 "RDFS / OWL"]
-    [:ul
-     [:li [link-component "Class" ::browse-type
-           {:type (url-encode (rdfs "Class"))}]]
-     [:li [link-component "Ontology" ::browse-type
-           {:type (url-encode (owl "Ontology"))}]]]
-
-    [:h3 "Enter URL"]
-    [go-to-url]
-    ]])
-
-(defn load-more-data [state subject loading]
-  (reset! loading true)
-  (async/take!
-   (geopub.state/add-rdf-graph! state
-                                (geopub.data.rdf/get-rdf (rdf/iri-value subject)
-                                                         {:with-credentials? false}))
-   #(reset! loading false)))
-
-(defn toolbar [state subject loading]
-  [:div.toolbar
-
-   (if (:account @state)
-     [:button
-      {:on-click
-       #(geopub.cpub/like! state subject)} "Like"])
-
-   (if @loading
-     [:span "Loading more data ..."]
-     [:button
-      {:on-click #(load-more-data state subject loading)}
-      "Load more data"])])
-
-(defn activity-bar [graph subject]
+(defn activity-bar [subject]
   [:div.activity-bar
    [:h3 "Related Activity"]
    ;; [geopub.ui.activity/activity-timeline-component

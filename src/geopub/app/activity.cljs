@@ -34,15 +34,12 @@
   (:require-macros [cljs.core.logic :refer [run* run fresh]]))
 
 
-;; TODO: move this to some other place and generalize to other properties other than as:published (such as dc:createdAt)
 (defn- sort-by-date [descriptions]
   (sort-by
    ;; get the as:published property and cast to js/Date
    (fn [description]
-     (->> (rdf/description-get description (as "published"))
-          (first)
-          (rdf/literal-value)
-          (new js/Date)))
+     (when description
+       (description-created-at description)))
    ;; reverse the sort order
    (comp - compare)
    descriptions))
@@ -66,8 +63,8 @@
  (fn [_] (re-frame/subscribe [::db/graph]))
  (fn [graph _]
    (->> (run* [id] (rdf-logic/graph-typeo graph id (as "Activity")))
-         (map #(rdf/description % graph))
-         (sort-by-date))))
+        (map #(rdf/description % graph))
+        (sort-by-date))))
 
 (comment
   (let [a (re-frame/subscribe [::activities])]
@@ -125,4 +122,5 @@
      [:main
       [:h1 "Activity"]
       ;; [:span (count @activities)]
-      [activity-timeline-component @activities]]]))
+      [activity-timeline-component @activities]
+      ]]))
