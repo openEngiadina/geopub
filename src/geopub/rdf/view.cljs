@@ -10,7 +10,7 @@
             [re-frame.core :as re-frame]
             [reitit.frontend.easy :as rfe]
 
-            [geopub.ns :as ns :refer [as ogp schema foaf dc]]
+            [geopub.ns :as ns :refer [as ogp schema foaf dc dce]]
             [geopub.view.link :refer [link-component]]
 
             ["date-fns" :as date-fns])
@@ -84,6 +84,9 @@
       
       ;; use dc:title
       [(rdf-logic/description-tripleo desc (dc "title") label)]
+
+      ;; use dce:title
+      [(rdf-logic/description-tripleo desc (dce "title") label)]
 
       ;; use schema.org name
       ((rdf-logic/description-tripleo desc (schema "name") label))
@@ -194,6 +197,8 @@
       [(rdf-logic/description-tripleo desc (as "summary") content)]
       [(rdf-logic/description-tripleo desc (ogp "description") content)]
       [(rdf-logic/description-tripleo desc (rdfs "comment") content)]
+      [(rdf-logic/description-tripleo desc (dc "description") content)]
+      [(rdf-logic/description-tripleo desc (dce "description") content)]
       [(l/== content nil)]))))
 
 (defn description-content-term
