@@ -1,8 +1,9 @@
 (ns geopub.view
   (:require [re-frame.core :as re-frame]
             [reitit.frontend.easy :as rfe]
-            [geopub.router :as router :refer [link-component]]
-            [geopub.ns :as ns]))
+            [geopub.router :as router]
+            [geopub.ns :as ns]
+            [geopub.view.link :refer [link-component]]))
 
 (defn router-component []
   (let [current-route @(re-frame/subscribe [::router/current-route])]

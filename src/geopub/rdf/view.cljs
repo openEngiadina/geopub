@@ -11,27 +11,10 @@
             [reitit.frontend.easy :as rfe]
 
             [geopub.ns :as ns :refer [as ogp schema foaf dc]]
+            [geopub.view.link :refer [link-component]]
 
             ["date-fns" :as date-fns])
   (:require-macros [cljs.core.logic :refer [run fresh]]))
-
-;; Links to the internal browser
- 
-
-(defn- iri-href [iri]
-  (rfe/href :geopub.router/browse-iri
-            {:iri (goog.string.urlEncode (rdf/iri-value iri))}))
-
-(defn- blank-node-href [blank-node]
-  (rfe/href :geopub.router/browse-blank-node
-            {:blank-node (goog.string.urlEncode (rdf/blank-node-id blank-node))}
-            ))
-
-(defn- term-href [term]
-  (cond
-    (rdf/iri? term) (iri-href term)
-    (rdf/blank-node? term) (blank-node-href term)
-    :else ""))
 
 ;; Reagent components
 
@@ -44,7 +27,7 @@
      (if-not (:disable-href opts)
 
        ;; create a href
-       [geopub.router/link-component
+       [link-component
         (rdf/iri-value iri)
         :geopub.app.browse/browse-description
         {:iri (goog.string.urlEncode (rdf/iri-value iri))}]
@@ -167,7 +150,7 @@
          (not (:disable-href opts)))
 
       ;; then make the component a clickable link
-      [geopub.router/link-component
+      [link-component
        [rdf-term-component label-term opts]
        :geopub.app.browse/browse-description
        {:iri

@@ -15,6 +15,7 @@
                                      description-component]]
             [geopub.data.activity]
             [geopub.app.activity]
+            [geopub.view.link :refer [link-component]]
 
             [cljs.core.async :as async])
   (:require-macros [cljs.core.logic :refer [run* fresh]]))
@@ -140,33 +141,33 @@
    [:nav
     [:h4 "ActivityStreams"]
     [:ul
-     [:li [geopub.router/link-component "Note" ::browse-type
+     [:li [link-component "Note" ::browse-type
            {:type (url-encode (as "Note"))}]]
-     [:li [geopub.router/link-component "Article" ::browse-type
+     [:li [link-component "Article" ::browse-type
            {:type (url-encode (as "Article"))}]]
-     [:li [geopub.router/link-component "Actor" ::browse-type
+     [:li [link-component "Actor" ::browse-type
            {:type (url-encode (as "Actor"))}]]
-     [:li [geopub.router/link-component "Like" ::browse-type
+     [:li [link-component "Like" ::browse-type
            {:type (url-encode (as "Like"))}]]
-     [:li [geopub.router/link-component "Object" ::browse-type
+     [:li [link-component "Object" ::browse-type
            {:type (url-encode (as "Object"))}]]]
 
     [:h4 "schema.org"]
     [:ul
-     [:li [geopub.router/link-component "Event" ::browse-type
+     [:li [link-component "Event" ::browse-type
            {:type (url-encode (schema "Event"))}]]
-     [:li [geopub.router/link-component "Organization" ::browse-type
+     [:li [link-component "Organization" ::browse-type
            {:type (url-encode (schema "Organization"))}]]
-     [:li [geopub.router/link-component "Place" ::browse-type
+     [:li [link-component "Place" ::browse-type
            {:type (url-encode (schema "Place"))}]]
-     [:li [geopub.router/link-component "Thing" ::browse-type
+     [:li [link-component "Thing" ::browse-type
            {:type (url-encode (schema "Thing"))}]]]
     
     [:h4 "RDFS / OWL"]
     [:ul
-     [:li [geopub.router/link-component "Class" ::browse-type
+     [:li [link-component "Class" ::browse-type
            {:type (url-encode (rdfs "Class"))}]]
-     [:li [geopub.router/link-component "Ontology" ::browse-type
+     [:li [link-component "Ontology" ::browse-type
            {:type (url-encode (owl "Ontology"))}]]]
 
     [:h3 "Enter URL"]

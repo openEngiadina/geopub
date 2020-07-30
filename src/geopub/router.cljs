@@ -9,16 +9,6 @@
             [geopub.app.settings]
             [geopub.app.about]))
 
-(defn link-component [body & route]
-  "Link to internal route"
-  [:a {:href (apply rfe/href route)
-            :on-click (fn [e]
-                        ;; prevent browser from loading the href
-                        (.preventDefault e)
-                        (re-frame/dispatch
-                         (vec (cons ::navigate route))))}
-        body])
-
 ;; event to navigate to another route
 (re-frame/reg-event-fx
  ::navigate
