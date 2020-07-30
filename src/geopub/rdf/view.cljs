@@ -109,15 +109,6 @@
     (rdf-logic/graph-tripleo (rdf/description-graph desc)
                              (rdf/triple image-link (as "url") image))))
 
-(defn- sort-descriptions-by-date [descriptions]
-  (sort-by
-   ;; get the as:published property and cast to js/Date
-   (fn [description]
-     (when description
-       (description-created-at description)))
-   ;; reverse the sort order
-   (comp - compare)
-   descriptions))
 
 (defn description-icon-src
   "Returns a string that can be used as src for an icon."
@@ -230,6 +221,16 @@
            (first)
            (rdf/literal-value)
            (new js/Date)))
+
+(defn sort-descriptions-by-date [descriptions]
+  (sort-by
+   ;; get the as:published property and cast to js/Date
+   (fn [description]
+     (when description
+       (description-created-at description)))
+   ;; reverse the sort order
+   (comp - compare)
+   descriptions))
 
 (defn description-creator
   "Returns a description of who created the description"
