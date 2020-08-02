@@ -3,7 +3,8 @@
             [reagent.core :as r]
             [re-frame.core :as re-frame]
 
-            [geopub.rdf.view :refer [iri-component]]
+            [geopub.rdf.view :refer [description-label-component]]
+            [geopub.cpub :as cpub]
             [geopub.cpub.oauth :as oauth]
             [geopub.local-storage :as local-storage]
 
@@ -25,9 +26,11 @@
                             (re-frame/dispatch [::oauth/request-authorization @server-url]))}]])))
 
 (defn authenticated-component [oauth-state]
-  [:p "Authenticated with " (:authorized oauth-state)
-   [:br]
-   [:button {:on-click (fn [_] (re-frame/dispatch [::oauth/reset-state]))} "Log out"]])
+  (when-let [user-profile (re-frame/subscribe [::cpub/user-profile])]
+    (when @user-profile
+      [:p "Authenticated as " [description-label-component @user-profile]
+       [:br]
+       [:button {:on-click #(re-frame/dispatch [::oauth/reset-state])} "Log out"]])))
 
 (defn oauth-state-debug-component []
   (let [oauth-state @(re-frame/subscribe [::oauth/state])]
@@ -40,9 +43,10 @@
     [:h2 "Account"]
     (let [oauth-state @(re-frame/subscribe [::oauth/state])]
       (cond (:authorized oauth-state) [authenticated-component oauth-state]
-            (:error oauth-state) "Error!"
-            :else [authentication-form-component]))
-    [oauth-state-debug-component]]])
+            (:error oauth-state) [:div "Error!"
+                                  [oauth-state-debug-component]
+                                  [:button {:on-click #(re-frame/dispatch [::oauth/reset-state])}]]
+            :else [authentication-form-component]))]])
 
 ;; OAuth Callback route / view
 

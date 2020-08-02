@@ -2,6 +2,8 @@
   "Authorization with CPub using OAuth"
   (:require [re-frame.core :as re-frame]
             [reitit.frontend.easy :as rfe]
+            
+            [ajax.core :as ajax]
 
             [cljs.core.async :as async :refer [<!]]
             [cljs-http.client :as http]
@@ -23,11 +25,19 @@
  ::state
  (fn [db] (get-in db [:oauth :state])))
 
+(re-frame/reg-sub
+ ::userinfo
+ (fn [db] (get-in db [:oauth :state :userinfo])))
+
+(re-frame/reg-sub
+ ::access-token-header
+ (fn [db]
+   (str "Bearer " (get-in db [:state :token :access_token]))))
+
 (re-frame/reg-event-db
  ::reset-state
- [(local-storage/persist :oauth)
-  (re-frame/path :oauth)]
- (fn [db _] (dissoc db :state)))
+ (local-storage/persist :oauth)
+ (fn [db _] (dissoc db :oauth)))
 
 (comment
   (re-frame/dispatch [::reset-state]))
@@ -139,7 +149,8 @@
      (if (= (:state current-auth-request) (:state params))
        ;; state matches what we stored, callback is legit -> get access token
        {:db (-> (:db coeffects)
-                (assoc :state :access-token-request))
+                (assoc :state :access-token-request)
+                (dissoc :current-oauth-request))
         ::http-post [(token-url server-url)
                      {:with-credentials? false
                       :form-params {:grant_type "authorization_code"
@@ -153,11 +164,8 @@
        ;; store error in db
        {:db (-> (:db coeffects)
                 (assoc :state {:error :invalid-authorization-code
-                               :params params}))}
-       )
-     )
-   )
- )
+                               :params params})
+                (dissoc :current-oauth-request))}))))
 
 (re-frame/reg-event-fx
  ::access-token-response
@@ -169,7 +177,8 @@
      {:db (-> (:db coeffects)
               (assoc :state {:authorized server-url
                              :date (js/Date)
-                             :token (:body response)}))}
+                             :token (:body response)}))
+      :dispatch [::get-userinfo]}
 
      ;; store error
      {:db (-> (:db coeffects)
@@ -177,3 +186,43 @@
                              :response response}))})))
 
 
+;; Get userinfo
+
+(defn userinfo-url [server-url]
+  (-> (uri/parse server-url)
+      (.setPath "/oauth/userinfo")
+      (.toString)))
+
+(re-frame/reg-event-fx
+ ::get-userinfo
+ (re-frame/path :oauth)
+ (fn [coeffects [_]]
+   (when-let [server-url (get-in coeffects [:db :state :authorized])]
+     {:http-xhrio {:method :get
+                   :uri (userinfo-url server-url)
+                   :response-format (ajax/json-response-format {:keywords? true})
+                   :headers {"Authorization"
+                             (str "Bearer " (get-in coeffects [:db :state :token :access_token]))}
+                   :on-success [::get-userinfo-success]
+                   :on-failure [::get-userinfo-failure]}})))
+
+(re-frame/reg-event-fx
+ ::get-userinfo-success
+ (re-frame/path :oauth)
+ (fn [coeffects [_ result]]
+   {:db (assoc-in (:db coeffects) [:state :userinfo] result)}))
+
+(re-frame/reg-event-fx
+ ::get-userinfo-failure
+ (re-frame/path :oauth)
+ (fn [coeffects [_ result]]
+   {:db (assoc-in (:db coeffects) [:state :userinfo] :error)}))
+
+(defn get-userinfo-component []
+  (let [state (re-frame/subscribe [::state])]
+    (when (:authorized @state)
+      (re-frame/dispatch [::get-userinfo]))))
+
+(comment
+  (re-frame/dispatch [::get-userinfo])
+  (get-in @re-frame.db/app-db [:oauth :state :userinfo]))

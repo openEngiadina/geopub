@@ -16,9 +16,10 @@
                  context)))
 
    :after (fn [context]
-            (when-let [value (get-in context [:effects :db key])]
+            (if-let [value (get-in context [:effects :db key])]
               (js/window.localStorage.setItem (str "geopub-" key)
-                                              (prn-str value)))
+                                              (prn-str value))
+              (js/window.localStorage.removeItem (str "geopub-" key)))
             context)))
 
 
