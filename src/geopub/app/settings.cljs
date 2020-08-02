@@ -19,61 +19,48 @@
                 :required true
                 :on-change (fn [e] (swap! server-url #(-> e .-target .-value)))}]
 
-       [:input {:type "submit" :value "Authenticate"
+       [:input {:type "submit" :value "Log in"
                 :on-click (fn [e]
                             (.preventDefault e)
-                            (re-frame/dispatch [::authenticate @server-url]))}]])))
+                            (re-frame/dispatch [::oauth/request-authorization @server-url]))}]])))
 
-(re-frame/reg-event-fx
- ::authenticate
- [(local-storage/persist :oauth-clients)
-  (local-storage/persist :auth-state)]
- (fn [coeffects [_ server-url]]
-   (print "oauth-clients: ")
-   (println (get-in coeffects [:db :oauth-clients]))
+(defn authenticated-component [oauth-state]
+  [:p "Authenticated with " (:authorized oauth-state)
+   [:br]
+   [:button {:on-click (fn [_] (re-frame/dispatch [::oauth/reset-state]))} "Log out"]])
 
-   (print "server-url: ")
-   (print server-url)
-
-   (let [client (get-in coeffects [:db :oauth-clients server-url])]
-     (cond
-       ;; attempt to register a client and retry
-       (nil? client) {:dispatch [::oauth/register-client server-url
-                                 ;; after attempted client registration authenticate again
-                                 {:callback [::authenticate server-url]}]
-                      :db (assoc (:db coeffects) :auth-state
-                                 {:state :registering-client
-                                  :server-url server-url})}
-
-       (= :error client) {:db (assoc (:db coeffects) :auth-state
-                                     {:state :error
-                                      :server-url server-url})}
-
-       :else {:db (assoc (:db coeffects) :auth-state
-                         {:state :external-auth
-                          :server-url server-url})
-              :dispatch [:geopub.router/navigate-external (authorize-url server-url client)]}))))
-
-
-(defn authorize-url [server-url client]
-  (-> (uri/parse server-url)
-      (.setPath "/oauth/authorize")
-      (.setQuery (str "response_type=code&"
-                      "client_id=" (:client_id client)))
-      (.toString)))
+(defn oauth-state-debug-component []
+  (let [oauth-state @(re-frame/subscribe [::oauth/state])]
+    [:pre (prn-str oauth-state)]))
 
 (defn view []
   [:div.ui-page
    [:main
     [:h1 "Settings"]
     [:h2 "Account"]
-    [authentication-form-component]
-    ]])
+    (let [oauth-state @(re-frame/subscribe [::oauth/state])]
+      (cond (:authorized oauth-state) [authenticated-component oauth-state]
+            (:error oauth-state) "Error!"
+            :else [authentication-form-component]))
+    [oauth-state-debug-component]]])
+
+;; OAuth Callback route / view
 
 (defn view-oauth-callback []
-  [:div.ui-page
-   [:main
-    [:p "blups"]]])
+  (let [current-route @(re-frame/subscribe [:geopub.router/current-route])
+        oauth-state @(re-frame/subscribe [::oauth/state])
+        params (get current-route :query-params)]
+    (if (= oauth-state :external-authorization-request)
+      (re-frame/dispatch [::oauth/handle-callback params {}])
+      (re-frame/dispatch [:geopub.router/navigate ::main]))
+    [:div.ui-page
+     [:main
+      [:p "Handling OAuth 2.0 callback ... "]
+      [oauth-state-debug-component]]]))
+
+(comment
+  (re-frame/dispatch
+   [::oauth/handle-callback (get-in @re-frame.db/app-db [:current-route :query-params])]))
 
 (def routes
   [["/"

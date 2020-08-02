@@ -19,17 +19,41 @@
          (when-let [on-response (:on-response opts)]
            (re-frame/dispatch (conj on-response response)))))))
 
+(re-frame/reg-sub
+ ::state
+ (fn [db] (get-in db [:oauth :state])))
+
+(re-frame/reg-event-db
+ ::reset-state
+ [(local-storage/persist :oauth)
+  (re-frame/path :oauth)]
+ (fn [db _] (dissoc db :state)))
+
+(comment
+  (re-frame/dispatch [::reset-state]))
+
+(comment
+  (re-frame/dispatch [::initialize])
+  (:oauth @re-frame.db/app-db))
+
+(re-frame/reg-event-fx
+ ::initialize
+ [(local-storage/persist :oauth)]
+ (fn [coeffects _]
+   ;; load db state from local storage
+   {:db (-> (get coeffects :db)
+            (assoc :oauth (get-in coeffects [:db :oauth])))}))
+
+
 (defn redirect-uri []
   (str (.-origin js/location)
        (rfe/href :geopub.app.settings/oauth-callback)))
 
-(re-frame/reg-sub
- ::client
- (fn [db [_ server-url]]
-   (get-in db [:oauth-clients server-url])))
+;; Client registration
 
 (re-frame/reg-event-fx
  ::register-client
+ (re-frame/path :oauth)
  (fn [coeffects [_ server-url opts]]
    {::http-post [(str server-url "/oauth/clients")
                  {:with-credentials? false
@@ -37,75 +61,119 @@
                                 "scope" ["openid" "read" "write"]
                                 "redirect_uris" [(redirect-uri)]}
                   :on-response [::register-client-response server-url opts]}]
-    :db (assoc-in (:db coeffects) [:oauth-clients server-url] :loading)}))
+    :db (-> (:db coeffects)
+            (assoc :state :registering-client))}))
 
 (re-frame/reg-event-fx
  ::register-client-response
- (local-storage/persist :oauth-clients)
+ [(local-storage/persist :oauth)
+  (re-frame/path :oauth)]
  (fn [coeffects [_ server-url opts response]]
-   (let [
-         client-or-error (if (and (:success response) (= (:status response) 201))
-                           (:body response)
-                           :error)
-         db-effect {:db (assoc-in (:db coeffects) [:oauth-clients server-url]
-                                  client-or-eror)}
-         dispatch-effect (when (:callback opts)
-                           {:dispatch (:callback opts)})])
-   (merge db-effects dispatch-effects)))
+   (if (and (:success response) (= (:status response) 201))
+
+     ;; store client in db and dispatch callback
+     {:db (-> (:db coeffects)
+              (assoc :state :client-registered)
+              (assoc-in [:clients server-url] (:body response)))
+      :dispatch (:callback opts)}
+
+     ;; store error in db
+     {:db (-> (:db coeffects)
+              (assoc :state {:error :client-registration-failed}))})))
 
 (comment
   (re-frame/dispatch [::register-client "http://localhost:4000/"]))
 
+;; Launch an Authorization request
+
+(defn- authorize-url [server-url client state]
+  (-> (uri/parse server-url)
+      (.setPath "/oauth/authorize")
+      (.setQuery (str "response_type=code"
+                      "&client_id=" (:client_id client)
+                      "&state=" state))
+      (.toString)))
+
+(re-frame/reg-event-fx
+ ::request-authorization
+ [(local-storage/persist :oauth)
+  (re-frame/path :oauth)]
+ (fn [coeffects [_ server-url]]
+   (let [client (get-in coeffects [:db :clients server-url])]
+     (cond
+       ;; if there is not client in local storage for given server-url, attempt to register a client
+       (nil? client) {:dispatch [::register-client server-url
+                                 ;; after successful client registration retry
+                                 {:callback [::request-authorization server-url]}]}
+
+       ;; Assume there is a valid client and launch OAuth 2.0 authorizaiton request
+       :else (let [random-state (goog.string/getRandomString)]
+               {:db (-> (:db coeffects)
+                        (assoc :current-auth-request {:server-url server-url
+                                                      :state random-state})
+                        (assoc :state :external-authorization-request))
+                :dispatch [:geopub.router/navigate-external
+                           (authorize-url server-url client random-state)]})))))
+
 
 (comment
-  (defn register-client! [server-url]
-    "Registers a new client on the CPub instance"
-    (go (let [response (<! (http/post
-                            (clojure.string/join [server-url "/oauth/clients"])
-                            {:with-credentials? false
-                             :json-params {"client_name" "GeoPub"
-                                           "scope" ["openid" "read" "write"]
-                                           "redirect_uris" [(redirect-uri)]
-                                           }}))]
-          (if (== (:status response) 201)
-            (:body response)))))
+  (re-frame/dispatch [::request-authorization "http://localhost:4000/" {:client_id "4ae60a48-bfba-41a0-b0a6-0efb46129ab0"}]))
 
-  (defn retrieve-persisted-clients! []
-    (or (cljs.reader/read-string
-         (js/window.localStorage.getItem "geopub-oauth-clients"))
-        {}))
+;; Handle callback
+
+(defn token-url [server-url]
+  (-> (uri/parse server-url)
+      (.setPath "/oauth/token")
+      (.toString)))
+
+(re-frame/reg-event-fx
+ ::handle-callback
+ [(local-storage/persist :oauth)
+  (re-frame/path :oauth)]
+ (fn [coeffects [_ params opts]]
+   (let [db (:db coeffects)
+         current-auth-request (:current-auth-request db)
+         server-url (:server-url current-auth-request)
+         client (get-in db [:clients server-url])]
+
+     (if (= (:state current-auth-request) (:state params))
+       ;; state matches what we stored, callback is legit -> get access token
+       {:db (-> (:db coeffects)
+                (assoc :state :access-token-request))
+        ::http-post [(token-url server-url)
+                     {:with-credentials? false
+                      :form-params {:grant_type "authorization_code"
+                                    :code (:code params)
+                                    :redirect_uri (redirect-uri)
+                                    :client_id (:client_id client)
+                                    ;; authenticate the client by providing the client secret
+                                    :client_secret (:client_secret client)}
+                      :on-response [::access-token-response server-url]}]}
+
+       ;; store error in db
+       {:db (-> (:db coeffects)
+                (assoc :state {:error :invalid-authorization-code
+                               :params params}))}
+       )
+     )
+   )
+ )
+
+(re-frame/reg-event-fx
+ ::access-token-response
+ [(local-storage/persist :oauth)
+  (re-frame/path :oauth)]
+ (fn [coeffects [_ server-url response]]
+   (print response)
+   (if (:success response)
+     {:db (-> (:db coeffects)
+              (assoc :state {:authorized server-url
+                             :date (js/Date)
+                             :token (:body response)}))}
+
+     ;; store error
+     {:db (-> (:db coeffects)
+              (assoc :state {:error :access-token-request-failed
+                             :response response}))})))
 
 
-  (defn persist-client! [server-url client]
-    "Persist client in local storage"
-    (js/window.localStorage.setItem "geopub-oauth-clients"
-                                    (prn-str
-                                     (assoc
-                                      (retrieve-persisted-clients!)
-                                      server-url client)))
-    ;; return the client
-    client)
-
-  (defn get-or-register-client! [server-url]
-    (go
-      (if-let [client
-               (get (retrieve-persisted-clients!) server-url)]
-        client
-        (->> (<! (register-client! server-url))
-             (persist-client! server-url)))))
-
-
-  (defn authorize! [state server-url]
-    (go-try
-     (let [client (<! (get-or-register-client! server-url))
-           authorize-uri (->
-                          (uri/parse server-url)
-                          (.setPath "/oauth/authorize")
-                          (.setQuery (str "response_type=code&"
-                                          "client_id=" (:client_id client)))
-                          (.toString))]
-       (print authorize-uri))))
-
-  ;; (authorize! {} "http://localhost:4000/")
-
-  )

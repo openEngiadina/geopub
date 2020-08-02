@@ -20,12 +20,15 @@
             [re-frame.core :as re-frame]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]
+
             [geopub.ns :as ns]
             [geopub.db :as db]
             [geopub.router :as router]
             [geopub.view :as view]
             [geopub.rdf]
             [geopub.rdf.ontology :as ontology]
+            [geopub.cpub.oauth :as oauth]
+
             [clojure.core.logic :as l]))
 
 (re-frame/reg-event-fx
@@ -69,6 +72,9 @@
 
   ;; initialize the application database
   (re-frame/dispatch-sync [::db/initialize])
+
+  ;; initialize OAuth state
+  (re-frame/dispatch-sync [::oauth/initialize])
 
   ;; load initial ontologies
   (re-frame/dispatch [::ontology/load])
