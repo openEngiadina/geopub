@@ -45,7 +45,8 @@
       (cond (:authorized oauth-state) [authenticated-component oauth-state]
             (:error oauth-state) [:div "Error!"
                                   [oauth-state-debug-component]
-                                  [:button {:on-click #(re-frame/dispatch [::oauth/reset-state])}]]
+                                  [:button {:on-click #(re-frame/dispatch [::oauth/reset-state])}
+                                   "Try again..."]]
             :else [authentication-form-component]))]])
 
 ;; OAuth Callback route / view

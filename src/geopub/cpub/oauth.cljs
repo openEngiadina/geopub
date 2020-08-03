@@ -4,22 +4,10 @@
             [reitit.frontend.easy :as rfe]
             
             [ajax.core :as ajax]
-
-            [cljs.core.async :as async :refer [<!]]
-            [cljs-http.client :as http]
+            [day8.re-frame.http-fx]
             [goog.Uri :as uri]
 
-            [geopub.local-storage :as local-storage])
-  (:require-macros [cljs.core.async.macros :refer [go]]
-                   [async-error.core :refer [<? go-try]]))
-
-(re-frame/reg-fx
- ::http-post
- (fn [args]
-   (go (let [[url opts] args
-             response (<! (http/post url opts))]
-         (when-let [on-response (:on-response opts)]
-           (re-frame/dispatch (conj on-response response)))))))
+            [geopub.local-storage :as local-storage]))
 
 (re-frame/reg-sub
  ::state
@@ -65,34 +53,43 @@
  ::register-client
  (re-frame/path :oauth)
  (fn [coeffects [_ server-url opts]]
-   {::http-post [(str server-url "/oauth/clients")
-                 {:with-credentials? false
-                  :json-params {"client_name" "GeoPub"
-                                "scope" ["openid" "read" "write"]
-                                "redirect_uris" [(redirect-uri)]}
-                  :on-response [::register-client-response server-url opts]}]
+
+   {:http-xhrio {:method :post
+                 :uri (str server-url "/oauth/clients")
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :format (ajax/json-request-format)
+                 :params {"client_name" "GeoPub"
+                          "scope" ["openid" "read" "write"]
+                          "redirect_uris" [(redirect-uri)]}
+                 :on-success [::register-client-success server-url opts]
+                 :on-failure [::register-client-failure server-url]}
+
     :db (-> (:db coeffects)
             (assoc :state :registering-client))}))
 
 (re-frame/reg-event-fx
- ::register-client-response
+ ::register-client-success
  [(local-storage/persist :oauth)
   (re-frame/path :oauth)]
  (fn [coeffects [_ server-url opts response]]
-   (if (and (:success response) (= (:status response) 201))
-
      ;; store client in db and dispatch callback
-     {:db (-> (:db coeffects)
-              (assoc :state :client-registered)
-              (assoc-in [:clients server-url] (:body response)))
-      :dispatch (:callback opts)}
+   {:db (-> (:db coeffects)
+            (assoc :state :client-registered)
+            (assoc-in [:clients server-url] response))
+    :dispatch (:callback opts)}))
 
+(re-frame/reg-event-fx
+ ::register-client-failure
+ [(local-storage/persist :oauth)
+  (re-frame/path :oauth)]
+ (fn [coeffects [_ server-url error]]
      ;; store error in db
      {:db (-> (:db coeffects)
-              (assoc :state {:error :client-registration-failed}))})))
+              (assoc :state {:error :client-registration-failed
+                             :server-url server-url}))}))
 
 (comment
-  (re-frame/dispatch [::register-client "http://localhost:4000/"]))
+  (re-frame/dispatch [::register-client "http://localhost:4000/" [:something]]))
 
 ;; Launch an Authorization request
 
@@ -151,16 +148,20 @@
        {:db (-> (:db coeffects)
                 (assoc :state :access-token-request)
                 (dissoc :current-oauth-request))
-        ::http-post [(token-url server-url)
-                     {:with-credentials? false
-                      :form-params {:grant_type "authorization_code"
-                                    :code (:code params)
-                                    :redirect_uri (redirect-uri)
-                                    :client_id (:client_id client)
-                                    ;; authenticate the client by providing the client secret
-                                    :client_secret (:client_secret client)}
-                      :on-response [::access-token-response server-url]}]}
 
+        :http-xhrio {:method :post
+                     :uri (token-url server-url)
+                     :response-format (ajax/json-response-format {:keywords? true})
+                     :format (ajax/url-request-format)
+                     :params {:grant_type "authorization_code"
+                              :code (:code params)
+                              :redirect_uri (redirect-uri)
+                              :client_id (:client_id client)
+                              ;; authenticate the client by providing the client secret
+                              :client_secret (:client_secret client)}
+                     :on-success [::access-token-success server-url]
+                     :on-failure [::access-token-failure server-url]}}
+        
        ;; store error in db
        {:db (-> (:db coeffects)
                 (assoc :state {:error :invalid-authorization-code
@@ -168,22 +169,25 @@
                 (dissoc :current-oauth-request))}))))
 
 (re-frame/reg-event-fx
- ::access-token-response
+ ::access-token-success
+ [(local-storage/persist :oauth)
+  (re-frame/path :oauth)]
+ (fn [coeffects [_ server-url token]]
+   {:db (-> (:db coeffects)
+            (assoc :state {:authorized server-url
+                           :date (js/Date)
+                           :token token}))}))
+
+(re-frame/reg-event-fx
+ ::access-token-failure
  [(local-storage/persist :oauth)
   (re-frame/path :oauth)]
  (fn [coeffects [_ server-url response]]
-   (print response)
-   (if (:success response)
-     {:db (-> (:db coeffects)
-              (assoc :state {:authorized server-url
-                             :date (js/Date)
-                             :token (:body response)}))
-      :dispatch [::get-userinfo]}
-
      ;; store error
-     {:db (-> (:db coeffects)
-              (assoc :state {:error :access-token-request-failed
-                             :response response}))})))
+   {:db (-> (:db coeffects)
+            (assoc :state {:error :access-token-request-failed
+                           :server-url server-url
+                           :response response}))}))
 
 
 ;; Get userinfo
