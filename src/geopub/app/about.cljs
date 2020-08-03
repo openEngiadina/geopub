@@ -1,7 +1,8 @@
-(ns geopub.ui.about
+(ns geopub.app.about
   (:require [shadow.resource :as rc]))
 
-(defn view [state]
+
+(defn view []
   [:div.ui-page
    [:main.about
     [:h1 "About"]

@@ -1,4 +1,4 @@
-(ns geopub.ui.map
+(ns geopub.app.map
   (:require-macros [cljs.core.logic :refer [run* fresh]])
   (:require
    [reagent.core :as r]

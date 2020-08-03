@@ -17,69 +17,56 @@
 
 (ns geopub.cpub
   "Helpers for interacting with CPub server"
-  (:require-macros [cljs.core.async.macros :refer [go]]
-                   [async-error.core :refer [<? go-try]])
-  (:require [cljs.core.async :as async :refer [<!]]
-            [async-error.core]
+  (:require [re-frame.core :as re-frame]
+
             [rdf.core :as rdf]
-            [geopub.state]
-            [geopub.data.rdf :refer [get-rdf]]
-            [geopub.data.activity :as activity]
+
+            [geopub.db :as db]
             [geopub.ns :refer [ldp as]]
+            [geopub.cpub.oauth :as oauth]
+            [geopub.rdf.view :refer [description-label-component]]
+
             [goog.Uri :as uri]))
 
-(defn public-timeline-url [server-url]
-  (if (uri? server-url)
-    (.setPath server-url "public")
-    (public-timeline-url (uri/parse server-url))))
+(re-frame/reg-sub
+ ::user-profile
+ (fn [_] [(re-frame/subscribe [::oauth/userinfo])
+          (re-frame/subscribe [::db/graph])])
+ (fn [input _]
+   (let [[userinfo graph] input]
+     (when (rdf/graph? graph)
+       (some-> (:sub userinfo)
+               (rdf/iri)
+               (rdf/description graph))))))
 
-(defn get-public-timeline [server-url]
-  "Returns a channel holding the content of the public timeline"
-  (-> server-url
-      (public-timeline-url)
-      (get-rdf {:with-credentials? false})))
+(comment)
+(rdf/graph?
+ (rdf/description-graph @(re-frame/subscribe [::user-profile])))
 
-(defn login! [state id password]
-  (go-try
-   (let [id (rdf/iri id)
+(defn get-profile-component []
+  "component that gets the inbox and outbox whenever userinfo changes"
+  (let [userinfo (re-frame/subscribe [::oauth/userinfo])]
+    (when-let [sub (:sub @userinfo)]
+      (re-frame/dispatch [:geopub.rdf/get {:uri sub
+                                           :on-success [::db/add-rdf-graph]}]))))
 
-         profile (rdf/description
-                  id (<? (get-rdf id {:with-credentials? false})))
+(defn get-inbox-outbox-component []
+  (let [user-profile (re-frame/subscribe [::user-profile])]
+    (when (rdf/description? @user-profile)
+      [description-label-component @user-profile])))
 
-         basic-auth {:username
-                     (->> (as "preferredUsername")
-                          (rdf/description-get-first profile)
-                          (rdf/literal-value))
-                     :password password}
+;; (rdf/description-get-first profile (ldp "inbox"))
 
-         req-opts {:basic-auth basic-auth
-                   ;; Required to allow a authenticated request with CORS. See: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials
-                   :with-credentials? false}
-
-         inbox (<? (get-rdf
-                    (rdf/description-get-first profile (ldp "inbox")) req-opts))
-         outbox (<? (get-rdf
-                     (rdf/description-get-first profile (as "outbox")) req-opts))]
-
-      (swap! state
-             (comp
-              #(assoc % :account
-                      {:basic-auth basic-auth
-                       :profile (rdf/description-subject profile)
-                       :outbox (rdf/description-get-first profile (as "outbox"))})
-              (geopub.state/merge-graphs (rdf/description-graph profile)
-                                         inbox
-                                         outbox))))))
-
-(defn like! [state what]
-  (go-try
-   (let [like-post (<? (-> (activity/like what)
-                           (geopub.data.rdf/post-rdf
-                            (get-in @state [:account :outbox])
-                            {:basic-auth (get-in @state [:account :basic-auth])
-                             :with-credentials? false})))
-         like-activity (<?
-                        (get-rdf (get-in like-post [:headers "location"])
-                                 {:with-credentials? false}))]
-     (swap! state
-            (geopub.state/merge-graphs like-activity)))))
+(comment
+  (defn like! [state what]
+    (go-try
+     (let [like-post (<? (-> (activity/like what)
+                             (geopub.data.rdf/post-rdf
+                              (get-in @state [:account :outbox])
+                              {:basic-auth (get-in @state [:account :basic-auth])
+                               :with-credentials? false})))
+           like-activity (<?
+                          (get-rdf (get-in like-post [:headers "location"])
+                                   {:with-credentials? false}))]
+       (swap! state
+              (geopub.state/merge-graphs like-activity))))))
