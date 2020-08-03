@@ -11,13 +11,13 @@
   (if-let [t (get @mapping bnode)]
     t
     (let [new-term (random-uuid-urn)]
-      (swap! mapping assoc bnode new-term)
+      (vswap! mapping assoc bnode new-term)
       new-term)))
 
 (defn skolemize []
   "Returns a transducer that skolemizes blank nodes in triples with new random UUID URNs."
   (fn [xf]
-    (let [mapping (atom {})]
+    (let [mapping (volatile! {})]
       (fn
         ([] (xf))
         ([result] (xf result))
