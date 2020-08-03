@@ -8,6 +8,7 @@
             [rdf.core :as rdf]
             [rdf.graph.map]
             [rdf.parse]
+            [rdf.skolem]
             [geopub.ns :refer [as dc]]
             [geopub.db :as db])
   (:require-macros [cljs.core.async :refer [go]]))
@@ -28,14 +29,13 @@
       (map-content-types)))
 
 (defn parse [data opts]
-  (async/reduce
+  (async/transduce
+
+   (rdf.skolem/skolemize)
 
    (fn [graph triple]
-     (cond
-       ;; handle errors
-       (instance? js/Error triple) triple
-       (instance? js/Error graph) graph
-       :else (rdf/graph-add graph triple)))
+     (if (rdf/triple? triple)
+       (rdf/graph-add graph triple) graph))
 
    ;; initialize a fresh graph
    (rdf.graph.map/graph)
