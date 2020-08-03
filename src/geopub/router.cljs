@@ -24,7 +24,6 @@
 (re-frame/reg-event-fx
  ::navigate-external
  (fn [_ [_ url]]
-   (print url)
    {::navigate-external! url}))
 
 (re-frame/reg-fx

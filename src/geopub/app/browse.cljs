@@ -48,8 +48,8 @@
            {:type (url-encode (as "Note"))}]]
      [:li [link-component "Article" ::browse-type
            {:type (url-encode (as "Article"))}]]
-     [:li [link-component "Actor" ::browse-type
-           {:type (url-encode (as "Actor"))}]]
+     [:li [link-component "Person" ::browse-type
+           {:type (url-encode (as "Person"))}]]
      [:li [link-component "Like" ::browse-type
            {:type (url-encode (as "Like"))}]]
      [:li [link-component "Object" ::browse-type
@@ -96,10 +96,10 @@
   [:div.toolbar
    [:button
     {:on-click #(re-frame/dispatch
-                 [:geopub.rdf/get (-> description
-                                      (rdf/description-subject)
-                                      (rdf/iri-value))
-                  {:with-credentials? false
+                 [:geopub.rdf/get
+                  {:uri (-> description
+                            (rdf/description-subject)
+                            (rdf/iri-value))
                    :on-success [::db/add-rdf-graph]}])}
     "Load more data"]])
 

@@ -5,8 +5,6 @@
         re-frame {:mvn/version "1.0.0"}
         day8.re-frame/http-fx {:mvn/version "0.2.1"}
 
-        cljs-http {:mvn/version "0.1.46"}
-
         metosin/reitit-core {:mvn/version "0.4.2"}
         metosin/reitit-frontend {:mvn/version "0.4.2"}
 

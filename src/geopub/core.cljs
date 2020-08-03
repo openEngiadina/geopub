@@ -38,8 +38,8 @@
  ::load-init-data
  (fn [_ _]
    {:dispatch-n
-    (map (fn [url] [:geopub.rdf/get url {:with-credentials? false
-                               :on-success [::db/add-rdf-graph]}])
+    (map (fn [url] [:geopub.rdf/get {:uri url
+                                     :on-success [::db/add-rdf-graph]}])
          ["http://localhost:4000/public"
           ;; "https://openengiadina.net/public"
           ])}))

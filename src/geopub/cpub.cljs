@@ -47,10 +47,8 @@
   "component that gets the inbox and outbox whenever userinfo changes"
   (let [userinfo (re-frame/subscribe [::oauth/userinfo])]
     (when-let [sub (:sub @userinfo)]
-      (print sub)
-      (re-frame/dispatch [:geopub.rdf/get sub
-                          {:with-credentials? false
-                           :on-success [::db/add-rdf-graph]}]))))
+      (re-frame/dispatch [:geopub.rdf/get {:uri sub
+                                           :on-success [::db/add-rdf-graph]}]))))
 
 (defn get-inbox-outbox-component []
   (let [user-profile (re-frame/subscribe [::user-profile])]
