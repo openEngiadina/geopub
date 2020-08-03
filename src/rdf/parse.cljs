@@ -1,5 +1,5 @@
 (ns rdf.parse
-  "Bindings to the rdf-parse.js library for parsing RDF from  B"
+  "Bindings to the rdf-parse.js library for parsing RDF from a bunch of different serializations."
   (:require-macros [cljs.core.async :refer [go go-loop]])
   (:require [rdf.core :as rdf]
             [cljs.core.async :as async :refer [<! >!]]

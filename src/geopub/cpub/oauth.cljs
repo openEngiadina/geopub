@@ -99,7 +99,7 @@
       (.setQuery (str "response_type=code"
                       "&client_id=" (:client_id client)
                       "&state=" state))
-      (.toString)))
+      (str)))
 
 (re-frame/reg-event-fx
  ::request-authorization
@@ -131,7 +131,7 @@
 (defn token-url [server-url]
   (-> (uri/parse server-url)
       (.setPath "/oauth/token")
-      (.toString)))
+      (str)))
 
 (re-frame/reg-event-fx
  ::handle-callback
@@ -195,7 +195,7 @@
 (defn userinfo-url [server-url]
   (-> (uri/parse server-url)
       (.setPath "/oauth/userinfo")
-      (.toString)))
+      (str)))
 
 (re-frame/reg-event-fx
  ::get-userinfo
