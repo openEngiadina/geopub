@@ -181,6 +181,11 @@
   "Protocol for accessing a graph"
   (graph-match [x triple] "Returns sequence of triples matching query."))
 
+;; implement a dummy protocol for nil
+(extend-protocol IGraph
+  nil
+  (graph-match [_ _] '()))
+
 (defn graph? [x]
   (satisfies? IGraph x))
 

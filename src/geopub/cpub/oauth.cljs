@@ -20,7 +20,8 @@
 (re-frame/reg-sub
  ::access-token-header
  (fn [db]
-   (str "Bearer " (get-in db [:state :token :access_token]))))
+   (str "Bearer " (get-in db [:oauth :state :token :access_token]))))
+
 
 (re-frame/reg-event-db
  ::reset-state

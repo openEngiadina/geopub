@@ -36,6 +36,6 @@
    [oauth/get-userinfo-component]
    ;; auto load user profile
    [cpub/get-profile-component]
-   ;; [cpub/get-inbox-outbox-component]
+   [cpub/get-inbox-outbox-component]
    ])
 
