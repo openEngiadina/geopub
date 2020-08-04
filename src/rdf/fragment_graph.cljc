@@ -82,6 +82,18 @@
    (index-remove (:fragment-statements fg)
                  (hash-map fragment (hash-map predicate (hash-set object))))))
 
+(defn- reify-statement-match [fg match]
+  (let [s (:base-subject fg)
+        p (expand-fragment-reference fg (first match))
+        o (expand-fragment-reference fg (second match))]
+    (rdf/triple s p o)))
+
+(defn- reify-fragment-statement-match [fg match]
+  (let [s (expand-fragment-reference fg {:f (first match)})
+        p (expand-fragment-reference fg (second match))
+        o (expand-fragment-reference fg (nth match 2))]
+    (rdf/triple s p o)))
+
 (defrecord FragmentGraph
     [base-subject statements fragment-statements]
 
@@ -125,18 +137,6 @@
             (index-match (:statements fg) [(l/lvar) (l/lvar)]))
        (map #(reify-fragment-statement-match fg %)
             (index-match (:fragment-statements fg) [(l/lvar) (l/lvar) (l/lvar)])))))
-
-(defn- reify-statement-match [fg match]
-  (let [s (:base-subject fg)
-        p (expand-fragment-reference fg (first match))
-        o (expand-fragment-reference fg (second match))]
-    (rdf/triple s p o)))
-
-(defn- reify-fragment-statement-match [fg match]
-  (let [s (expand-fragment-reference fg {:f (first match)})
-        p (expand-fragment-reference fg (second match))
-        o (expand-fragment-reference fg (nth match 2))]
-    (rdf/triple s p o)))
 
 (comment
   (defns ex "http://example.com/")
