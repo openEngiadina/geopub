@@ -1,8 +1,10 @@
 (ns rdf.fragment-graph
   (:require [rdf.core :as rdf]
             [clojure.core.logic :as l]
-            [rdf.graph.map.index :refer [index-match index-merge index-remove]])
-  (:require-macros [rdf.core :refer [defns]]))
+
+            [rdf.graph.map.index :refer [index-match index-merge index-remove]]
+            [rdf.fragment-graph.csexp :as csexp]
+            [rdf.ns :as ns]))
 
 ;; Helpers for dealing with URI fragments
 
@@ -146,3 +148,65 @@
       (rdf/graph-add (rdf/triple (ex "") (ex "#q") (ex "not-a-frag")))
       (rdf/graph-add (rdf/triple (ex "#a") (ex "r") (ex "#b")))
       (rdf/triple-seq)))
+
+;; Canonical Serialization
+
+(defn- literal->sexp [l]
+  (if (= (rdf/literal-datatype l) (ns/rdf "langString"))
+    (list "l"
+          (rdf/literal-canonical l)
+          (rdf/iri-value (rdf/literal-datatype l))
+          (rdf/literal-language l))
+    (list "l"
+          (rdf/literal-canonical l)
+          (rdf/iri-value (rdf/literal-datatype l)))))
+
+
+(comment
+  (literal->sexp
+   (rdf/literal "hello" :datatype (ns/xsd "string")))
+
+  (literal->sexp
+   (rdf/literal "Grüezi"
+                :datatype (ns/rdf "langString")
+                :language "gsw")))
+
+(defn- term->sexp [term]
+  (cond
+    (rdf/iri? term) (rdf/iri-value term)
+    (rdf/literal? term) (literal->sexp term)
+    ;; fragment reference
+    (:f term) (list 'f (:f term))))
+
+(defn- statement->sexp [[p o]]
+  (list 's (term->sexp p) (term->sexp o)))
+
+(comment
+  (statement->sexp
+   (list
+    (rdf/iri (ns/rdf "test"))
+    (rdf/literal 53 :datatype (ns/xsd "integer")))))
+
+(defn- fragment-statement->sexp [[fragment p o]]
+  (list 'fs fragment (term->sexp p) (term->sexp o)))
+
+(defn ->csexp [fg]
+  (csexp/encode
+   (cons 'rdf
+         (map (fn [csexp] {:csexp csexp})
+              (sort (concat
+                     (map (comp csexp/encode statement->sexp)
+                          (index-match (:statements fg) [(l/lvar) (l/lvar)]))
+
+                     (map (comp csexp/encode fragment-statement->sexp)
+                          (index-match (:fragment-statements fg) [(l/lvar) (l/lvar) (l/lvar)]))))))))
+
+(comment
+  (csexp/byte-seq->string
+   (->csexp
+    (-> (fragment-graph (ns/ex ""))
+        (rdf/graph-add (rdf/triple (ns/ex "") (ns/ex "p") (rdf/literal 4 :datatype (ns/xsd "integer"))))
+        (rdf/graph-add (rdf/triple (ns/ex "") (ns/ex "q") (ns/ex "#a")))
+        (rdf/graph-add (rdf/triple (ns/ex "") (ns/ex "#q") (ns/ex "not-a-frag")))
+        (rdf/graph-add (rdf/triple (ns/ex "#a") (ns/ex "r") (ns/ex "#b")))))))
+
