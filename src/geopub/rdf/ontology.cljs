@@ -15,6 +15,6 @@
     (map (fn [url] [:geopub.rdf/get {:uri url
                                      :content-type "text/turtle"
                                      :on-success [::db/add-rdf-graph]}])
-         ["/activitystreams2.ttl"
-          "/schema.ttl"
-          "/rdf.ttl"])}))
+         ["/ontology/activitystreams2.ttl"
+          "/ontology/schema.ttl"
+          "/ontology/rdf.ttl"])}))
