@@ -8,7 +8,7 @@
 
 (defn- p->c [promise]
   "Wrap a JavaScript promise as a core.async channel."
-  (let [c (async/chan)]
+  (let [c (async/promise-chan)]
         (-> promise
             (.then (fn [res] (go (>! c res)
                                  (async/close! c))))
@@ -21,7 +21,6 @@
   "Returns the ERIS read capability for some data as rdf.core/iri in an async.core/channel"
   (async/map rdf/iri
              [(p->c (js-eris/put data))]))
-
 
 (comment
   ;; Note that iri takes strings as well but as JavaScript uses UTF-16 this will
