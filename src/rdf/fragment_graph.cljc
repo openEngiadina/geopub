@@ -8,6 +8,12 @@
 
 ;; Helpers for dealing with URI fragments
 
+(defn iri-base-subject [iri]
+  "Returns the base subject of an IRI."
+  (cond
+    (rdf/iri? iri) (iri-base-subject (rdf/iri-value iri))
+    (string? iri) (rdf/iri (str (.setFragment (new goog.Uri iri) "")))))
+
 (defn- get-fragment [iri]
   (cond
     (rdf/iri? iri) (get-fragment (rdf/iri-value iri))
@@ -113,9 +119,9 @@
           :else fg)))
 
     (rdf/graph-merge [fg-x fg-y]
-      (if (= (base-subject fg-x) (base-subject fg-y))
+      (if (= (:base-subject fg-x) (:base-subject fg-y))
         (->FragmentGraph
-         (base-subject fg-x)
+         (:base-subject fg-x)
          (index-merge (:statements fg-x) (:statements fg-y))
          (index-merge (:fragment-statements fg-x) (:fragment-statements fg-y)))
         fg-x))
