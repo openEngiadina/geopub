@@ -31,7 +31,6 @@
 
 (defn encode [sexp]
   "Encode S-Expression as Canonical S-Expression"
-  (print sexp)
   (cond
     (string? sexp) (encode-netstring sexp)
 
