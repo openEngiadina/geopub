@@ -7,6 +7,7 @@
             [day8.re-frame.http-fx]
             [rdf.core :as rdf]
             [rdf.graph.map]
+            [rdf.fragment-graph :as fragment-graph]
             [rdf.parse]
             [rdf.skolem]
             [geopub.ns :refer [as dc]]
@@ -28,10 +29,24 @@
       (first)
       (map-content-types)))
 
-(defn parse [data opts]
-  (async/transduce
+(defn content-addressable-fragment-graph [fg]
+  (go (let [eris-urn (<! (eris/iri (fragment-graph/->csexp fg)))]
+        (fragment-graph/set-base-subject fg eris-urn))))
 
-   (rdf.skolem/skolemize)
+
+(defn parse-content-addressed [data opts]
+  "Parse some RDF and make it content-addressed"
+  ;; Parse triples into a channel
+  (rdf.parse/parse-string data
+                          :content-type (:content-type opts)
+                          :path (:uri opts)
+                          ;; skolemize and group into fragment graphs
+                          :xform (comp (fragment-graph/into-fragment-graphs)
+                                       (rdf.skolem/skolemize))))
+
+(defn parse [data opts]
+  "Parse some RDF and return as graph"
+  (async/reduce
 
    (fn [graph triple]
      (if (rdf/triple? triple)
@@ -42,7 +57,15 @@
    ;; receive parsed triples in  channel
    (rdf.parse/parse-string data
                            :content-type (:content-type opts)
-                           :path (:uri opts))))
+                           :path (:uri opts)
+                           :xform (rdf.skolem/skolemize))))
+
+(comment
+  (go
+    (println
+     (<! (async/into []
+                     (parse-content-addressed
+                      "<http://example.com/> <http://blups.com> <http://blips.com> .\n<http://bl.com> <http://bl.com#a> <http://123.com> ." {:content-type "text/turtle"}))))))
 
 (defn rdf-response-format [opts]
   "Custom RDF response format for cljs-ajax (see https://github.com/JulianBirch/cljs-ajax/blob/master/docs/formats.md)"
@@ -52,7 +75,9 @@
                                   (get-content-type xhrio))
                  body (pr/-body xhrio)]
              ;; returns a channel
-             (parse body {:content-type content-type :uri (:uri opts)})))
+             (if (:content-address? opts)
+               (parse-content-addressed body {:content-type content-type :uri (:uri opts)})
+               (parse body {:content-type content-type :uri (:uri opts)}))))
    :content-type (clojure.string/join ", " (rdf.parse/content-types))})
 
 (re-frame/reg-event-fx
@@ -70,15 +95,17 @@
                        opts)}))
 
 (comment
+
   (re-frame/reg-event-fx
    ::get-success
    (fn [_ [_ response]]
-     (go
-       (print (<! response)))
+     (go (println (<! (async/into [] response))))
      {}))
+
 
   (re-frame/dispatch [::get
                       {:method :get
                        :uri "http://localhost:4000/public"
+                       :content-address? true
                        :on-success [::get-success]
                        :on-failure [::get-failure-default-handler]}]))

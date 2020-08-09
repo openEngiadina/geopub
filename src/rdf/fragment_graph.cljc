@@ -155,6 +155,49 @@
       (rdf/graph-add (rdf/triple (ex "#a") (ex "r") (ex "#b")))
       (rdf/triple-seq)))
 
+;; Transduce
+
+(defn into-fragment-graphs []
+  "Returns a stateful transducer that groups a sequence of triples in fragment graphs"
+  ;; TODO read up on the thing about early termination (https://clojure.org/reference/transducers#_early_termination)
+  ;; I believe I am doing it wrong...
+  (fn [xf]
+    (let [fragment-graphs (volatile! {})]
+      (fn
+        ([] (xf))
+
+        ;; finalize and return all fragment graphs
+        ([result]
+         (let [fgs @fragment-graphs]
+           (vreset! fragment-graphs nil)
+           (xf (reduce xf result (vals fgs)))))
+
+        ;; add triple to buffered fragment-graphs
+        ([result triple]
+         (when (rdf/triple? triple)
+           (let [base-subject (iri-base-subject
+                               (rdf/triple-subject triple))]
+
+             ;; merge fragment-graphs with
+             (vswap! fragment-graphs
+                     (partial merge-with rdf/graph-merge)
+
+                     ;; a new fragment graph containing only the input triple
+                     {base-subject (-> (fragment-graph base-subject)
+                                       (rdf/graph-add triple))})))
+         ;; don't return anything now
+         result)))))
+
+(comment
+  (into []
+        (into-fragment-graphs)
+        [(rdf/triple (ns/ex "") (ns/ex "#foo") (ns/ex "bar"))
+         (rdf/triple (ns/ex "") (ns/ex "#foo") (ns/ex "bzr"))
+         (rdf/triple (ns/ex "another") (ns/ex "#foo") (ns/ex "bzr"))
+         (rdf/triple (ns/ex "another") (ns/ex "#foo2") (ns/ex "bzr"))
+         (rdf/triple (ns/ex "another2") (ns/ex "#foo") (ns/ex "bzr"))
+         (rdf/triple (ns/ex "another2") (ns/ex "#foo3") (ns/ex "#bzr"))]))
+
 ;; Canonical Serialization
 
 (defn- literal->sexp [l]
