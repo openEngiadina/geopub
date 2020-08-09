@@ -4,7 +4,6 @@
             [reitit.frontend.easy :as rfe]
             [geopub.app.activity]
             [geopub.app.browse]
-            [geopub.app.store]
             [geopub.app.map]
             [geopub.app.settings]
             [geopub.app.about]))
@@ -58,10 +57,6 @@
 
    ["browse"
     geopub.app.browse/routes]
-
-   ["store"
-    {:name ::store
-     :view geopub.app.store/view}]
 
    ["map"
     {:name ::map
