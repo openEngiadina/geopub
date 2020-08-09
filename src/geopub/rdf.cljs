@@ -5,11 +5,16 @@
             [ajax.core :as ajax]
             [ajax.protocols :as pr]
             [day8.re-frame.http-fx]
+
             [rdf.core :as rdf]
             [rdf.graph.map]
             [rdf.fragment-graph :as fragment-graph]
             [rdf.parse]
             [rdf.skolem]
+
+            [eris.core :as eris]
+            [eris.cache]
+
             [geopub.ns :refer [as dc]]
             [geopub.db :as db])
   (:require-macros [cljs.core.async :refer [go]]))
@@ -33,16 +38,18 @@
   (go (let [eris-urn (<! (eris/iri (fragment-graph/->csexp fg)))]
         (fragment-graph/set-base-subject fg eris-urn))))
 
-
 (defn parse-content-addressed [data opts]
   "Parse some RDF and make it content-addressed"
   ;; Parse triples into a channel
-  (rdf.parse/parse-string data
-                          :content-type (:content-type opts)
-                          :path (:uri opts)
-                          ;; skolemize and group into fragment graphs
-                          :xform (comp (fragment-graph/into-fragment-graphs)
-                                       (rdf.skolem/skolemize))))
+  (let [out (async/chan)]
+    (async/pipeline-async 1 out eris.cache/cache-fragment-graph-async
+                          (rdf.parse/parse-string data
+                                                  :content-type (:content-type opts)
+                                                  :path (:uri opts)
+                                                  ;; skolemize and group into fragment graphs
+                                                  :xform (comp (fragment-graph/into-fragment-graphs)
+                                                               (rdf.skolem/skolemize))))
+    out))
 
 (defn parse [data opts]
   "Parse some RDF and return as graph"
@@ -75,9 +82,9 @@
                                   (get-content-type xhrio))
                  body (pr/-body xhrio)]
              ;; returns a channel
-             (if (:content-address? opts)
-               (parse-content-addressed body {:content-type content-type :uri (:uri opts)})
-               (parse body {:content-type content-type :uri (:uri opts)}))))
+             (if (:disable-content-addressing opts)
+               (parse body {:content-type content-type :uri (:uri opts)})
+               (parse-content-addressed body {:content-type content-type :uri (:uri opts)}))))
    :content-type (clojure.string/join ", " (rdf.parse/content-types))})
 
 (re-frame/reg-event-fx
@@ -102,10 +109,19 @@
      (go (println (<! (async/into [] response))))
      {}))
 
+  (re-frame/dispatch [::get
+                      {:method :get
+                       :uri "http://localhost:4000/objects?iri=urn:erisx:AAAABEB6W7PGNETW6HQ36XR5HT736RZNS4JFDLCZN7K42JGIC5HOT4L2WLQHLY2JUOIHJKDPL45NATIIQY2PQJUA7WQUJUN7JQ7ES3EDN6GA"
+                       ;; :on-success [::db/add-rdf-graph]
+                       :on-success [::get-success]
+                       :on-failure [::get-failure-default-handler]}])
 
   (re-frame/dispatch [::get
                       {:method :get
+                       ;; :uri "http://localhost:4000/objects?iri=urn:erisx:AAAABEB6W7PGNETW6HQ36XR5HT736RZNS4JFDLCZN7K42JGIC5HOT4L2WLQHLY2JUOIHJKDPL45NATIIQY2PQJUA7WQUJUN7JQ7ES3EDN6GA"
                        :uri "http://localhost:4000/public"
-                       :content-address? true
-                       :on-success [::get-success]
-                       :on-failure [::get-failure-default-handler]}]))
+                       :on-success [::db/add-rdf-graph]
+                       ;; :on-success [::get-success]
+                       :on-failure [::get-failure-default-handler]}])
+
+  (re-frame/dispatch [::db/initialize]))

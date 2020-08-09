@@ -14,6 +14,8 @@
    {:dispatch-n
     (map (fn [url] [:geopub.rdf/get {:uri url
                                      :content-type "text/turtle"
+                                     ;; don't content-address the ontologies
+                                     :disable-content-addressing true
                                      :on-success [::db/add-rdf-graph]}])
          ["/ontology/activitystreams2.ttl"
           "/ontology/schema.ttl"

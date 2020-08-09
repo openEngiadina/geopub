@@ -51,7 +51,8 @@
   (when goog.DEBUG
     (println "dev mode")
     (enable-console-print!)
-    (re-frame/reg-global-interceptor re-frame/debug)))
+    ;; (re-frame/reg-global-interceptor re-frame/debug)
+    ))
 
 (defn ^:dev/after-load mount-app []
   ;; clear subscription cache

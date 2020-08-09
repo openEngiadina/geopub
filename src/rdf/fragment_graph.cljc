@@ -132,6 +132,11 @@
 
           :else fg)))
 
+    rdf/IGraph
+    (rdf/graph-match [fg triple]
+      ;; TODO!!!
+      [])
+
     rdf/ITripleSeq
     (rdf/triple-seq [fg]
       (concat
