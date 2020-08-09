@@ -12,17 +12,15 @@
   "Returns the base subject of an IRI."
   (cond
     (rdf/iri? iri) (iri-base-subject (rdf/iri-value iri))
-    (string? iri) (rdf/iri (str (.setFragment (new goog.Uri iri) "")))))
+    (string? iri) (rdf/iri (first (clojure.string/split iri "#")))))
 
 (defn- get-fragment [iri]
   (cond
     (rdf/iri? iri) (get-fragment (rdf/iri-value iri))
-    (string? iri) (.getFragment (new goog.Uri iri))))
+    (string? iri) (or (second (clojure.string/split iri "#")) "")))
 
 (defn- is-fragment? [fg iri]
-  (let [iri (if (rdf/iri? iri) (rdf/iri-value iri) iri)]
-    (= (str (.setFragment (new goog.Uri iri) ""))
-       (str (new goog.Uri (rdf/iri-value (:base-subject fg)))))))
+  (= (iri-base-subject iri) (:base-subject fg)))
 
 (comment
   (is-fragment? (fragment-graph "http://example.com/") "http://example.com/#saf"))
@@ -34,15 +32,11 @@
 
 (defn- expand-fragment-reference [fg fragment-reference]
   (if (:f fragment-reference)
-    (-> (new goog.Uri (rdf/iri-value (:base-subject fg)))
-        (.setFragment (:f fragment-reference))
-        (str)
-        (rdf/iri))
+    (rdf/iri (str (rdf/iri-value (:base-subject fg)) "#" (:f fragment-reference)))
     fragment-reference))
 
 (comment
   (expand-fragment-reference (fragment-graph "http://example.com/") {:f "asdf"}))
-
 
 ;; Fragment Graph
 
