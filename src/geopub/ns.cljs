@@ -29,3 +29,4 @@
 (defns dc "http://purl.org/dc/terms/")
 (defns dce "http://purl.org/dc/elements/1.1/")
 (defns ogp "http://ogp.me/ns#")
+(defns prov "http://www.w3.org/ns/prov#")

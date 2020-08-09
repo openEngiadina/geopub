@@ -19,4 +19,6 @@
                                      :on-success [::db/add-rdf-graph]}])
          ["/ontology/activitystreams2.ttl"
           "/ontology/schema.ttl"
-          "/ontology/rdf.ttl"])}))
+          "/ontology/rdf.ttl"
+          "/ontology/prov.ttl"
+          "/ontology/eris-cache.ttl"])}))

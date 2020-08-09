@@ -51,15 +51,13 @@
  (fn [user-profile _]
    (rdf/description-get-first user-profile (as "outbox"))))
 
-(comment)
-(rdf/graph?
- (rdf/description-graph @(re-frame/subscribe [::user-profile])))
-
 (defn get-profile-component []
   "component that gets the inbox and outbox whenever userinfo changes"
   (let [userinfo (re-frame/subscribe [::oauth/userinfo])]
     (when-let [sub (:sub @userinfo)]
       (re-frame/dispatch [:geopub.rdf/get {:uri sub
+                                           ;; disable content-addressing of profile as it would break inbox and outbox fetching
+                                           :disable-content-addressing true
                                            :on-success [::db/add-rdf-graph]}]))))
 
 (defn get-inbox-outbox-component []

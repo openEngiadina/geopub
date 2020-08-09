@@ -124,4 +124,12 @@
                        ;; :on-success [::get-success]
                        :on-failure [::get-failure-default-handler]}])
 
-  (re-frame/dispatch [::db/initialize]))
+  (re-frame/dispatch [::db/initialize])
+
+  (re-frame/dispatch [::get
+                      {:method :get
+                       :uri "/ontology/eris-cache.ttl"
+                       :disable-content-addressing true
+                       ;; :on-success [::db/add-rdf-graph]
+                       :on-success [::get-success]
+                       :on-failure [::get-failure-default-handler]}]))

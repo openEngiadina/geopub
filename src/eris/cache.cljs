@@ -10,7 +10,7 @@
   (:require-macros [cljs.core.async :refer [go]]
                    [rdf.core :refer [defns]]))
 
-(defns ec "http://purl.org/eris/cache/")
+(defns ec "http://purl.org/eris/cache#")
 (defns prov "http://www.w3.org/ns/prov#")
 
 (defn- create-prov-cache-activity [used generated]
