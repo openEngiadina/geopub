@@ -1,6 +1,8 @@
 (ns rdf.ns
   "Common namespaces"
+  (:require [rdf.core :as rdf])
   (:require-macros [rdf.core :refer [defns]]))
+
 
 (defns rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 (defns rdfs "http://www.w3.org/2000/01/rdf-schema#")

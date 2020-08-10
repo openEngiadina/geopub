@@ -7,7 +7,8 @@
   [["/object/:iri"
     {:name ::object
      :view geopub.app.browse.object/view
-     :parameters {:path {:iri string?}}}]
+     :parameters {:path {:iri string?}
+                  :query {:ec string?}}}]
 
    ["/type/:type"
     {:name ::type

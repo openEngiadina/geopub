@@ -9,8 +9,10 @@
 
             [eris.cache :refer [ec]]
 
-            [geopub.ns :refer [prov as]]
+            [geopub.ns :refer [prov as ogp]]
+            [geopub.view.link :refer [link-component]]
             [geopub.rdf.view :refer [description-component
+                                     rdf-term-component
                                      description-label-component
                                      sort-descriptions-by-date]]
             [geopub.db :as db]
@@ -18,8 +20,7 @@
             [geopub.app.browse.sidebar :refer [sidebar]])
   (:require-macros [cljs.core.logic :refer [run run* fresh]]))
 
-;; Current IRI
-
+;; get the current IRI from ther route
 (re-frame/reg-sub
  ::current-route-iri
  (fn [_] (re-frame/subscribe [:geopub.router/current-route]))
@@ -29,36 +30,9 @@
        (goog.string.urlDecode)
        (rdf/iri))))
 
-;; Cache component
- 
+;; current description
 (re-frame/reg-sub
- ::cache-activities
- (fn [_] [(re-frame/subscribe [:geopub.db/graph])
-          (re-frame/subscribe [::current-route-iri])])
- (fn [input _]
-   (let [[graph current-iri] input]
-     (->> (run* [s]
-            (rdf.logic/graph-tripleo graph s (prov "used") current-iri)
-            (rdf.logic/graph-typeo graph s (ec "CreateCache")))
-          (map #(rdf/description % graph))
-          (group-by #(rdf/description-get-first % (prov "generated")))))))
-
-(defn cached-versions-component [description]
-  (let [current-iri (re-frame/subscribe [::current-route-iri])
-        cache-activities (re-frame/subscribe [::cache-activities])]
-    (when-not (empty? @cache-activities)
-      [:div
-       [:h4 "Versions"]
-       [:ul
-        (for [[generated activities] @cache-activities]
-          ^{:key (hash generated)}
-          (let [generated-desc (rdf/description-move (first activities) generated)]
-            [:li [description-label-component generated-desc]]))]])))
-
-;; Description view
-
-(re-frame/reg-sub
- ::current-description
+ ::current-route-description
  (fn [_] [(re-frame/subscribe [:geopub.db/graph])
           (re-frame/subscribe [:geopub.router/current-route])])
  (fn [input _]
@@ -70,16 +44,7 @@
      (when subject
        (rdf/description subject graph)))))
 
-(defn toolbar [description]
-  [:div.toolbar
-   [:button
-    {:on-click #(re-frame/dispatch
-                 [:geopub.rdf/get
-                  {:uri (-> description
-                            (rdf/description-subject)
-                            (rdf/iri-value))
-                   :on-success [::db/add-rdf-graph]}])}
-    "Load more data"]])
+;; Related activity
 
 (defn- related-activityo [graph related-to activity]
   (l/conda
@@ -101,24 +66,124 @@
  (fn [graph [_ to]]
    (get-related-activities graph to)))
 
-(defn activity-bar [description]
+(defn related-activity-bar [description]
   (let [related-activities (re-frame/subscribe
                              [::related-activities (rdf/description-subject description)])]
     [:div.activity-bar
      [:h3 "Related Activity"]
      [geopub.app.activity/activity-timeline-component @related-activities]]))
 
+;; Cache
+
+;; returns descriptions of all ERIS Cache activities that use the given IRI
+(re-frame/reg-sub
+ ::cache-activities
+ (fn [_] (re-frame/subscribe [:geopub.db/graph]))
+ (fn [graph [_ iri]]
+   (->> (run* [s]
+          (rdf.logic/graph-tripleo graph s (prov "used") iri)
+          (rdf.logic/graph-typeo graph s (ec "CreateCache")))
+        (map #(rdf/description % graph)))))
+
+;; the cached version to display may be specified with the ec query. This returns the ec query param as subscription.
+(re-frame/reg-sub
+ ::current-route-cache-activity
+ (fn [_] [(re-frame/subscribe [:geopub.router/current-route])
+          (re-frame/subscribe [:geopub.db/graph])])
+ (fn [[current-route graph] _]
+   (some-> current-route
+           (get-in [:query-params :ec])
+           (goog.string.urlDecode)
+           (rdf/iri)
+           (rdf/description graph))))
+
+(re-frame/reg-sub
+ ::cached-description
+ (fn [[_ iri]] [(re-frame/subscribe [::current-route-ec])
+                (re-frame/subscribe [::cache-activities iri])
+                (re-frame/subscribe [:geopub.db/graph])])
+ (fn [[current-route-ec cache-activities graph] _]
+   (rdf/description current-route-ec graph)))
+
+(defn available-cached-versions-component []
+  (let [current-iri @(re-frame/subscribe [::current-route-iri])
+        cache-activities @(re-frame/subscribe [::cache-activities current-iri])
+        current-cache-activity @(re-frame/subscribe [::current-route-cache-activity])
+        ;; TODO make default-cache-activity a subscrition and clean up this mess
+        all-cache-activities (re-frame/subscribe [::cache-activities current-iri])
+        default-cache-activity (first @all-cache-activities)]
+    (when-not (empty? cache-activities)
+      [:span
+       "cached version: "
+       [:select
+        {:on-change (fn [e]
+                      (let [ec (.-value (.-target e))]
+                        (re-frame/dispatch
+                         [:geopub.router/navigate :geopub.app.browse/object
+                          {:iri (goog.string.urlEncode (rdf/iri-value current-iri))}
+                          {:ec ec}])))}
+        (for [a cache-activities]
+          ^{:key (hash a)}
+          [:option
+           ;; TODO and this mess
+           (if (or (= (rdf/description-subject current-cache-activity)
+                      (rdf/description-subject a))
+                   (= (rdf/description-subject default-cache-activity)
+                      (rdf/description-subject a)))
+             {:selected true
+              :value (goog.string.urlEncode (rdf/iri-value (rdf/description-subject a)))}
+             {:value (goog.string.urlEncode (rdf/iri-value (rdf/description-subject a)))})
+           (rdf/literal-value (rdf/description-get-first a (prov "endedAtTime")))
+           ;; [link-component (rdf/iri-value (rdf/description-subject a))
+           ;; :geopub.app.browse/object
+           ;; {:iri (goog.string.urlEncode (rdf/iri-value current-iri))}
+           ;; {:ec (goog.string.urlEncode
+           ;; (rdf/iri-value (rdf/description-get-first a (prov "generated"))))}]
+           ])]])))
+
+(defn cached-description-component [activity]
+  [description-component
+   (rdf/description-move activity
+                         (rdf/description-get-first activity (prov "generated")))])
+
+(defn cached-data-component []
+  (let [current-iri @(re-frame/subscribe [::current-route-iri])
+        description @(re-frame/subscribe [::current-route-description])
+        current-route-cache-activity (re-frame/subscribe [::current-route-cache-activity])
+        all-cache-activities (re-frame/subscribe [::cache-activities current-iri])
+        default-cache-activity (first @all-cache-activities)]
+    (if (and (some? @current-route-cache-activity)
+             (not (rdf/description-empty? @current-route-cache-activity)))
+      [cached-description-component @current-route-cache-activity]
+      (if (some? default-cache-activity)
+        [cached-description-component default-cache-activity]
+        [:div
+         [description-component description]]))))
+
+;; Description view
+
+(defn toolbar [description]
+  (when (rdf/description-empty? description)
+    [:div.toolbar
+     [available-cached-versions-component]
+     [:button
+      {:on-click #(re-frame/dispatch
+                   [:geopub.rdf/get
+                    {:uri (-> description
+                              (rdf/description-subject)
+                              (rdf/iri-value))
+                     :on-success [::db/add-rdf-graph]}])}
+      "Load more data"]]))
+
 (defn view []
-  (let [description (re-frame/subscribe [::current-description])]
+  (let [description (re-frame/subscribe [::current-route-description])]
     [:div.ui-page
      [sidebar]
      [:div.main-container
       [toolbar @description]
       [:main
-       [description-component @description]
-       ;; [cached-versions-component [description]]
-       ]]
-     [activity-bar @description]]))
-
-
+       (if-not (rdf/description-empty? @description)
+         [description-component @description]
+         [cached-data-component (rdf/description-subject @description)])]]
+     [related-activity-bar @description]]))
 
