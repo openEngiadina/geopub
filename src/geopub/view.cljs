@@ -24,7 +24,7 @@
     [:nav
      [:ul
       [:li [link-component "Activity" ::router/activity]]
-      [:li [link-component "Browse" :geopub.app.browse/browse-type
+      [:li [link-component "Browse" :geopub.app.browse/type
             {:type (rdf.core/iri-value (ns/as "Note"))}]]]
      
      [:ul.nav-right

@@ -3,6 +3,7 @@
   (:require [rdf.core :as rdf]
             [rdf.fragment-graph :as fragment-graph]
             [rdf.ns :as ns]
+            [rdf.xsd.date-time :as date-time]
 
             [eris.core :as eris]
 
@@ -20,6 +21,8 @@
                                     (fragment-graph/base-subject used))
       (fragment-graph/add-statement (prov "generated")
                                     (fragment-graph/base-subject generated))
+      (fragment-graph/add-statement (prov "endedAtTime")
+                                    (date-time/now))
       (eris/set-base-subject-to-eris-urn)))
 
 (defn cache-fragment-graph-async [fg result]
@@ -30,4 +33,3 @@
         (async/put! result eris-fg)
         (async/put! result cache-activity)
         (async/close! result))))
-

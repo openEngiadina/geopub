@@ -47,8 +47,8 @@
                                                   :content-type (:content-type opts)
                                                   :path (:uri opts)
                                                   ;; skolemize and group into fragment graphs
-                                                  :xform (comp (fragment-graph/into-fragment-graphs)
-                                                               (rdf.skolem/skolemize))))
+                                                  :xform (comp (rdf.skolem/skolemize)
+                                                               (fragment-graph/into-fragment-graphs))))
     out))
 
 (defn parse [data opts]
@@ -132,4 +132,13 @@
                        :disable-content-addressing true
                        ;; :on-success [::db/add-rdf-graph]
                        :on-success [::get-success]
+                       :on-failure [::get-failure-default-handler]}])
+
+
+  (re-frame/dispatch [::get
+                      {:method :get
+                       :uri "https://radar.squat.net/en"
+                       ;; :disable-content-addressing true
+                       :on-success [::db/add-rdf-graph]
+                       ;; :on-success [::get-success]
                        :on-failure [::get-failure-default-handler]}]))

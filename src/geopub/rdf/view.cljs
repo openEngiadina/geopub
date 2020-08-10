@@ -29,7 +29,7 @@
        ;; create a href
        [link-component
         (rdf/iri-value iri)
-        :geopub.app.browse/browse-description
+        :geopub.app.browse/object
         {:iri (goog.string.urlEncode (rdf/iri-value iri))}]
 
        ;; only display the iri
@@ -155,7 +155,7 @@
       ;; then make the component a clickable link
       [link-component
        [rdf-term-component label-term opts]
-       :geopub.app.browse/browse-description
+       :geopub.app.browse/object
        {:iri
         (-> desc
             (rdf/description-subject)
