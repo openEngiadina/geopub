@@ -10,4 +10,6 @@
 
 ec:CreateCache
     a rdfs:Class ;
+    rdfs:label "CreateCache" ;
+    rdfs:comment "The activity of creating an ERIS encoded, content-addressed cache of some content.";
     rdfs:subClassOf prov:Activity .
