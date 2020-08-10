@@ -1,12 +1,13 @@
 (ns geopub.app.browse
   (:require [reagent.core :as r]
             [re-frame.core :as re-frame]
-            [reitit.frontend.easy :as rfe]
 
             [rdf.core :as rdf]
             [rdf.ns :refer [rdfs owl]]
             [rdf.logic :as rdf-logic]
             [cljs.core.logic :as l]
+
+            [eris.cache :refer [ec]]
 
             [geopub.ns :refer [as schema prov]]
             [geopub.rdf.view :refer [rdf-term-component
@@ -18,70 +19,50 @@
             [geopub.app.activity]
             [geopub.view.link :refer [link-component]]
 
+            [geopub.app.browse.sidebar :refer [sidebar]]
+            [geopub.app.browse.type]
+
             [cljs.core.async :as async])
-  (:require-macros [cljs.core.logic :refer [run* fresh]]))
+  (:require-macros [cljs.core.logic :refer [run run* fresh]]))
 
-;; common components
 
-(defn- go-to-url []
-  (let [input (r/atom "")]
-    (fn []
+
+;; Current IRI
+
+(re-frame/reg-sub
+ ::current-route-iri
+ (fn [_] (re-frame/subscribe [:geopub.router/current-route]))
+ (fn [current-route _]
+   (-> current-route
+       (get-in [:path-params :iri])
+       (goog.string.urlDecode)
+       (rdf/iri))))
+
+;; Cache component
+ 
+(re-frame/reg-sub
+ ::cache-activities
+ (fn [_] [(re-frame/subscribe [:geopub.db/graph])
+          (re-frame/subscribe [::current-route-iri])])
+ (fn [input _]
+   (let [[graph current-iri] input]
+     (->> (run* [s]
+            (rdf-logic/graph-tripleo graph s (prov "used") current-iri)
+            (rdf-logic/graph-typeo graph s (ec "CreateCache")))
+          (map #(rdf/description % graph))
+          (group-by #(rdf/description-get-first % (prov "generated")))))))
+
+(defn cached-versions-component [description]
+  (let [current-iri (re-frame/subscribe [::current-route-iri])
+        cache-activities (re-frame/subscribe [::cache-activities])]
+    (when-not (empty? @cache-activities)
       [:div
-       [:input {:type "text"
-                :on-change #(reset! input (-> % .-target .-value))}]
-       [:button
-        {:on-click #(rfe/push-state ::browse-description
-                                    {:iri (goog.string.urlEncode @input)})}
-        "Go"]])))
-
-(defn- url-encode [iri]
-  (-> iri
-      (rdf/iri-value)
-      (goog.string.urlEncode)))
-
-(defn- sidebar []
-  [:div.sidebar
-   [:nav
-    [:h4 "ActivityStreams"]
-    [:ul
-     [:li [link-component "Note" ::browse-type
-           {:type (url-encode (as "Note"))}]]
-     [:li [link-component "Article" ::browse-type
-           {:type (url-encode (as "Article"))}]]
-     [:li [link-component "Person" ::browse-type
-           {:type (url-encode (as "Person"))}]]
-     [:li [link-component "Like" ::browse-type
-           {:type (url-encode (as "Like"))}]]
-     [:li [link-component "Object" ::browse-type
-           {:type (url-encode (as "Object"))}]]]
-
-
-    [:h4 "PROV"]
-    [:ul
-     [:li [link-component "Activity" ::browse-type
-           {:type (url-encode (prov "Activity"))}]]]
-
-    [:h4 "schema.org"]
-    [:ul
-     [:li [link-component "Event" ::browse-type
-           {:type (url-encode (schema "Event"))}]]
-     [:li [link-component "Organization" ::browse-type
-           {:type (url-encode (schema "Organization"))}]]
-     [:li [link-component "Place" ::browse-type
-           {:type (url-encode (schema "Place"))}]]
-     [:li [link-component "Thing" ::browse-type
-           {:type (url-encode (schema "Thing"))}]]]
-    
-    [:h4 "RDFS / OWL"]
-    [:ul
-     [:li [link-component "Class" ::browse-type
-           {:type (url-encode (rdfs "Class"))}]]
-     [:li [link-component "Ontology" ::browse-type
-           {:type (url-encode (owl "Ontology"))}]]]
-
-    [:h3 "Enter URL"]
-    [go-to-url]
-    ]])
+       [:h4 "Versions"]
+       [:ul
+        (for [[generated activities] @cache-activities]
+          ^{:key (hash generated)}
+          (let [generated-desc (rdf/description-move (first activities) generated)]
+            [:li [description-label-component generated-desc]]))]])))
 
 ;; Description view
 
@@ -137,68 +118,16 @@
      [geopub.app.activity/activity-timeline-component @related-activities]]))
 
 (defn view-description []
-  (let [description (re-frame/subscribe [::current-description])
-        loading (r/atom false)]
-    ;; Auto load some more data if description is empty
-    ;; (if (rdf/description-empty? @description)
-    ;;   (load-more-data state subject loading))
-
+  (let [description (re-frame/subscribe [::current-description])]
     [:div.ui-page
      [sidebar]
      [:div.main-container
       [toolbar @description]
-      [:main [description-component @description]]]
+      [:main
+       [description-component @description]
+       ;; [cached-versions-component [description]]
+       ]]
      [activity-bar @description]]))
-
-;; Type view
-
-(re-frame/reg-sub
- ::current-type-descriptions
- (fn [_] [(re-frame/subscribe [:geopub.db/graph])
-          (re-frame/subscribe [:geopub.router/current-route])])
- (fn [input b]
-   (let [[graph current-route] input
-         ;; extract the type from the current route
-         type (-> current-route
-                     (get-in [:path-params :type])
-                     (goog.string.urlDecode)
-                     (rdf/iri))]
-     (when type
-       [(rdf/description type graph)
-        (map #(rdf/description % graph)
-             (run* [subject] (rdf-logic/graph-typeo graph subject type)))]))))
-
-(comment
-  (deref
-   (re-frame/subscribe [::current-type-descriptions])))
-
-(comment
-  (-> @re-frame.db/app-db
-      (get-in [:current-route :path-params :type])
-      (goog.string.urlDecode)
-      (rdf/iri)))
-
-
-(defn view-type []
-  (let [type-description-sub (re-frame/subscribe [::current-type-descriptions])
-        [type-description objects] @type-description-sub]
-    [:div.ui-page
-      [sidebar]
-      [:div.main-container
-       [:main
-        [:h1 "Browse: " [description-label-component type-description]]
-        [:table.browse-list
-         [:thead
-          [:tr
-           [:td "Name"]
-           [:td "IRI"]]]
-         [:tbody
-          (for [desc objects]
-            ^{:key (rdf/iri-value (rdf/description-subject desc))}
-            [:tr
-             [:td [description-label-component desc]]
-             [:td [rdf-term-component (rdf/description-subject desc)]]])]]]
-       ]]))
 
 (def routes
   [["/description/:iri"
@@ -208,7 +137,6 @@
 
    ["/type/:type"
     {:name ::browse-type
-     :view view-type
+     :view geopub.app.browse.type/view
      :parameters {:path {:type string?}}}]])
-
 
