@@ -1,0 +1,13 @@
+@prefix ec: <http://purl.org/eris/cache#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+<http://purl.org/eris/cache#>
+    a owl:Ontology ;
+    rdfs:label "ERIS Cache Vocabulary"@en ;
+    rdfs:comment "An extension to the W3C PROVenance Interchange Ontology to describe the Activity of content-addressed caching with the ERIS encoding."@en .
+
+ec:CreateCache
+    a rdfs:Class ;
+    rdfs:subClassOf prov:Activity .

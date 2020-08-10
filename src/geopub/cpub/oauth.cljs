@@ -5,7 +5,7 @@
             
             [ajax.core :as ajax]
             [day8.re-frame.http-fx]
-            [goog.Uri :as uri]
+            [geopub.uri :as uri]
 
             [geopub.local-storage :as local-storage]))
 
@@ -20,7 +20,8 @@
 (re-frame/reg-sub
  ::access-token-header
  (fn [db]
-   (str "Bearer " (get-in db [:state :token :access_token]))))
+   (str "Bearer " (get-in db [:oauth :state :token :access_token]))))
+
 
 (re-frame/reg-event-db
  ::reset-state
@@ -94,12 +95,12 @@
 ;; Launch an Authorization request
 
 (defn- authorize-url [server-url client state]
-  (-> (uri/parse server-url)
-      (.setPath "/oauth/authorize")
-      (.setQuery (str "response_type=code"
-                      "&client_id=" (:client_id client)
-                      "&state=" state))
-      (.toString)))
+  (-> server-url
+      (uri/set-path "/oauth/authorize")
+      (uri/set-query {:response_type "code"
+                      :client_id (:client_id client)
+                      :state state})
+      (str)))
 
 (re-frame/reg-event-fx
  ::request-authorization
@@ -129,9 +130,9 @@
 ;; Handle callback
 
 (defn token-url [server-url]
-  (-> (uri/parse server-url)
-      (.setPath "/oauth/token")
-      (.toString)))
+  (-> server-url
+      (uri/set-path "/oauth/token")
+      (str)))
 
 (re-frame/reg-event-fx
  ::handle-callback
@@ -193,9 +194,9 @@
 ;; Get userinfo
 
 (defn userinfo-url [server-url]
-  (-> (uri/parse server-url)
-      (.setPath "/oauth/userinfo")
-      (.toString)))
+  (-> server-url
+      (uri/set-path "/oauth/userinfo")
+      (str)))
 
 (re-frame/reg-event-fx
  ::get-userinfo

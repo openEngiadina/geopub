@@ -14,7 +14,11 @@
    {:dispatch-n
     (map (fn [url] [:geopub.rdf/get {:uri url
                                      :content-type "text/turtle"
+                                     ;; don't content-address the ontologies
+                                     :disable-content-addressing true
                                      :on-success [::db/add-rdf-graph]}])
-         ["/activitystreams2.ttl"
-          "/schema.ttl"
-          "/rdf.ttl"])}))
+         ["/ontology/activitystreams2.ttl"
+          "/ontology/schema.ttl"
+          "/ontology/rdf.ttl"
+          "/ontology/prov.ttl"
+          "/ontology/eris-cache.ttl"])}))

@@ -1,5 +1,5 @@
 (ns rdf.parse
-  "Bindings to the rdf-parse.js library for parsing RDF from  B"
+  "Bindings to the rdf-parse.js library for parsing RDF from a bunch of different serializations."
   (:require-macros [cljs.core.async :refer [go go-loop]])
   (:require [rdf.core :as rdf]
             [cljs.core.async :as async :refer [<! >!]]
@@ -58,11 +58,20 @@
 
 (defn parse
   "Takes data from the input-channel and parses them to Triples. Returns a channel that contains triples. input-channel needs to be closed before all triples are emitted."
-  [input-channel & {:keys [content-type base-iri]}]
+  [input-channel & {:keys [content-type base-iri xform]}]
   (let
       [input-stream (new (.-PassThrough stream))
-       ;; cast to rdf/triple by transducing output channel, pass errors trough
-       output-channel (async/chan 1 (map rdf/triple) identity)
+
+       ;; use identity if no xform given
+       xform (or xform (map identity))
+       
+       output-channel (async/chan 10
+                                  ;; cast to rdf/triple and apply the optional transducer
+                                  ;; TODO the order seems wrong to me. The xform should be applied on triples. But this seems to "work". Resolve confusion.
+                                  (comp (map rdf/triple) xform)
+                                  ;; pass errors trough
+                                  identity)
+
        opts (clj->js {:contentType (or content-type "text/turtle")
                       :baseIRI (or base-iri "")})]
 
@@ -79,9 +88,10 @@
 
 (defn parse-string
   "Parse string to triples. Returns a channel containing triples."
-  [input & {:keys [content-type base-iri]}]
+  [input & {:keys [content-type base-iri xform]}]
   (let [input-chan (async/chan)]
     (async/put! input-chan input #(async/close! input-chan))
     (parse input-chan
            :content-type content-type
-           :base-iri base-iri)))
+           :base-iri base-iri
+           :xform xform)))

@@ -57,9 +57,18 @@
        (add-to-index (:ops graph) o p s))))
 
   (rdf/graph-merge [graph-x graph-y]
-    (->Graph
-     (index-merge (:spo graph-x) (:spo graph-y))
-     (index-merge (:ops graph-x) (:ops graph-y))))
+    (cond
+      
+      (instance? Graph graph-y) (->Graph
+                                 (index-merge (:spo graph-x) (:spo graph-y))
+                                 (index-merge (:ops graph-x) (:ops graph-y)))
+
+      (satisfies? rdf/ITripleSeq graph-y) (reduce
+                                           rdf/graph-add
+                                           graph-x
+                                           (rdf/triple-seq graph-y))
+
+      :else graph-x))
 
   (rdf/graph-delete [graph triple]
     (let [s (rdf/triple-subject triple)

@@ -8,7 +8,7 @@
             [rdf.logic :as rdf-logic]
             [cljs.core.logic :as l]
 
-            [geopub.ns :refer [as schema]]
+            [geopub.ns :refer [as schema prov]]
             [geopub.rdf.view :refer [rdf-term-component
                                      description-label-component
                                      description-component
@@ -54,6 +54,12 @@
            {:type (url-encode (as "Like"))}]]
      [:li [link-component "Object" ::browse-type
            {:type (url-encode (as "Object"))}]]]
+
+
+    [:h4 "PROV"]
+    [:ul
+     [:li [link-component "Activity" ::browse-type
+           {:type (url-encode (prov "Activity"))}]]]
 
     [:h4 "schema.org"]
     [:ul

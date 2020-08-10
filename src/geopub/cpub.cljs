@@ -39,21 +39,41 @@
                (rdf/iri)
                (rdf/description graph))))))
 
-(comment)
-(rdf/graph?
- (rdf/description-graph @(re-frame/subscribe [::user-profile])))
+(re-frame/reg-sub
+ ::user-inbox-uri
+ (fn [_] (re-frame/subscribe [::user-profile]))
+ (fn [user-profile _]
+   (rdf/description-get-first user-profile (ldp "inbox"))))
+
+(re-frame/reg-sub
+ ::user-outbox-uri
+ (fn [_] (re-frame/subscribe [::user-profile]))
+ (fn [user-profile _]
+   (rdf/description-get-first user-profile (as "outbox"))))
 
 (defn get-profile-component []
   "component that gets the inbox and outbox whenever userinfo changes"
   (let [userinfo (re-frame/subscribe [::oauth/userinfo])]
     (when-let [sub (:sub @userinfo)]
       (re-frame/dispatch [:geopub.rdf/get {:uri sub
+                                           ;; disable content-addressing of profile as it would break inbox and outbox fetching
+                                           :disable-content-addressing true
                                            :on-success [::db/add-rdf-graph]}]))))
 
 (defn get-inbox-outbox-component []
-  (let [user-profile (re-frame/subscribe [::user-profile])]
-    (when (rdf/description? @user-profile)
-      [description-label-component @user-profile])))
+  (let [inbox-uri (re-frame/subscribe [::user-inbox-uri])
+        outbox-uri (re-frame/subscribe [::user-outbox-uri])
+        access-token-header (re-frame/subscribe [::oauth/access-token-header])]
+    (when @access-token-header
+      (when @inbox-uri
+        (re-frame/dispatch [:geopub.rdf/get {:uri (rdf/iri-value @inbox-uri)
+                                             :on-success [::db/add-rdf-graph]
+                                             :headers {"authorization" @access-token-header}}]))
+
+      (when @outbox-uri
+        (re-frame/dispatch [:geopub.rdf/get {:uri (rdf/iri-value @outbox-uri)
+                                             :on-success [::db/add-rdf-graph]
+                                             :headers {"authorization" @access-token-header}}])))))
 
 ;; (rdf/description-get-first profile (ldp "inbox"))
 
