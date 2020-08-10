@@ -20,7 +20,7 @@
        [:input {:type "text"
                 :on-change #(reset! input (-> % .-target .-value))}]
        [:button
-        {:on-click #(rfe/push-state ::browse-description
+        {:on-click #(rfe/push-state :geopub.app.browse/object
                                     {:iri (goog.string.urlEncode @input)})}
         "Go"]])))
 
@@ -34,39 +34,39 @@
    [:nav
     [:h4 "ActivityStreams"]
     [:ul
-     [:li [link-component "Note" :geopub.app.browse/browse-type
+     [:li [link-component "Note" :geopub.app.browse/type
            {:type (url-encode (as "Note"))}]]
-     [:li [link-component "Article" :geopub.app.browse/browse-type
+     [:li [link-component "Article" :geopub.app.browse/type
            {:type (url-encode (as "Article"))}]]
-     [:li [link-component "Person" :geopub.app.browse/browse-type
+     [:li [link-component "Person" :geopub.app.browse/type
            {:type (url-encode (as "Person"))}]]
-     [:li [link-component "Like" :geopub.app.browse/browse-type
+     [:li [link-component "Like" :geopub.app.browse/type
            {:type (url-encode (as "Like"))}]]
-     [:li [link-component "Object" :geopub.app.browse/browse-type
+     [:li [link-component "Object" :geopub.app.browse/type
            {:type (url-encode (as "Object"))}]]]
 
 
     [:h4 "PROV"]
     [:ul
-     [:li [link-component "Activity" :geopub.app.browse/browse-type
+     [:li [link-component "Activity" :geopub.app.browse/type
            {:type (url-encode (prov "Activity"))}]]]
 
     [:h4 "schema.org"]
     [:ul
-     [:li [link-component "Event" :geopub.app.browse/browse-type
+     [:li [link-component "Event" :geopub.app.browse/type
            {:type (url-encode (schema "Event"))}]]
-     [:li [link-component "Organization" :geopub.app.browse/browse-type
+     [:li [link-component "Organization" :geopub.app.browse/type
            {:type (url-encode (schema "Organization"))}]]
-     [:li [link-component "Place" :geopub.app.browse/browse-type
+     [:li [link-component "Place" :geopub.app.browse/type
            {:type (url-encode (schema "Place"))}]]
-     [:li [link-component "Thing" :geopub.app.browse/browse-type
+     [:li [link-component "Thing" :geopub.app.browse/type
            {:type (url-encode (schema "Thing"))}]]]
     
     [:h4 "RDFS / OWL"]
     [:ul
-     [:li [link-component "Class" :geopub.app.browse/browse-type
+     [:li [link-component "Class" :geopub.app.browse/type
            {:type (url-encode (rdfs "Class"))}]]
-     [:li [link-component "Ontology" :geopub.app.browse/browse-type
+     [:li [link-component "Ontology" :geopub.app.browse/type
            {:type (url-encode (owl "Ontology"))}]]]
 
     [:h3 "Enter URL"]
