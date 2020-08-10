@@ -114,7 +114,9 @@
         default-cache-activity (first @all-cache-activities)]
     (when-not (empty? cache-activities)
       [:span
-       "cached version: "
+       "cached version of "
+       [rdf-term-component current-iri {:disable-href true}]
+       " from "
        [:select
         {:on-change (fn [e]
                       (let [ec (.-value (.-target e))]
