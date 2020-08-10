@@ -14,7 +14,7 @@
   (let [server-url (r/atom "http://localhost:4000/")]
     (fn []
       [:form.authentication
-       [:label {:for :server-url} "Server URL"]
+       [:label {:for :server-url} "URL"]
        [:input {:type "url" :id :server-url
                 :default-value @server-url
                 :required true
@@ -40,14 +40,18 @@
   [:div.ui-page
    [:main
     [:h1 "Settings"]
-    [:h2 "Account"]
+    [:h2 "Authentication"]
     (let [oauth-state @(re-frame/subscribe [::oauth/state])]
       (cond (:authorized oauth-state) [authenticated-component oauth-state]
             (:error oauth-state) [:div "Error!"
                                   [oauth-state-debug-component]
                                   [:button {:on-click #(re-frame/dispatch [::oauth/reset-state])}
                                    "Try again..."]]
-            :else [authentication-form-component]))]])
+            :else [:div
+                   [:button {:on-click (fn [e] (re-frame/dispatch [::oauth/request-authorization "https://openengiadina.net/"]))} "Authenticate with https://openengiadina.net/"]
+                   [:details
+                    [:summary "custom CPub instance"]
+                    [authentication-form-component]]]))]])
 
 ;; OAuth Callback route / view
 
