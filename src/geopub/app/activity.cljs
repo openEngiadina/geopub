@@ -25,7 +25,6 @@
                                      description-label-component
                                      description-created-at
                                      sort-descriptions-by-date]]
-            [geopub.data.activity :as activity]
             [rdf.core :as rdf]
             [rdf.ns :refer [rdf rdfs]]
             [rdf.graph.map]
