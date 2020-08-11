@@ -13,7 +13,7 @@
 
 (defn- p->c [promise]
   "Wrap a JavaScript promise as a core.async channel."
-  (let [c (async/promise-chan)]
+  (let [c (async/chan)]
         (-> promise
             (.then (fn [res] (go (>! c res)
                                  (async/close! c))))
