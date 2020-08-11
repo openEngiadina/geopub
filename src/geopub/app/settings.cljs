@@ -27,10 +27,11 @@
 
 (defn authenticated-component [oauth-state]
   (when-let [user-profile (re-frame/subscribe [::cpub/user-profile])]
-    (when @user-profile
+    (if @user-profile
       [:p "Authenticated as " [description-label-component @user-profile]
        [:br]
-       [:button {:on-click #(re-frame/dispatch [::oauth/reset-state])} "Log out"]])))
+       [:button {:on-click #(re-frame/dispatch [::oauth/reset-state])} "Log out"]]
+      [:p "Loading user profile ... "])))
 
 (defn oauth-state-debug-component []
   (let [oauth-state @(re-frame/subscribe [::oauth/state])]

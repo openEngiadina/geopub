@@ -221,7 +221,7 @@
  ::get-userinfo-failure
  (re-frame/path :oauth)
  (fn [coeffects [_ result]]
-   {:db (assoc-in (:db coeffects) [:state :userinfo] :error)}))
+   {:db (assoc (:db coeffects) :state {:error :get-userinfo-failed})}))
 
 (defn get-userinfo-component []
   (let [state (re-frame/subscribe [::state])]
