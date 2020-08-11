@@ -33,16 +33,16 @@ npm install
 ** Run development server
 
 #+BEGIN_SRC sh
-clj -A:shadow-cljs -m shadow.cljs.devtools.cli watch app
+make watch
 #+END_SRC
 
 This will download any required ClojureScript dependencies, start a development
 server. The application can now be accessed at [[http://localhost:9500/]].
 
-** Building
+** Building a release
 
 #+BEGIN_SRC sh
-clj -A:shadow-cljs -m shadow.cljs.devtools.cli release app
+make release
 #+END_SRC
 
-*** TODO copy public resources and create a complete build
+This will create a release in the `release/` folder.
