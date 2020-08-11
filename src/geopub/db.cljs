@@ -21,16 +21,6 @@
   [x]
   (satisfies? cljs.core.async.impl.protocols/Channel x))
 
-
-;; take graphs from channel and individually add to db
-(re-frame/reg-fx
- ::add-rdf-graph-async
- (fn [chan]
-   (go-loop []
-     (when-let [graph (<! chan)]
-       (re-frame/dispatch [::add-rdf-graph graph])
-       (recur)))))
-
 (re-frame/reg-event-fx
  ::add-rdf-graph
  (re-frame/path :graph)
@@ -40,6 +30,7 @@
      (rdf/graph? graph) {:db (rdf/graph-merge (:db coeffects) graph)}
 
      ;; handle async/channel of graphs
-     (channel? graph) {::add-rdf-graph-async graph}
+     (channel? graph)
+     {:dispatch-async (async/map #(conj [::add-rdf-graph] %) [graph])}
 
      :else {})))

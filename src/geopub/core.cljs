@@ -31,8 +31,12 @@
             [geopub.rdf]
             [geopub.rdf.ontology :as ontology]
             [geopub.cpub.oauth :as oauth]
+            [geopub.dispatch-async]
 
             [clojure.core.logic :as l]))
+
+
+;; Initial data
 
 (re-frame/reg-event-fx
  ::load-init-data
@@ -41,11 +45,9 @@
     (map (fn [url] [:geopub.rdf/get {:uri url
                                      :on-success [::db/add-rdf-graph]}])
          ["http://localhost:4000/public"
-          ;; "https://openengiadina.net/public"
-          ])}))
+          "https://openengiadina.net/public"])}))
 
 ;; Setup
-
 
 (defn dev-setup []
   (when goog.DEBUG
