@@ -10,6 +10,7 @@
             [rdf.graph.map]
             [rdf.fragment-graph :as fragment-graph]
             [rdf.parse]
+            [rdf.n3 :as n3]
             [rdf.skolem]
 
             [eris.core :as eris]
@@ -67,13 +68,6 @@
                            :path (:uri opts)
                            :xform (rdf.skolem/skolemize))))
 
-(comment
-  (go
-    (println
-     (<! (async/into []
-                     (parse-content-addressed
-                      "<http://example.com/> <http://blups.com> <http://blips.com> .\n<http://bl.com> <http://bl.com#a> <http://123.com> ." {:content-type "text/turtle"}))))))
-
 (defn rdf-response-format [opts]
   "Custom RDF response format for cljs-ajax (see https://github.com/JulianBirch/cljs-ajax/blob/master/docs/formats.md)"
   {:description "RDF"
@@ -86,6 +80,7 @@
                (parse body {:content-type content-type :uri (:uri opts)})
                (parse-content-addressed body {:content-type content-type :uri (:uri opts)}))))
    :content-type (clojure.string/join ", " (rdf.parse/content-types))})
+
 
 (re-frame/reg-event-fx
  ::get-failure-default-handler
@@ -101,8 +96,21 @@
                         :on-failure [::get-failure-default-handler]}
                        opts)}))
 
-(comment
+(re-frame/reg-event-fx
+ ::post
+ (fn [_ [_ opts]]
+   {:http-xhrio (merge {:method :post
+                        ;; A dummy response format. Encoding as RDF/Turtle with
+                        ;; rdf.n3 is an async operation. cljs-ajax is not capable
+                        ;; of handling async encoding in request-format, so :params
+                        ;; field must hold already encoded Turtle data.
+                        :format {:content-type "text/turtle"
+                                 :write identity}
+                        :response-format (ajax/text-response-format)
+                        :on-failure [::get-failure-default-handler]}
+                       opts)}))
 
+(comment
   (re-frame/reg-event-fx
    ::get-success
    (fn [_ [_ response]]

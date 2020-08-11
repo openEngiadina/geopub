@@ -162,9 +162,7 @@
         [:div
          [description-component description]]))))
 
-;; Description view
-
-(defn toolbar [description]
+(defn cache-toolbar [description]
   (when (rdf/description-empty? description)
     [:div.toolbar
      [available-cached-versions-component]
@@ -177,12 +175,27 @@
                      :on-success [::db/add-rdf-graph]}])}
       "Load more data"]]))
 
+
+(defn social-toolbar [description]
+  (let [user-profile @(re-frame/subscribe [:geopub.cpub/user-profile])]
+    (when user-profile
+      [:div.toolbar
+       [:button
+        {:on-click
+         (fn [e]
+           (.preventDefault e)
+           (re-frame/dispatch [:geopub.cpub/like (rdf/description-subject description)]))}
+        "Like"]])))
+
+;; Description view
+
 (defn view []
   (let [description (re-frame/subscribe [::current-route-description])]
     [:div.ui-page
      [sidebar]
      [:div.main-container
-      [toolbar @description]
+      [social-toolbar @description]
+      [cache-toolbar @description]
       [:main
        (if-not (rdf/description-empty? @description)
          [description-component @description]
