@@ -38,6 +38,7 @@
 ;; Literal
 (defprotocol ILiteral
   (literal-value [x] "Returns the literal value")
+  (literal-canonical [x] "Returns the literal value in canonical form")
   (literal-language [x] "Returns the literal language")
   (literal-datatype [x] "Returns the literal datatype"))
 
@@ -47,6 +48,8 @@
 (defrecord Literal [value language datatype]
   ILiteral
   (literal-value [x] (:value x))
+  ;; TODO implement canonical form
+  (literal-canonical [x] (:value x))
   (literal-language [x] (:language x))
   (literal-datatype [x] (:datatype x))
 
@@ -180,6 +183,11 @@
 (defprotocol IGraph
   "Protocol for accessing a graph"
   (graph-match [x triple] "Returns sequence of triples matching query."))
+
+;; implement a dummy protocol for nil
+(extend-protocol IGraph
+  nil
+  (graph-match [_ _] '()))
 
 (defn graph? [x]
   (satisfies? IGraph x))

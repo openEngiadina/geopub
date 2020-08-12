@@ -1,15 +1,20 @@
 {:paths ["src" "resources" "target"]
  
  :deps {reagent {:mvn/version "0.9.1"}
-        cljs-http {:mvn/version "0.1.46"}
+
+        re-frame {:mvn/version "1.0.0"}
+        day8.re-frame/http-fx {:mvn/version "0.2.1"}
+
         metosin/reitit-core {:mvn/version "0.4.2"}
         metosin/reitit-frontend {:mvn/version "0.4.2"}
+
         org.clojure/core.logic {:mvn/version "1.0.0"}
         org.clojars.akiel/async-error {:mvn/version "0.3"}}
 
  :aliases
  {:shadow-cljs
-  {:extra-deps {thheller/shadow-cljs {:mvn/version "2.8.90"}}
+  {:extra-deps {thheller/shadow-cljs {:mvn/version "2.10.18"}
+                binaryage/devtools {:mvn/version "1.0.2"}}
    ;; :main-opts ["-m" "shadow.cljs.devtools.cli"]
    }}
  }
