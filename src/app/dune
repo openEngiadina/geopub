@@ -1,0 +1,10 @@
+(executable
+ (name main)
+ (modes js))
+
+(install
+ (section share)
+ (files
+   index.html
+  (main.bc.js as geopub.js)
+   style.css))
