@@ -1,10 +1,11 @@
 (executable
  (name main)
+ (libraries brr brr_react js_of_ocaml js_of_ocaml-lwt lwt_react)
  (modes js))
 
 (install
  (section share)
  (files
-   index.html
+  index.html
   (main.bc.js as geopub.js)
-   style.css))
+  style.css))

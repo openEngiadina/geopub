@@ -17,14 +17,10 @@ A second version was developed in ClojureScript (see branch `cljs`). The Clojure
 A development environment can be created with [Guix](https://guix.gnu.org/):
 
 ``` sh
-guix time-machine
-    --url=https://gitlab.com/pukkamustard/guix.git \
-    --branch=js-of-ocaml \
-    --disable-authentication \
-    -- environment -l guix.scm
+guix -- environment -l guix.scm
 ```
 
-After this you can run `dune build` to build GeoPub.
+After this you can run `dune build @install` which will build GeoPub and place all necessary artifacts into `_build/install/default/share/geopub/`.
 
 # Acknowledgments
 
