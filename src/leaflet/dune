@@ -1,0 +1,5 @@
+(library
+ (name leaflet)
+ (libraries brr js_of_ocaml)
+ (js_of_ocaml
+  (javascript_files ../../vendor/leaflet/leaflet.js)))

@@ -1,11 +1,13 @@
 (executable
  (name main)
- (libraries brr brr_react js_of_ocaml js_of_ocaml-lwt lwt_react)
+ (libraries brr brr_react js_of_ocaml js_of_ocaml-lwt lwt_react leaflet)
  (modes js))
 
 (install
  (section share)
  (files
+  ../../vendor/leaflet/leaflet.css
   index.html
+  sgraffito.svg
   (main.bc.js as geopub.js)
   style.css))
