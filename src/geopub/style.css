@@ -31,7 +31,7 @@ body {
     margin: 0 10px 0 50px;
     width: 100%;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
 }
 
 #topbar nav ul {

@@ -16,6 +16,10 @@ let create el = Jv.call leaflet "map" [| El.to_jv el |]
 
 let invalidate_size map = ignore @@ Jv.call map "invalidateSize" [| Jv.true' |]
 
+let fit_world map = ignore @@ Jv.call map "fitWorld" [||]
+
+let get_container map = Jv.call map "getContainer" [||] |> El.of_jv
+
 module LatLng = struct
   type t = Jv.t
 
