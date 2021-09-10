@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 open Lwt
-open Lwt.Syntax
+
+(* open Lwt.Syntax *)
 open Brr
 open Brr_react
 open Lwt_react
-open Js_of_ocaml_lwt
+(* open Js_of_ocaml_lwt *)
 
 let src = Logs.Src.create "GeoPub"
 
@@ -56,9 +57,44 @@ module Topbar = struct
         ])
 end
 
+let about_view =
+  El.(
+    div
+      ~at:At.[ class' @@ Jstr.v "text-content" ]
+      [
+        h1 [ txt' "GeoPub" ];
+        p [ txt' "GeoPub is an experimental XMPP client for geospatial data." ];
+        p
+          [
+            txt' "For more information see ";
+            a
+              ~at:At.[ href @@ Jstr.v "https://openengiadina.net/" ]
+              [ txt' "openengiadina.net" ];
+            txt' ".";
+          ];
+        h2 [ txt' "License" ];
+        p
+          [
+            txt'
+              "GeoPub is free software and is licensed under the \
+               AGPL-3.0-or-later.";
+          ];
+        p
+          [
+            txt'
+              "The source code and complete license text is available in the ";
+            a
+              ~at:
+                At.
+                  [ href @@ Jstr.v "https://codeberg.org/openEngiadina/geopub" ]
+              [ txt' "project repository" ];
+            txt' ".";
+          ];
+      ])
+
 let view model =
   let main_view = function
-    | About -> El.txt' "About"
+    | About -> about_view
     | Messages -> El.txt' "GeoPub is also an XMPP client!"
     | Map -> Leaflet.get_container model.map
   in
@@ -79,7 +115,6 @@ let main =
     Elr.def_children (Document.body G.document) S.(map view model_s)
   in
 
-  let* () = Lwt_js.sleep 2.0 >|= fun () -> update_route Map in
   return_unit
 
 let () =

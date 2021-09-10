@@ -1,5 +1,6 @@
 body {
     font-family: Helvetica, sans-serif;
+    font-size: 18px;
     margin: 0;
     padding: 0;
     display: flex;
@@ -52,10 +53,16 @@ body {
 }
 
 #main {
-    display: flex;
-    align-items: stretch;
     flex-grow: 1;
+    display: flex;
     overflow: auto;
+}
+
+.text-content {
+    width: 50vw;
+    max-width: 700px;
+    height: 100%;
+    margin: auto;
 }
 
 #map {
