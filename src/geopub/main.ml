@@ -20,7 +20,7 @@ type route = About | Map | Messages
 
 type route_msg = [ `SetRoute of route ]
 
-type msg = route_msg
+type msg = [ `InvalidateMapSize | route_msg ]
 
 type model = { route : route; map : Geopub_map.t }
 (* { route : route; map : Geopub_map.t; xmpp : Geopub_xmpp.t } *)
@@ -90,6 +90,28 @@ let topbar _model_s =
           nav [ ul List.(map fst entries) ];
         ]) )
 
+(* A small hack to invalidate the size of the Leaflet map when it is
+   dynamically loaded. If not it would not be displayed correctly until a
+   manual window resize. *)
+let observe_map main =
+  let e, send = E.create () in
+  let observer records _obs =
+    let on_node node =
+      match Jv.(to_option to_string @@ get node "id") with
+      | Some "map" -> send `InvalidateMapSize
+      | _ -> ()
+    in
+    records
+    |> List.map (fun record ->
+           Jv.to_list (fun x -> x) @@ Jv.get record "addedNodes")
+    |> List.flatten |> List.iter on_node
+  in
+  let mutation_observer = Jv.get Jv.global "MutationObserver" in
+  let observer = Jv.new' mutation_observer [| Jv.repr observer |] in
+  let opts = Jv.obj [| ("childList", Jv.true') |] in
+  ignore @@ Jv.call observer "observe" [| El.to_jv main; opts |];
+  e
+
 let main model_s =
   let main_el = El.div ~at:At.[ id @@ Jstr.v "main" ] [] in
   let msg_e, _ = E.create () in
@@ -103,9 +125,14 @@ let main model_s =
            | About -> [ about_view ])
          model_s)
   in
-  (def_signal, msg_e, main_el)
+  (def_signal, E.select [ msg_e; observe_map main_el ], main_el)
 
-let update msg model = match msg with `SetRoute r -> { model with route = r }
+let update msg model =
+  match msg with
+  | `SetRoute r -> { model with route = r }
+  | `InvalidateMapSize ->
+      Leaflet.invalidate_size model.map;
+      model
 
 let ui init_model =
   let def model_s =
