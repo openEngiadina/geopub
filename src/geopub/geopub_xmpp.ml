@@ -7,61 +7,79 @@
 open Lwt
 open Lwt.Syntax
 open Lwt_react
+open Reactor
+open Reactor_brr
 open Brr
 open Brr_io
-open Brr_react
 module Client = Xmpp_websocket.Client
 
-type action = Login of Xmpp.Jid.t * string | NoOp
+type msg = Login of Xmpp.Jid.t * string | Authenticated of Client.t
 
-type t = string option
+type t = Init | Loading | Client of Client.t
 
-module Login = struct
-  let ui () =
-    let login_form =
-      El.(
-        form
-          [
-            (* JID *)
-            label ~at:At.[ for' @@ Jstr.v "jid" ] [ txt' "JID" ];
-            input
-              ~at:
-                At.
-                  [
-                    id @@ Jstr.v "jid";
-                    name @@ Jstr.v "jid";
-                    type' @@ Jstr.v "text";
-                  ]
-              ();
-            (* Password *)
-            label ~at:At.[ for' @@ Jstr.v "password" ] [ txt' "Password" ];
-            input
-              ~at:
-                At.
-                  [
-                    id @@ Jstr.v "password";
-                    name @@ Jstr.v "password";
-                    type' @@ Jstr.v "password";
-                  ]
-              ();
-            (* Submit *)
-            input
-              ~at:
-                At.
-                  [
-                    id @@ Jstr.v "submit";
-                    type' @@ Jstr.v "submit";
-                    value @@ Jstr.v "Login";
-                  ]
-              ();
-          ])
-    in
+let init () = Return.singleton Init
 
-    let e =
+let login jid password =
+  let* client =
+    Client.create
+      { ws_endpoint = Some "ws://localhost:5280/xmpp-websocket" }
+      jid ~password
+  in
+  let* () = Client.connect client in
+  return @@ Authenticated client
+
+let update ~send_msg model = function
+  | Login (jid, password) ->
+      Loading |> Return.singleton |> Return.command (login jid password)
+  | Authenticated client -> Client client |> Return.singleton
+
+(* View *)
+
+let login_view send_msg =
+  let login_form =
+    El.(
+      form
+        [
+          (* JID *)
+          label ~at:At.[ for' @@ Jstr.v "jid" ] [ txt' "JID" ];
+          input
+            ~at:
+              At.
+                [
+                  id @@ Jstr.v "jid";
+                  name @@ Jstr.v "jid";
+                  type' @@ Jstr.v "text";
+                ]
+            ();
+          (* Password *)
+          label ~at:At.[ for' @@ Jstr.v "password" ] [ txt' "Password" ];
+          input
+            ~at:
+              At.
+                [
+                  id @@ Jstr.v "password";
+                  name @@ Jstr.v "password";
+                  type' @@ Jstr.v "password";
+                ]
+            ();
+          (* Submit *)
+          input
+            ~at:
+              At.
+                [
+                  id @@ Jstr.v "submit";
+                  type' @@ Jstr.v "submit";
+                  value @@ Jstr.v "Login";
+                ]
+            ();
+        ])
+  in
+  El.
+    [
+      h1 [ txt' "Login" ];
+      p [ txt' "You may login using any XMPP account." ];
       Evr.on_el ~default:false Form.Ev.submit
         (fun ev ->
-          Ev.prevent_default ev;
-
           let form_data =
             Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
           in
@@ -85,42 +103,23 @@ module Login = struct
             | _ -> failwith "We need better error handling"
           in
 
-          Login (jid, password))
-        login_form
-    in
+          send_msg @@ Login (jid, password))
+        login_form;
+    ]
 
-    (e, [ login_form ])
-end
+let view send_msg = function
+  | Init ->
+      El.
+        [
+          div ~at:At.[ class' @@ Jstr.v "text-content" ] @@ login_view send_msg;
+        ]
+  | Loading ->
+      El.[ div ~at:At.[ class' @@ Jstr.v "text-content" ] [ txt' "Loading" ] ]
+  | Client _ ->
+      El.[ div ~at:At.[ class' @@ Jstr.v "text-content" ] [ txt' "Client" ] ]
 
-let update model action =
-  match action with
-  | Login (jid, password) ->
-      let* client =
-        Client.create
-          { ws_endpoint = Some "ws://localhost:5280/xmpp-websocket" }
-          jid ~password
-      in
-      let* () = Client.connect client in
-      return_some "hi"
-  | NoOp -> return model
-
-let init () = None
-
-let ui model_s =
-  let container =
-    El.(div ~at:At.[ id @@ Jstr.v "messaging" ] [ txt' "XMPP" ])
-  in
-  let act_el_s =
-    S.map ~eq:( == )
-      (function
-        | None -> Login.ui ()
-        | Some _client ->
-            let actions_e, _ = E.create () in
-            (actions_e, El.[ txt' "Hi" ]))
-      model_s
-  in
-  let act =
-    S.bind ~eq:( == ) act_el_s (fun (act, _) -> S.hold NoOp act) |> S.changes
-  in
-  Elr.def_children container S.(map ~eq:( == ) snd act_el_s) |> S.keep;
-  (act, container)
+(* let update model action =
+ *   match action with
+ *   | Login (jid, password) ->
+ *       return @@ Client client
+ *   | NoOp -> return model *)

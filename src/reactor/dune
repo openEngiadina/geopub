@@ -1,0 +1,9 @@
+(library
+ (name reactor)
+ (modules reactor)
+ (libraries lwt lwt_react))
+
+(library
+ (name reactor_brr)
+ (modules reactor_brr)
+ (libraries reactor brr))
