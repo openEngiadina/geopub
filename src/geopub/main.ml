@@ -16,18 +16,13 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 (* Model *)
 
-type route = About | Map | Messages
+type action = [ `InvalidateMapSize | `Xmpp of Geopub_xmpp.action ]
 
-type route_msg = [ `SetRoute of route ]
+type model = { route : Route.t; map : Geopub_map.t; xmpp : Geopub_xmpp.t }
 
-type msg = [ `InvalidateMapSize | route_msg ]
-
-type model = { route : route; map : Geopub_map.t }
-(* { route : route; map : Geopub_map.t; xmpp : Geopub_xmpp.t } *)
-
-let init () = return { route = About; map = Geopub_map.create () }
-(* let* xmpp = Geopub_xmpp.init () in
- * return { route = About; map = Geopub_map.create (); xmpp } *)
+let init () =
+  return
+    { route = About; map = Geopub_map.create (); xmpp = Geopub_xmpp.init () }
 
 (* View *)
 
@@ -75,9 +70,9 @@ let topbar _model_s =
   in
   let entries =
     [
-      make_entry "Map" Map;
-      make_entry "Messages" Messages;
-      make_entry "About" About;
+      make_entry "Map" Route.Map;
+      make_entry "Messages" Route.Messages;
+      make_entry "About" Route.About;
     ]
   in
   let e = entries |> List.map snd |> E.select in
@@ -103,7 +98,9 @@ let observe_map main =
     in
     records
     |> List.map (fun record ->
-           Jv.to_list (fun x -> x) @@ Jv.get record "addedNodes")
+           if Jv.is_some record then
+             Jv.to_list (fun x -> x) @@ Jv.get record "addedNodes"
+           else [])
     |> List.flatten |> List.iter on_node
   in
   let mutation_observer = Jv.get Jv.global "MutationObserver" in
@@ -112,56 +109,69 @@ let observe_map main =
   ignore @@ Jv.call observer "observe" [| El.to_jv main; opts |];
   e
 
-let main model_s =
+let main ~xmpp model_s =
   let main_el = El.div ~at:At.[ id @@ Jstr.v "main" ] [] in
-  let msg_e, _ = E.create () in
-  let def_signal =
-    Elr.def_children main_el
-      (S.map
-         (fun model ->
-           match model.route with
-           | Map -> [ Leaflet.get_container model.map ]
-           | Messages -> El.[ txt' "Messages" ]
-           | About -> [ about_view ])
-         model_s)
-  in
-  (def_signal, E.select [ msg_e; observe_map main_el ], main_el)
+  let action_e, _ = E.create () in
+  Elr.def_children main_el
+    (S.map ~eq:( == )
+       (fun model ->
+         match model.route with
+         | Map -> [ Leaflet.get_container model.map ]
+         | Messages -> [ xmpp ]
+         | About -> [ about_view ])
+       model_s)
+  (* Keep reference to the signal *)
+  |> S.keep;
+  (E.select [ action_e; observe_map main_el ], main_el)
 
-let update msg model =
-  match msg with
-  | `SetRoute r -> { model with route = r }
+let update model action =
+  match action with
+  | `SetRoute r -> return { model with route = r }
   | `InvalidateMapSize ->
       Leaflet.invalidate_size model.map;
-      model
+      return model
+  | `Xmpp action ->
+      let* xmpp' = Geopub_xmpp.update model.xmpp action in
+      return { model with xmpp = xmpp' }
+  | _ -> return model
 
 let ui init_model =
   let def model_s =
-    let main_def_s, main_msg, main = main model_s in
-    let topbar_msg, topbar = topbar model_s in
+    (* Init the XMPP component *)
+    let xmpp_action, xmpp_el =
+      Geopub_xmpp.ui (S.map ~eq:( == ) (fun m -> m.xmpp) model_s)
+    in
 
-    (* Keep reference to all update signals *)
-    S.keep @@ S.merge (fun _ _ -> ()) () [ main_def_s ];
+    (* Start the main UI that switches based on the current route *)
+    let main_action, main = main ~xmpp:xmpp_el model_s in
+    let topbar_action, topbar = topbar model_s in
 
-    (* Collect all events *)
-    let msg = E.select [ main_msg; topbar_msg ] in
+    (* Collect all actions *)
+    let action =
+      E.select
+        [ main_action; topbar_action; E.map (fun a -> `Xmpp a) xmpp_action ]
+    in
 
     (* Perform the model update *)
-    let updates = E.map update msg in
-    let model_s = S.accum updates (S.value model_s) in
-    (model_s, [ topbar; main ])
+    let model_s' = S.fold_s ~eq:( == ) update (S.value model_s) action in
+
+    (* Return the model signal and the HTML elements *)
+    (model_s', (model_s', [ topbar; main ]))
   in
-  (* I admit, I do not understand what this does... TODO wrap my head around S.fix *)
-  S.fix init_model def
+  (* Resolve self-reference of model signal on itself (for updates) *)
+  S.fix ~eq:( == ) init_model def
 
 (* Start the application *)
 
 let setup_logging () =
   Logs.set_reporter @@ Logs_browser.console_reporter ();
-  Logs.set_level @@ Some Logs.Info
+  Logs.set_level @@ Some Logs.Debug
 
 let main =
   let* init_model = init () in
-  return @@ El.set_children (Document.body G.document) (ui init_model)
+  let model_s, children = ui init_model in
+  model_s |> S.keep;
+  return @@ El.set_children (Document.body G.document) children
 
 let () =
   setup_logging ();
