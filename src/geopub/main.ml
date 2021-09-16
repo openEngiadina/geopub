@@ -24,6 +24,20 @@ let init () =
     (fun xmpp -> { route = About; map = Geopub_map.create (); xmpp })
     (Geopub_xmpp.init ())
 
+let update ~stop ~send_msg model msg =
+  ignore stop;
+  ignore send_msg;
+  match msg with
+  | `SetRoute r -> Return.singleton { model with route = r }
+  | `InvalidateMapSize ->
+      Leaflet.invalidate_size model.map;
+      Return.singleton model
+  | `XmppMsg msg ->
+      Geopub_xmpp.update ~send_msg model.xmpp msg
+      |> Return.map (fun xmpp -> { model with xmpp })
+      |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg))
+  | _ -> Return.singleton model
+
 (* View *)
 
 let about_view =
@@ -60,61 +74,6 @@ let about_view =
             txt' ".";
           ];
       ])
-
-(* let main ~xmpp model_s =
- *   let main_el = El.div ~at:At.[ id @@ Jstr.v "main" ] [] in
- *   let action_e, _ = E.create () in
- *   Elr.def_children main_el
- *     (S.map ~eq:( == )
- *        (fun model ->
- *          match model.route with
- *          | Map -> [ Leaflet.get_container model.map ]
- *          | Messages -> [ xmpp ]
- *          | About -> [ about_view ])
- *        model_s)
- *   (\* Keep reference to the signal *\)
- *   |> S.keep;
- *   (E.select [ action_e; observe_map main_el ], main_el) *)
-
-let update ~stop ~send_msg model msg =
-  ignore stop;
-  ignore send_msg;
-  match msg with
-  | `SetRoute r -> Return.singleton { model with route = r }
-  | `InvalidateMapSize ->
-      Leaflet.invalidate_size model.map;
-      Return.singleton model
-  | `XmppMsg msg ->
-      Geopub_xmpp.update ~send_msg model.xmpp msg
-      |> Return.map (fun xmpp -> { model with xmpp })
-      |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg))
-  | _ -> Return.singleton model
-
-(* let ui init_model =
- *   let def model_s =
- *     (\* Init the XMPP component *\)
- *     let xmpp_action, xmpp_el =
- *       Geopub_xmpp.ui (S.map ~eq:( == ) (fun m -> m.xmpp) model_s)
- *     in
- * 
- *     (\* Start the main UI that switches based on the current route *\)
- *     let main_action, main = main ~xmpp:xmpp_el model_s in
- *     let topbar_action, topbar = topbar model_s in
- * 
- *     (\* Collect all actions *\)
- *     let action =
- *       E.select
- *         [ main_action; topbar_action; E.map (fun a -> `Xmpp a) xmpp_action ]
- *     in
- * 
- *     (\* Perform the model update *\)
- *     let model_s' = S.fold_s ~eq:( == ) update (S.value model_s) action in
- * 
- *     (\* Return the model signal and the HTML elements *\)
- *     (model_s', (model_s', [ topbar; main ]))
- *   in
- *   (\* Resolve self-reference of model signal on itself (for updates) *\)
- *   S.fix ~eq:( == ) init_model def *)
 
 let topbar send_msg _model =
   let on_click msg el =

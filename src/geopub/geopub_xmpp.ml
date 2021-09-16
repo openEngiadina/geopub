@@ -117,9 +117,3 @@ let view send_msg = function
       El.[ div ~at:At.[ class' @@ Jstr.v "text-content" ] [ txt' "Loading" ] ]
   | Client _ ->
       El.[ div ~at:At.[ class' @@ Jstr.v "text-content" ] [ txt' "Client" ] ]
-
-(* let update model action =
- *   match action with
- *   | Login (jid, password) ->
- *       return @@ Client client
- *   | NoOp -> return model *)
