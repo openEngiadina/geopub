@@ -22,7 +22,7 @@ type model = { route : Route.t; map : Geopub_map.t; xmpp : Geopub_xmpp.t }
 let init () =
   Return.map
     (fun xmpp -> { route = About; map = Geopub_map.create (); xmpp })
-    (Geopub_xmpp.init ())
+    (Geopub_xmpp.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
 
 let update ~stop ~send_msg model msg =
   ignore stop;
@@ -75,14 +75,22 @@ let about_view =
           ];
       ])
 
-let topbar send_msg _model =
+let topbar send_msg model =
   let on_click msg el = Evr.on_el Ev.click (fun _ -> send_msg msg) el in
   let make_entry name route =
     on_click (`SetRoute route)
       El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])
   in
+  let jid = Geopub_xmpp.jid_opt model.xmpp in
   let entries =
-    [ make_entry "Map" Route.Map; make_entry "Messages" Route.Messages ]
+    match jid with
+    | None -> [ make_entry "Login" Route.Account ]
+    | Some jid ->
+        [
+          make_entry "Map" Route.Map;
+          make_entry "Messages" (Route.Messages None);
+          make_entry jid Route.Account;
+        ]
   in
   El.(
     div
@@ -105,8 +113,8 @@ let view send_msg model =
         ~at:At.[ id @@ Jstr.v "main" ]
         (match model.route with
         | Map -> [ Leaflet.get_container model.map ]
-        | Messages ->
-            Geopub_xmpp.view (fun msg -> send_msg @@ `XmppMsg msg) model.xmpp
+        | Messages jid -> Geopub_xmpp.messages_view send_msg model.xmpp jid
+        | Account -> Geopub_xmpp.account_view send_msg model.xmpp
         | About -> [ about_view ]))
   in
   [ topbar send_msg model; main ]
@@ -159,4 +167,7 @@ let main =
   App.start geopub;
   App.result geopub
 
-let () = ignore main
+let () =
+  Lwt.on_any main
+    (fun v -> Console.error [ "Application unexpectedly stopped"; v ])
+    (fun exn -> Console.error [ exn ])

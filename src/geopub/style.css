@@ -55,6 +55,7 @@ body {
 #main {
     flex-grow: 1;
     overflow: auto;
+    display: flex;
 }
 
 .text-content {
@@ -67,4 +68,29 @@ body {
 #map {
     height: 100%;
     width: 100%;
+}
+
+.sidebar {
+    background-color: #e9f7ff;
+    width: 300px;
+}
+
+.messages {
+    background-color: green;
+}
+
+
+/* Roster */
+
+.roster {
+    list-style-type: none;
+}
+
+.roster-item a {
+    text-decoration: none;
+}
+
+
+.roster-item a:hover {
+    font-weight: 600;
 }

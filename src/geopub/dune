@@ -1,7 +1,8 @@
 (executable
  (name main)
  (libraries brr reactor reactor_brr logs logs.lwt logs.browser js_of_ocaml
-   js_of_ocaml-lwt lwt_react leaflet xmpp xmpp_websocket)
+   js_of_ocaml-lwt lwt_react leaflet loadable xmpp xmpp_websocket xmpp.roster
+   xmpp.disco xmpp.entity_capabilities)
  (modes js))
 
 (install
