@@ -76,9 +76,7 @@ let about_view =
       ])
 
 let topbar send_msg _model =
-  let on_click msg el =
-    Reactor_brr.Evr.on_el Ev.click (fun _ -> send_msg msg) el
-  in
+  let on_click msg el = Evr.on_el Ev.click (fun _ -> send_msg msg) el in
   let make_entry name route =
     on_click (`SetRoute route)
       El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])

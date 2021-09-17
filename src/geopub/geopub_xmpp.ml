@@ -6,7 +6,6 @@
 
 open Lwt
 open Lwt.Syntax
-open Lwt_react
 open Reactor
 open Reactor_brr
 open Brr
@@ -28,7 +27,9 @@ let login jid password =
   let* () = Client.connect client in
   return @@ Authenticated client
 
-let update ~send_msg model = function
+let update ~send_msg _model msg =
+  ignore send_msg;
+  match msg with
   | Login (jid, password) ->
       Loading |> Return.singleton |> Return.command (login jid password)
   | Authenticated client -> Client client |> Return.singleton
