@@ -62,6 +62,74 @@
     (description #f)
     (license license:agpl3+)))
 
+(define-public ocaml-ptime
+  (package
+  (name "ocaml-ptime")
+  (version "0.8.5")
+  (source
+    (origin
+      (method url-fetch)
+      (uri "https://erratique.ch/software/ptime/releases/ptime-0.8.5.tbz")
+      (sha256
+        (base32
+          "1fxq57xy1ajzfdnvv5zfm7ap2nf49znw5f9gbi4kb9vds942ij27"))))
+  (build-system ocaml-build-system)
+  (arguments
+   `(#:build-flags (list "build" "--with-js_of_ocaml" "true" "--tests" "true")
+     #:phases
+     (modify-phases %standard-phases
+       (delete 'configure))))
+  (propagated-inputs
+   `(("ocaml-result" ,ocaml-result)
+     ("js-of-ocaml" ,js-of-ocaml)))
+  (native-inputs
+    `(("ocaml-findlib" ,ocaml-findlib)
+      ("ocamlbuild" ,ocamlbuild)
+      ("ocaml-topkg" ,ocaml-topkg)
+      ("opam" ,opam)))
+  (home-page "https://erratique.ch/software/ptime")
+  (synopsis "POSIX time for OCaml")
+  (description
+    "Ptime offers platform independent POSIX time support in pure OCaml. It
+provides a type to represent a well-defined range of POSIX timestamps
+with picosecond precision, conversion with date-time values,
+conversion with [RFC 3339 timestamps][rfc3339] and pretty printing to a
+human-readable, locale-independent representation.")
+  (license license:isc)))
+
+(define-public ocaml-syndic
+  (package
+    (name "ocaml-syndic")
+    (version "1.6.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri "https://github.com/Cumulus/Syndic/releases/download/v1.6.1/syndic-v1.6.1.tbz")
+       (sha256
+        (base32
+         "1i43yqg0i304vpiy3sf6kvjpapkdm6spkf83mj9ql1d4f7jg6c58"))))
+    (build-system dune-build-system)
+    (arguments `(#:tests? #f))
+    (propagated-inputs
+     `(("ocaml-ptime" ,ocaml-ptime)
+       ("ocaml-uri" ,ocaml-uri)
+       ("ocaml-xmlm" ,ocaml-xmlm)))
+    (native-inputs
+     `(
+       ;; ("ocaml-fmt" ,ocaml-fmt)
+       ;; ("ocaml-ocurl" ,ocaml-ocurl)
+       ;; ("ocaml-fpath" ,ocaml-fpath)
+       ;; ("ocaml-ocplib-json-typed" ,ocaml-ocplib-json-typed)
+       ;; ("ocaml-base-unix" ,ocaml-base-unix)
+       ;; ("ocaml-jsonm" ,ocaml-jsonm)
+       ))
+    (home-page "https://github.com/Cumulus/Syndic")
+    (synopsis "RSS1, RSS2, Atom and OPML1 parsing")
+    (description
+     "Pure OCaml Library for parsing and writing various types of
+feeds and subscriber lists.")
+    (license license:expat)))
+
 (define-public ocaml-note
   (package
     (name "ocaml-note")
@@ -289,6 +357,7 @@ message report is decoupled from logging and is handled by a reporter.")
        ("ocaml-brr" ,ocaml-brr)
        ("ocaml-rdf" ,ocaml-rdf)
        ("ocaml-xmpp" ,ocaml-xmpp)
+       ("ocaml-syndic" ,ocaml-syndic)
        ("js_of_ocaml" ,js-of-ocaml)))
     (propagated-inputs
      `(("uri" ,ocaml-uri)))

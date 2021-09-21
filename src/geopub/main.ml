@@ -91,9 +91,8 @@ let topbar send_msg model =
     | None -> [ make_entry "Login" Route.Account ]
     | Some jid ->
         [
-          make_entry "Publish" Route.Map;
           make_entry "Map" Route.Map;
-          make_entry "Posts" Route.Map;
+          make_entry "Posts" Route.Posts;
           make_entry "Chat" (Route.Chat None);
           make_entry jid Route.Account;
         ]
@@ -117,6 +116,7 @@ let view send_msg model =
     match model.route with
     | Map -> return [ Leaflet.get_container model.map ]
     | Chat jid -> Geopub_xmpp.chat_view send_msg model.xmpp jid
+    | Posts -> Posts.view send_msg model.xmpp
     | Account -> return @@ Geopub_xmpp.account_view send_msg model.xmpp
     | About -> return [ about_view ]
   in

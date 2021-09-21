@@ -20,11 +20,16 @@ open Reactor_brr
 open Brr
 open Brr_io
 
+(* Loadable helper *)
+
+module L = Loadable
+
 (* XMPP and various XEPs *)
 
 module Client = Xmpp_websocket.Client
 module Entity_capabilities = Xmpp_entity_capabilities.Make (Client)
 module Roster = Xmpp_roster.Make (Client)
+module Pubsub = Xmpp_pubsub.Make (Client)
 
 type contact = {
   roster_item : Roster.Item.t option;
@@ -44,7 +49,7 @@ type model = {
   contacts : contact JidMap.t;
 }
 
-type t = model Loadable.t
+type t = model L.t
 
 type msg =
   | NoOp
@@ -55,15 +60,15 @@ type msg =
   | ReceiveMsg of Xmpp.Stanza.Message.t
   (* Send a message *)
   | SendMsg of Xmpp.Jid.t * string
+  (* Publish a simple post *)
+  | PublishPost of string
 
 let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
 
-let jid_opt = function
-  | Loadable.Loaded model -> Option.some @@ jid model
-  | _ -> None
+let jid_opt = function L.Loaded model -> Option.some @@ jid model | _ -> None
 
 let init () =
-  Loadable.Idle |> Return.singleton
+  L.Idle |> Return.singleton
   |> Return.command
      @@ Lwt.return
           (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil"))
@@ -138,28 +143,41 @@ let update ~send_msg model msg =
   match (model, msg) with
   (* Initiate authentication *)
   | _, Login (jid, password) ->
-      Loadable.Loading |> Return.singleton
+      L.Loading |> Return.singleton
       |> Return.command (login ~send_msg jid password)
   (* Authentication succeeded *)
-  | _, Authenticated model' -> Loadable.Loaded model' |> Return.singleton
+  | _, Authenticated model' -> L.Loaded model' |> Return.singleton
   | _, Logout ->
       (* TODO implement Client.disconnect *)
-      Loadable.Idle |> Return.singleton
+      L.Idle |> Return.singleton
   (* Handle incoming message *)
-  | Loadable.Loaded model, ReceiveMsg msg ->
-      Loadable.Loaded
+  | L.Loaded model, ReceiveMsg msg ->
+      L.Loaded
         { model with contacts = contacts_add_incoming_msg model.contacts msg }
       |> Return.singleton
   (* Send a message *)
-  | Loadable.Loaded ({ client; _ } as model), SendMsg (to', message) ->
+  | L.Loaded ({ client; _ } as model), SendMsg (to', message) ->
       let message = make_outgoing_message client to' message in
-      Loadable.Loaded
+      L.Loaded
         {
           model with
           contacts = contacts_add_outgoing_msg model.contacts message;
         }
       |> Return.singleton
       |> Return.command (send_xmpp_message client message)
+  | L.Loaded model, PublishPost post_content ->
+      let atom_entry = Atom.Entry.make post_content in
+      let jid = Client.jid model.client in
+      let item =
+        Xmpp.Xml.make_element
+          ~children:[ Atom.Entry.to_xml atom_entry ]
+          (Pubsub.Ns.pubsub "item")
+      in
+      L.Loaded model |> Return.singleton
+      |> Return.command
+           ( Pubsub.publish ~to':jid ~node:"urn:xmpp:microblog:0" model.client
+               (Option.some @@ item)
+           >|= fun _ -> `NoOp )
   | _, _ -> model |> Return.singleton
 
 (* View *)
@@ -303,33 +321,30 @@ let chat_view send_msg model selected_jid =
   in
 
   let compose_form selected_jid =
-    El.(
-      Evr.on_el ~default:false Form.Ev.submit (fun ev ->
-          let form_data =
-            Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
-          in
+    Evr.on_el ~default:false Form.Ev.submit
+      (fun ev ->
+        let form_data =
+          Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
+        in
 
-          let message_value =
-            Form.Data.find form_data (Jstr.v "message") |> Option.get
-          in
+        let message_value =
+          Form.Data.find form_data (Jstr.v "message") |> Option.get
+        in
 
-          let message =
-            match message_value with
-            | `String js -> Jstr.to_string js
-            | _ -> failwith "We need better error handling"
-          in
+        let message =
+          match message_value with
+          | `String js -> Jstr.to_string js
+          | _ -> failwith "We need better error handling"
+        in
 
-          send_msg @@ `XmppMsg (SendMsg (selected_jid, message)))
-      @@ form
-           ~at:At.[ class' @@ Jstr.v "chat-compose"; type' @@ Jstr.v "text" ]
-           [
-             input
-               ~at:At.[ type' @@ Jstr.v "text"; name @@ Jstr.v "message" ]
-               ();
-             input
-               ~at:At.[ type' @@ Jstr.v "submit"; value @@ Jstr.v "Send" ]
-               ();
-           ])
+        send_msg @@ `XmppMsg (SendMsg (selected_jid, message)))
+      El.(
+        form
+          ~at:At.[ class' @@ Jstr.v "chat-compose" ]
+          [
+            input ~at:At.[ type' @@ Jstr.v "text"; name @@ Jstr.v "message" ] ();
+            input ~at:At.[ type' @@ Jstr.v "submit"; value @@ Jstr.v "Send" ] ();
+          ])
   in
 
   let contact_chat_view model selected_jid contact =
@@ -348,7 +363,7 @@ let chat_view send_msg model selected_jid =
   in
 
   match model with
-  | Loadable.Loaded model -> (
+  | L.Loaded model -> (
       match selected_jid with
       | Some selected_jid ->
           let contact =
@@ -371,14 +386,14 @@ let chat_view send_msg model selected_jid =
           ]
 
 let account_view send_msg = function
-  | Loadable.Idle ->
+  | L.Idle ->
       El.
         [
           div ~at:At.[ class' @@ Jstr.v "text-content" ] @@ login_view send_msg;
         ]
-  | Loadable.Loading ->
+  | L.Loading ->
       El.[ div ~at:At.[ class' @@ Jstr.v "text-content" ] [ txt' "Loading" ] ]
-  | Loadable.Loaded model ->
+  | L.Loaded model ->
       El.
         [
           div
