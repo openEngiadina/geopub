@@ -35,6 +35,7 @@ module App = struct
     send : ?step:React.step -> 'msg -> unit;
     model_signal : 'model Lwt_react.signal;
     result : ('a, exn) Lwt_result.t;
+    cmd_u : unit event;
   }
 
   type ('model, 'msg) init = unit -> ('model, 'msg Lwt.t) Return.t
@@ -62,8 +63,7 @@ module App = struct
     let on_stop a = Lwt.wakeup resolver (Ok a) in
 
     (* run the commands and send results on as messages *)
-    (* Note: we need to keep this from the garbage collector *)
-    cmd_e |> E.map (fun t -> Lwt.on_any t send_msg on_exception) |> E.keep;
+    let cmd_u = cmd_e |> E.map (fun t -> Lwt.on_any t send_msg on_exception) in
 
     (* we need the initial model but can not run initial effects
        before the msg handling is set up *)
@@ -100,7 +100,7 @@ module App = struct
     (* Catch any other possible exceptions (e.g. Cancel) *)
     let result = Lwt.catch (fun () -> result) (fun e -> return @@ Error e) in
 
-    { start; send = send_msg; model_signal; result }
+    { start; send = send_msg; model_signal; result; cmd_u }
 
   let start t = Lwt.wakeup t.start ()
 
