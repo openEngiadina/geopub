@@ -53,8 +53,7 @@ type msg =
   | Logout
   (* Handle incoming and outgoing (already sent) messages *)
   | ReceiveMsg of Xmpp.Stanza.Message.t
-  | SentMsg of Xmpp.Stanza.Message.t
-  (* Cause a message to be sent *)
+  (* Send a message *)
   | SendMsg of Xmpp.Jid.t * string
 
 let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
@@ -88,8 +87,6 @@ let login ~send_msg jid password =
       ~node:"https://codeberg.org/openEngiadina/geopub"
       [
         "http://jabber.org/protocol/caps";
-        "https://openengiadina.net/xmpp/activitystream";
-        "https://openengiadina.net/xmpp/activitystream+notify";
         "urn:xmpp:microblog:0";
         "urn:xmpp:microblog:0+notify";
         "http://jabber.org/protocol/geoloc";
@@ -128,15 +125,14 @@ let contacts_add_outgoing_msg contacts (msg : Xmpp.Stanza.Message.t) =
       | None -> Some { roster_item = None; messages = [ msg ] })
     contacts
 
-let send_xmpp_message client to' message =
+let make_outgoing_message client to' message =
   let from = Client.jid client in
-  let message =
-    Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
-      Xmpp.Xml.
-        [ make_element ~children:[ make_text message ] (Ns.client "body") ]
-  in
+  Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
+    Xmpp.Xml.[ make_element ~children:[ make_text message ] (Ns.client "body") ]
+
+let send_xmpp_message client message =
   let* () = Client.send_message client message in
-  return @@ `XmppMsg (SentMsg message)
+  return @@ `NoOp
 
 let update ~send_msg model msg =
   match (model, msg) with
@@ -154,16 +150,16 @@ let update ~send_msg model msg =
       Loadable.Loaded
         { model with contacts = contacts_add_incoming_msg model.contacts msg }
       |> Return.singleton
-  (* Handle outgoing message *)
-  | _, SentMsg _msg ->
-      Console.log [ Jstr.v "SentMsg" ];
-      (* Loadable.Loaded *)
-      (* { model with contacts = contacts_add_outgoing_msg model.contacts msg } *)
-      Loadable.Idle |> Return.singleton |> Return.command (return `Inc)
   (* Send a message *)
-  | Loadable.Loaded { client; _ }, SendMsg (to', message) ->
-      model |> Return.singleton
-      |> Return.command (send_xmpp_message client to' message)
+  | Loadable.Loaded ({ client; _ } as model), SendMsg (to', message) ->
+      let message = make_outgoing_message client to' message in
+      Loadable.Loaded
+        {
+          model with
+          contacts = contacts_add_outgoing_msg model.contacts message;
+        }
+      |> Return.singleton
+      |> Return.command (send_xmpp_message client message)
   | _, _ -> model |> Return.singleton
 
 (* View *)
