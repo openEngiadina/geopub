@@ -259,23 +259,22 @@ let contacts_sidebar send_msg model =
 
 let chat_view send_msg model selected_jid =
   let message_body (message : Xmpp.Stanza.Message.t) =
-    (* let signals =
-     *   message.payload |> List.map Xmpp.Xml.tree_to_signals |> List.flatten
-     * in
-     * let parser =
-     *   Xmpp.Xml.Parser.(
-     *     many
-     *       (choice
-     *          [
-     *            element (Xmpp.Xml.Ns.client "body") (fun _attrs ->
-     *                text >>| String.concat "" >>| Option.some);
-     *            (ignore_element >>| fun _ -> None);
-     *          ])
-     *     >>| List.filter_map (fun x -> x)
-     *     >>| String.concat "")
-     * in
-     * signals |> Lwt_stream.of_list |> Xmpp.Xml.Parser.parse_stream parser *)
-    Format.asprintf "%a" (Fmt.list Xmpp.Xml.pp) message.payload
+    let signals =
+      message.payload |> List.map Xmpp.Xml.tree_to_signals |> List.flatten
+    in
+    let parser =
+      Xmpp.Xml.Parser.(
+        many
+          (choice
+             [
+               element (Xmpp.Xml.Ns.client "body") (fun _attrs ->
+                   text >>| String.concat "" >>| Option.some);
+               (ignore_element >>| fun _ -> None);
+             ])
+        >>| List.filter_map (fun x -> x)
+        >>| String.concat "")
+    in
+    signals |> Lwt_stream.of_list |> Xmpp.Xml.Parser.parse_stream parser
   in
 
   let message_item (message : Xmpp.Stanza.Message.t) =
@@ -287,7 +286,8 @@ let chat_view send_msg model selected_jid =
             message.from
           |> Option.value ~default:""
         in
-        Option.some
+        let* message_body = message_body message in
+        Lwt.return_some
         @@ El.(
              li
                ~at:At.[ class' @@ Jstr.v "message" ]
@@ -297,9 +297,54 @@ let chat_view send_msg model selected_jid =
                    [ txt' from; txt' ":" ];
                  p
                    ~at:At.[ class' @@ Jstr.v "message-body" ]
-                   [ txt' @@ message_body message ];
+                   [ txt' message_body ];
                ])
-    | _ -> None
+    | _ -> Lwt.return_none
+  in
+
+  let compose_form selected_jid =
+    El.(
+      Evr.on_el ~default:false Form.Ev.submit (fun ev ->
+          let form_data =
+            Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
+          in
+
+          let message_value =
+            Form.Data.find form_data (Jstr.v "message") |> Option.get
+          in
+
+          let message =
+            match message_value with
+            | `String js -> Jstr.to_string js
+            | _ -> failwith "We need better error handling"
+          in
+
+          send_msg @@ `XmppMsg (SendMsg (selected_jid, message)))
+      @@ form
+           ~at:At.[ class' @@ Jstr.v "chat-compose"; type' @@ Jstr.v "text" ]
+           [
+             input
+               ~at:At.[ type' @@ Jstr.v "text"; name @@ Jstr.v "message" ]
+               ();
+             input
+               ~at:At.[ type' @@ Jstr.v "submit"; value @@ Jstr.v "Send" ]
+               ();
+           ])
+  in
+
+  let contact_chat_view model selected_jid contact =
+    let* messages = Lwt_list.filter_map_s message_item contact.messages in
+    return
+    @@ El.
+         [
+           contacts_sidebar send_msg model;
+           div
+             ~at:At.[ class' @@ Jstr.v "chat" ]
+             [
+               ul ~at:At.[ class' @@ Jstr.v "messages" ] @@ List.rev messages;
+               compose_form selected_jid;
+             ];
+         ]
   in
 
   match model with
@@ -310,69 +355,20 @@ let chat_view send_msg model selected_jid =
             JidMap.find_opt selected_jid model.contacts
             |> Option.value ~default:{ roster_item = None; messages = [] }
           in
-          El.
-            [
-              contacts_sidebar send_msg model;
-              div
-                ~at:At.[ class' @@ Jstr.v "chat" ]
-                [
-                  ul
-                    ~at:At.[ class' @@ Jstr.v "messages" ]
-                    (List.filter_map message_item contact.messages |> List.rev);
-                  Evr.on_el ~default:false Form.Ev.submit (fun ev ->
-                      let form_data =
-                        Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
-                        @@ Ev.target ev
-                      in
-
-                      let message_value =
-                        Form.Data.find form_data (Jstr.v "message")
-                        |> Option.get
-                      in
-
-                      let message =
-                        match message_value with
-                        | `String js -> Jstr.to_string js
-                        | _ -> failwith "We need better error handling"
-                      in
-
-                      send_msg @@ `XmppMsg (SendMsg (selected_jid, message)))
-                  @@ form
-                       ~at:
-                         At.
-                           [
-                             class' @@ Jstr.v "chat-compose";
-                             type' @@ Jstr.v "text";
-                           ]
-                       [
-                         input
-                           ~at:
-                             At.
-                               [
-                                 type' @@ Jstr.v "text";
-                                 name @@ Jstr.v "message";
-                               ]
-                           ();
-                         input
-                           ~at:
-                             At.
-                               [
-                                 type' @@ Jstr.v "submit";
-                                 value @@ Jstr.v "Send";
-                               ]
-                           ();
-                       ];
-                ];
-            ]
+          contact_chat_view model selected_jid contact
       | None ->
-          El.
-            [ contacts_sidebar send_msg model; div [ txt' "Select a contact" ] ]
-      )
+          return
+            El.
+              [
+                contacts_sidebar send_msg model; div [ txt' "Select a contact" ];
+              ])
   | _ ->
-      El.
-        [
-          div ~at:At.[ class' @@ Jstr.v "text-content" ] @@ login_view send_msg;
-        ]
+      return
+        El.
+          [
+            div ~at:At.[ class' @@ Jstr.v "text-content" ]
+            @@ login_view send_msg;
+          ]
 
 let account_view send_msg = function
   | Loadable.Idle ->

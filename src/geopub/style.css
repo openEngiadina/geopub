@@ -91,6 +91,7 @@ body {
 
 .messages {
     flex-grow: 1;
+    overflow-y: auto;
     margin: 10px;
     list-style-type: none;
 }

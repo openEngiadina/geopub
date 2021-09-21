@@ -7,6 +7,8 @@
 open Brr
 open Reactor
 open Reactor_brr
+open Lwt
+open Lwt.Syntax
 open Lwt_react
 
 let src = Logs.Src.create "GeoPub"
@@ -111,17 +113,14 @@ let topbar send_msg model =
       ])
 
 let view send_msg model =
-  let main =
-    El.(
-      div
-        ~at:At.[ id @@ Jstr.v "main" ]
-        (match model.route with
-        | Map -> [ Leaflet.get_container model.map ]
-        | Chat jid -> Geopub_xmpp.chat_view send_msg model.xmpp jid
-        | Account -> Geopub_xmpp.account_view send_msg model.xmpp
-        | About -> [ about_view ]))
+  let* main =
+    match model.route with
+    | Map -> return [ Leaflet.get_container model.map ]
+    | Chat jid -> Geopub_xmpp.chat_view send_msg model.xmpp jid
+    | Account -> return @@ Geopub_xmpp.account_view send_msg model.xmpp
+    | About -> return [ about_view ]
   in
-  [ topbar send_msg model; main ]
+  return [ topbar send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]
 
 (* A small hack to invalidate the size of the Leaflet map when it is
    dynamically loaded. If not it would not be displayed correctly until a
@@ -162,7 +161,7 @@ let main =
   observe_for_map body (App.send geopub);
 
   (* Create a signal that carries the UI *)
-  let ui = S.map (view @@ App.send geopub) (App.model geopub) in
+  let* ui = S.map_s (view @@ App.send geopub) (App.model geopub) in
 
   (* Bind the UI to the DOM *)
   S.keep @@ S.map (El.set_children body) ui;
