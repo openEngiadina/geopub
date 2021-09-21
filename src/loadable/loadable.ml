@@ -5,3 +5,8 @@
  *)
 
 type 'a t = Idle | Loading | Loaded of 'a
+
+let map f = function
+  | Idle -> Idle
+  | Loading -> Loading
+  | Loaded v -> Loaded (f v)

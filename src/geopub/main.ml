@@ -26,16 +26,18 @@ let init () =
 
 let update ~stop ~send_msg model msg =
   ignore stop;
-  ignore send_msg;
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
       Leaflet.invalidate_size model.map;
       Return.singleton model
   | `XmppMsg msg ->
-      Geopub_xmpp.update ~send_msg model.xmpp msg
+      Geopub_xmpp.update
+        ~send_msg:(fun msg ->
+          let step = None in
+          send_msg ?step msg)
+        model.xmpp msg
       |> Return.map (fun xmpp -> { model with xmpp })
-      |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg))
   | _ -> Return.singleton model
 
 (* View *)
@@ -87,8 +89,10 @@ let topbar send_msg model =
     | None -> [ make_entry "Login" Route.Account ]
     | Some jid ->
         [
+          make_entry "Publish" Route.Map;
           make_entry "Map" Route.Map;
-          make_entry "Messages" (Route.Messages None);
+          make_entry "Posts" Route.Map;
+          make_entry "Chat" (Route.Chat None);
           make_entry jid Route.Account;
         ]
   in
@@ -113,7 +117,7 @@ let view send_msg model =
         ~at:At.[ id @@ Jstr.v "main" ]
         (match model.route with
         | Map -> [ Leaflet.get_container model.map ]
-        | Messages jid -> Geopub_xmpp.messages_view send_msg model.xmpp jid
+        | Chat jid -> Geopub_xmpp.chat_view send_msg model.xmpp jid
         | Account -> Geopub_xmpp.account_view send_msg model.xmpp
         | About -> [ about_view ]))
   in
@@ -147,7 +151,7 @@ let observe_for_map el send_msg =
 let main =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
-  Logs.set_level @@ Some Logs.Debug;
+  Logs.set_level @@ Some Logs.Info;
 
   (* Initialize the application *)
   let geopub = App.create ~init ~update in

@@ -8,6 +8,7 @@
 
 open Lwt
 open Lwt.Syntax
+open Lwt_react
 
 (* Reactor *)
 
@@ -25,16 +26,36 @@ module Client = Xmpp_websocket.Client
 module Entity_capabilities = Xmpp_entity_capabilities.Make (Client)
 module Roster = Xmpp_roster.Make (Client)
 
+type contact = {
+  roster_item : Roster.Item.t option;
+  messages : Xmpp.Stanza.Message.t list;
+}
+
+module JidMap = Map.Make (struct
+  type t = Xmpp.Jid.t
+
+  let compare a b = String.compare (Xmpp.Jid.to_string a) (Xmpp.Jid.to_string b)
+end)
+
 type model = {
   client : Client.t;
   (* Lwt thread that listens for XMPP stanzas and handles them *)
-  listener : unit Lwt.t;
-  roster : Roster.Item.t list;
+  listener : unit event;
+  contacts : contact JidMap.t;
 }
 
 type t = model Loadable.t
 
-type msg = Login of Xmpp.Jid.t * string | Authenticated of model | Logout
+type msg =
+  | NoOp
+  | Login of Xmpp.Jid.t * string
+  | Authenticated of model
+  | Logout
+  (* Handle incoming and outgoing (already sent) messages *)
+  | ReceiveMsg of Xmpp.Stanza.Message.t
+  | SentMsg of Xmpp.Stanza.Message.t
+  (* Cause a message to be sent *)
+  | SendMsg of Xmpp.Jid.t * string
 
 let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
 
@@ -48,32 +69,102 @@ let init () =
      @@ Lwt.return
           (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil"))
 
-let login jid password =
+let get_roster_contacts client =
+  let* roster = Roster.get client in
+  roster
+  |> List.map (fun (roster_item : Roster.Item.t) ->
+         (roster_item.jid, { roster_item = Some roster_item; messages = [] }))
+  |> List.to_seq |> JidMap.of_seq |> return
+
+let login ~send_msg jid password =
   let* client =
     Client.create
       { ws_endpoint = Some "ws://localhost:5280/xmpp-websocket" }
       jid ~password
   in
   let* () = Client.connect client in
-  let ec_responder =
+  let* ec_responder =
     Entity_capabilities.advertise ~category:"client" ~type':"web" ~name:"GeoPub"
-      [ "http://jabber.org/protocol/caps" ]
+      ~node:"https://codeberg.org/openEngiadina/geopub"
+      [
+        "http://jabber.org/protocol/caps";
+        "https://openengiadina.net/xmpp/activitystream";
+        "https://openengiadina.net/xmpp/activitystream+notify";
+        "urn:xmpp:microblog:0";
+        "urn:xmpp:microblog:0+notify";
+        "http://jabber.org/protocol/geoloc";
+        "http://jabber.org/protocol/geoloc+notify";
+      ]
       client
   in
-  let* roster = Roster.get client in
-  let listener = Lwt.pick [ ec_responder ] in
-  return @@ Authenticated { client; listener; roster }
+  let msg_listener =
+    Client.stanzas client
+    |> E.map (fun stanza ->
+           match stanza with
+           | Xmpp.Stanza.Message msg -> send_msg @@ `XmppMsg (ReceiveMsg msg)
+           | _ -> ())
+  in
+  let* contacts = get_roster_contacts client in
+  let listener =
+    E.merge (fun _ _ -> ()) () [ E.stamp ec_responder (); msg_listener ]
+  in
+  return @@ `XmppMsg (Authenticated { client; listener; contacts })
 
-let update ~send_msg _model msg =
-  ignore send_msg;
-  match msg with
-  | Login (jid, password) ->
+let contacts_add_incoming_msg contacts (msg : Xmpp.Stanza.Message.t) =
+  match msg.from with
+  | Some from ->
+      JidMap.update (Xmpp.Jid.bare from)
+        (function
+          | Some contact ->
+              Some { contact with messages = msg :: contact.messages }
+          | None -> Some { roster_item = None; messages = [ msg ] })
+        contacts
+  | None -> contacts
+
+let contacts_add_outgoing_msg contacts (msg : Xmpp.Stanza.Message.t) =
+  JidMap.update (Xmpp.Jid.bare msg.to')
+    (function
+      | Some contact -> Some { contact with messages = msg :: contact.messages }
+      | None -> Some { roster_item = None; messages = [ msg ] })
+    contacts
+
+let send_xmpp_message client to' message =
+  let from = Client.jid client in
+  let message =
+    Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
+      Xmpp.Xml.
+        [ make_element ~children:[ make_text message ] (Ns.client "body") ]
+  in
+  let* () = Client.send_message client message in
+  return @@ `XmppMsg (SentMsg message)
+
+let update ~send_msg model msg =
+  match (model, msg) with
+  (* Initiate authentication *)
+  | _, Login (jid, password) ->
       Loadable.Loading |> Return.singleton
-      |> Return.command (login jid password)
-  | Authenticated model' -> Loadable.Loaded model' |> Return.singleton
-  | Logout ->
+      |> Return.command (login ~send_msg jid password)
+  (* Authentication succeeded *)
+  | _, Authenticated model' -> Loadable.Loaded model' |> Return.singleton
+  | _, Logout ->
       (* TODO implement Client.disconnect *)
       Loadable.Idle |> Return.singleton
+  (* Handle incoming message *)
+  | Loadable.Loaded model, ReceiveMsg msg ->
+      Loadable.Loaded
+        { model with contacts = contacts_add_incoming_msg model.contacts msg }
+      |> Return.singleton
+  (* Handle outgoing message *)
+  | _, SentMsg _msg ->
+      Console.log [ Jstr.v "SentMsg" ];
+      (* Loadable.Loaded *)
+      (* { model with contacts = contacts_add_outgoing_msg model.contacts msg } *)
+      Loadable.Idle |> Return.singleton |> Return.command (return `Inc)
+  (* Send a message *)
+  | Loadable.Loaded { client; _ }, SendMsg (to', message) ->
+      model |> Return.singleton
+      |> Return.command (send_xmpp_message client to' message)
+  | _, _ -> model |> Return.singleton
 
 (* View *)
 
@@ -149,17 +240,15 @@ let login_view send_msg =
         login_form;
     ]
 
-let roster_sidebar send_msg model =
-  let roster_item_el (item : Roster.Item.t) =
+let contacts_sidebar send_msg model =
+  let contact_item_el (jid, _contact) =
     El.(
       li
         ~at:At.[ class' @@ Jstr.v "roster-item" ]
         [
           Evr.on_el Ev.click (fun _ ->
-              send_msg @@ `SetRoute (Route.Messages (Some item.jid)))
-          @@ a
-               ~at:At.[ href @@ Jstr.v "#" ]
-               [ txt' @@ Xmpp.Jid.to_string item.jid ];
+              send_msg @@ `SetRoute (Route.Chat (Some jid)))
+          @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' @@ Xmpp.Jid.to_string jid ];
         ])
   in
   El.(
@@ -168,17 +257,121 @@ let roster_sidebar send_msg model =
       [
         ul
           ~at:At.[ class' @@ Jstr.v "roster" ]
-          List.(map roster_item_el model.roster);
+          (JidMap.to_seq model.contacts
+          |> Seq.map contact_item_el |> List.of_seq);
       ])
 
-let messages_view send_msg model _selected_jid =
+let chat_view send_msg model selected_jid =
+  let message_body (message : Xmpp.Stanza.Message.t) =
+    (* let signals =
+     *   message.payload |> List.map Xmpp.Xml.tree_to_signals |> List.flatten
+     * in
+     * let parser =
+     *   Xmpp.Xml.Parser.(
+     *     many
+     *       (choice
+     *          [
+     *            element (Xmpp.Xml.Ns.client "body") (fun _attrs ->
+     *                text >>| String.concat "" >>| Option.some);
+     *            (ignore_element >>| fun _ -> None);
+     *          ])
+     *     >>| List.filter_map (fun x -> x)
+     *     >>| String.concat "")
+     * in
+     * signals |> Lwt_stream.of_list |> Xmpp.Xml.Parser.parse_stream parser *)
+    Format.asprintf "%a" (Fmt.list Xmpp.Xml.pp) message.payload
+  in
+
+  let message_item (message : Xmpp.Stanza.Message.t) =
+    match message.type' with
+    | Some "chat" ->
+        let from =
+          Option.map
+            (fun from -> Xmpp.Jid.(to_string @@ bare from))
+            message.from
+          |> Option.value ~default:""
+        in
+        Option.some
+        @@ El.(
+             li
+               ~at:At.[ class' @@ Jstr.v "message" ]
+               [
+                 div
+                   ~at:At.[ class' @@ Jstr.v "message-from" ]
+                   [ txt' from; txt' ":" ];
+                 p
+                   ~at:At.[ class' @@ Jstr.v "message-body" ]
+                   [ txt' @@ message_body message ];
+               ])
+    | _ -> None
+  in
+
   match model with
-  | Loadable.Loaded model ->
-      El.
-        [
-          roster_sidebar send_msg model;
-          div ~at:At.[ class' @@ Jstr.v "messages" ] [];
-        ]
+  | Loadable.Loaded model -> (
+      match selected_jid with
+      | Some selected_jid ->
+          let contact =
+            JidMap.find_opt selected_jid model.contacts
+            |> Option.value ~default:{ roster_item = None; messages = [] }
+          in
+          El.
+            [
+              contacts_sidebar send_msg model;
+              div
+                ~at:At.[ class' @@ Jstr.v "chat" ]
+                [
+                  ul
+                    ~at:At.[ class' @@ Jstr.v "messages" ]
+                    (List.filter_map message_item contact.messages |> List.rev);
+                  Evr.on_el ~default:false Form.Ev.submit (fun ev ->
+                      let form_data =
+                        Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
+                        @@ Ev.target ev
+                      in
+
+                      let message_value =
+                        Form.Data.find form_data (Jstr.v "message")
+                        |> Option.get
+                      in
+
+                      let message =
+                        match message_value with
+                        | `String js -> Jstr.to_string js
+                        | _ -> failwith "We need better error handling"
+                      in
+
+                      send_msg @@ `XmppMsg (SendMsg (selected_jid, message)))
+                  @@ form
+                       ~at:
+                         At.
+                           [
+                             class' @@ Jstr.v "chat-compose";
+                             type' @@ Jstr.v "text";
+                           ]
+                       [
+                         input
+                           ~at:
+                             At.
+                               [
+                                 type' @@ Jstr.v "text";
+                                 name @@ Jstr.v "message";
+                               ]
+                           ();
+                         input
+                           ~at:
+                             At.
+                               [
+                                 type' @@ Jstr.v "submit";
+                                 value @@ Jstr.v "Send";
+                               ]
+                           ();
+                       ];
+                ];
+            ]
+      | None ->
+          El.
+            [ contacts_sidebar send_msg model; div [ txt' "Select a contact" ] ]
+      )
   | _ ->
       El.
         [

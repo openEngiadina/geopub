@@ -75,10 +75,37 @@ body {
     width: 300px;
 }
 
-.messages {
-    background-color: green;
+
+/* Chat */
+
+.chat {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
 }
 
+.chat-compose {
+    width: 100%;
+}
+
+.messages {
+    flex-grow: 1;
+    margin: 10px;
+    list-style-type: none;
+}
+
+.message {
+    paddig: 5px;
+}
+
+.message-from {
+    font-weight: lighter;
+}
+
+.message-body {
+    margin-left: 2em;
+}
 
 /* Roster */
 
@@ -89,7 +116,6 @@ body {
 .roster-item a {
     text-decoration: none;
 }
-
 
 .roster-item a:hover {
     font-weight: 600;
