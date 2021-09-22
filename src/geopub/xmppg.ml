@@ -58,11 +58,10 @@ let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
 
 let jid_opt = function L.Loaded model -> Option.some @@ jid model | _ -> None
 
-let init () =
-  L.Idle |> Return.singleton
-  |> Return.command
-     @@ Lwt.return
-          (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil"))
+let init () = L.Idle |> Return.singleton
+(* |> Return.command
+ *    @@ Lwt.return
+ *         (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil")) *)
 
 let get_roster_contacts client =
   let* roster = Roster.get client in
@@ -73,9 +72,7 @@ let get_roster_contacts client =
 
 let login ~send_msg jid password =
   let* client =
-    Client.create
-      { ws_endpoint = Some "ws://localhost:5280/xmpp-websocket" }
-      jid ~password
+    Client.create { ws_endpoint = Some "wss://movim.eu/xmpp" } jid ~password
   in
   let* () = Client.connect client in
   let* ec_responder =

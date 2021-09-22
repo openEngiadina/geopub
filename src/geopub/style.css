@@ -131,8 +131,33 @@ body {
 
 /* post compose form */
 .post-compose {
+    width: 100%;
+    border-bottom: solid 0.5px grey;
+    margin: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.posts {
+    list-style-type: none;
+    padding-left: 0;
+    padding-righ: 0;
+    width: 100%;
+}
+
+.post-item {
+    display: flex;
+    flex-direction: column;
+    border-bottom: solid 0.5px grey;
+    margin: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.post-jid {
 }
 
 /* an individual atom entry */
 .atom-entry {
+    margin-left: 20px;
 }
