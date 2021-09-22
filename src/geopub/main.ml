@@ -115,7 +115,7 @@ let view send_msg model =
   let* main =
     match model.route with
     | Map -> return [ Leaflet.get_container model.map ]
-    | Chat jid -> Geopub_xmpp.chat_view send_msg model.xmpp jid
+    | Chat jid -> Chat.view send_msg model.xmpp jid
     | Posts -> Posts.view send_msg model.xmpp
     | Account -> return @@ Geopub_xmpp.account_view send_msg model.xmpp
     | About -> return [ about_view ]
