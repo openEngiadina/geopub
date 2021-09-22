@@ -13,11 +13,21 @@ module L = Loadable
 module Gxmpp = Xmppg
 module JidMap = Gxmpp.JidMap
 
-let contacts_sidebar send_msg (model : Xmppg.model) =
+let contacts_sidebar send_msg ?selected_jid (model : Xmppg.model) =
   let contact_item_el (jid, _contact) =
     El.(
       li
-        ~at:At.[ class' @@ Jstr.v "roster-item" ]
+        ~at:
+          (List.filter_map
+             (fun x -> x)
+             At.
+               [
+                 Option.some @@ class' @@ Jstr.v "roster-item";
+                 Option.bind selected_jid (fun selected_jid ->
+                     if selected_jid = jid then
+                       Option.some @@ class' @@ Jstr.v "roster-item-selected"
+                     else None);
+               ])
         [
           Evr.on_el Ev.click (fun _ ->
               send_msg @@ `SetRoute (Route.Chat (Some jid)))
@@ -111,7 +121,7 @@ let view send_msg (model : Gxmpp.model L.t) selected_jid =
     return
     @@ El.
          [
-           contacts_sidebar send_msg model;
+           contacts_sidebar ~selected_jid send_msg model;
            div
              ~at:At.[ class' @@ Jstr.v "chat" ]
              [

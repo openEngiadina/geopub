@@ -121,3 +121,7 @@ body {
 .roster-item a:hover {
     font-weight: 600;
 }
+
+.roster-item-selected {
+    font-weight: 600;
+}
