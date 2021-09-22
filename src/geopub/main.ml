@@ -17,14 +17,14 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 (* Model *)
 
-type msg = [ `InvalidateMapSize | `XmppMsg of Geopub_xmpp.msg ]
+type msg = [ `InvalidateMapSize | `XmppMsg of Xmppg.msg ]
 
-type model = { route : Route.t; map : Geopub_map.t; xmpp : Geopub_xmpp.t }
+type model = { route : Route.t; map : Geopub_map.t; xmpp : Xmppg.t }
 
 let init () =
   Return.map
     (fun xmpp -> { route = About; map = Geopub_map.create (); xmpp })
-    (Geopub_xmpp.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
+    (Xmppg.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
 
 let update ~stop ~send_msg model msg =
   ignore stop;
@@ -34,7 +34,7 @@ let update ~stop ~send_msg model msg =
       Leaflet.invalidate_size model.map;
       Return.singleton model
   | `XmppMsg msg ->
-      Geopub_xmpp.update
+      Xmppg.update
         ~send_msg:(fun msg ->
           let step = None in
           send_msg ?step msg)
@@ -85,7 +85,7 @@ let topbar send_msg model =
     on_click (`SetRoute route)
       El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])
   in
-  let jid = Geopub_xmpp.jid_opt model.xmpp in
+  let jid = Xmppg.jid_opt model.xmpp in
   let entries =
     match jid with
     | None -> [ make_entry "Login" Route.Account ]
@@ -117,7 +117,7 @@ let view send_msg model =
     | Map -> return [ Leaflet.get_container model.map ]
     | Chat jid -> Chat.view send_msg model.xmpp jid
     | Posts -> Posts.view send_msg model.xmpp
-    | Account -> return @@ Geopub_xmpp.account_view send_msg model.xmpp
+    | Account -> return @@ Xmppg.account_view send_msg model.xmpp
     | About -> return [ about_view ]
   in
   return [ topbar send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]

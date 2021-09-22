@@ -10,10 +10,10 @@ open Brr
 open Brr_io
 open Reactor_brr
 module L = Loadable
-module Gxmpp = Geopub_xmpp
+module Gxmpp = Xmppg
 module JidMap = Gxmpp.JidMap
 
-let contacts_sidebar send_msg (model : Geopub_xmpp.model) =
+let contacts_sidebar send_msg (model : Xmppg.model) =
   let contact_item_el (jid, _contact) =
     El.(
       li
@@ -96,7 +96,7 @@ let view send_msg (model : Gxmpp.model L.t) selected_jid =
           | _ -> failwith "We need better error handling"
         in
 
-        send_msg @@ `XmppMsg (Geopub_xmpp.SendMsg (selected_jid, message)))
+        send_msg @@ `XmppMsg (Xmppg.SendMsg (selected_jid, message)))
       El.(
         form
           ~at:At.[ class' @@ Jstr.v "chat-compose" ]

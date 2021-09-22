@@ -30,7 +30,7 @@ let compose_form send_msg _client =
         | _ -> failwith "We need better error handling"
       in
 
-      send_msg @@ `XmppMsg (Geopub_xmpp.PublishPost post_content))
+      send_msg @@ `XmppMsg (Xmppg.PublishPost post_content))
     El.(
       form
         ~at:At.[ class' @@ Jstr.v "post-compose" ]
@@ -43,7 +43,7 @@ let compose_form send_msg _client =
             ();
         ])
 
-let view send_msg (model : Geopub_xmpp.model L.t) =
+let view send_msg (model : Xmppg.model L.t) =
   match model with
   | L.Loaded model ->
       return
