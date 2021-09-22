@@ -19,11 +19,11 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 type msg = [ `InvalidateMapSize | `XmppMsg of Xmppg.msg ]
 
-type model = { route : Route.t; map : Geopub_map.t; xmpp : Xmppg.t }
+type model = { route : Route.t; map : Mapg.t; xmpp : Xmppg.t }
 
 let init () =
   Return.map
-    (fun xmpp -> { route = About; map = Geopub_map.create (); xmpp })
+    (fun xmpp -> { route = About; map = Mapg.create (); xmpp })
     (Xmppg.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
 
 let update ~stop ~send_msg model msg =
