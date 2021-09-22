@@ -10,8 +10,7 @@ open Brr
 open Brr_io
 open Reactor_brr
 module L = Loadable
-module Gxmpp = Xmppg
-module JidMap = Gxmpp.JidMap
+module JidMap = Xmppg.JidMap
 
 let contacts_sidebar send_msg ?selected_jid (model : Xmppg.model) =
   let contact_item_el (jid, _contact) =
@@ -44,11 +43,8 @@ let contacts_sidebar send_msg ?selected_jid (model : Xmppg.model) =
           |> Seq.map contact_item_el |> List.of_seq);
       ])
 
-let view send_msg (model : Gxmpp.model L.t) selected_jid =
+let view send_msg (model : Xmppg.model L.t) selected_jid =
   let message_body (message : Xmpp.Stanza.Message.t) =
-    let signals =
-      message.payload |> List.map Xmpp.Xml.tree_to_signals |> List.flatten
-    in
     let parser =
       Xmpp.Xml.Parser.(
         many
@@ -61,7 +57,7 @@ let view send_msg (model : Gxmpp.model L.t) selected_jid =
         >>| List.filter_map (fun x -> x)
         >>| String.concat "")
     in
-    signals |> Lwt_stream.of_list |> Xmpp.Xml.Parser.parse_stream parser
+    Xmpp.Xml.parse_trees parser message.payload
   in
 
   let message_item (message : Xmpp.Stanza.Message.t) =
@@ -116,7 +112,7 @@ let view send_msg (model : Gxmpp.model L.t) selected_jid =
           ])
   in
 
-  let contact_chat_view model selected_jid (contact : Gxmpp.contact) =
+  let contact_chat_view model selected_jid (contact : Xmppg.contact) =
     let* messages = Lwt_list.filter_map_s message_item contact.messages in
     return
     @@ El.
@@ -139,7 +135,7 @@ let view send_msg (model : Gxmpp.model L.t) selected_jid =
             JidMap.find_opt selected_jid model.contacts
             |> Option.value
                  ~default:
-                   ({ roster_item = None; messages = [] } : Gxmpp.contact)
+                   ({ roster_item = None; messages = [] } : Xmppg.contact)
           in
           contact_chat_view model selected_jid contact
       | None ->

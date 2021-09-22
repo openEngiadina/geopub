@@ -125,3 +125,14 @@ body {
 .roster-item-selected {
     font-weight: 600;
 }
+
+
+/* Posts */
+
+/* post compose form */
+.post-compose {
+}
+
+/* an individual atom entry */
+.atom-entry {
+}
