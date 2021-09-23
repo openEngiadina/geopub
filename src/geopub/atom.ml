@@ -14,15 +14,15 @@ module Entry = struct
   let make title = { title }
 
   let to_xml entry =
-    Xmpp.Xml.(
+    Xmlc.(
       make_element
-        ~attributes:[ (Ns.xmlns "xmlns", atom_uri) ]
+        ~attributes:[ (xmlns "xmlns", atom_uri) ]
         ~children:
           [ make_element ~children:[ make_text entry.title ] (ns "title") ]
         (ns "entry"))
 
   let parser =
-    Xmpp.Xml.Parser.(
+    Xmlc.Parser.(
       (* The order of elements in an Atom entry is not specified -
          parsing requires some tricks. *)
       element (ns "entry") (fun _attributes ->

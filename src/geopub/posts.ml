@@ -19,7 +19,7 @@ module Post = struct
 
   let of_contacts contacts =
     let atom_parser =
-      Xmpp.Xml.Parser.(
+      Xmlc.Parser.(
         element (ns_pubsub_event "event") (fun _ ->
             element (ns_pubsub_event "items") (fun _ ->
                 element (ns_pubsub_event "item") (fun _ -> Atom.Entry.parser))))
@@ -28,7 +28,7 @@ module Post = struct
       contact.messages
       |> Lwt_list.filter_map_s (fun (message : Xmpp.Stanza.Message.t) ->
              (* Ignore the message if it failes to parse *)
-             Lwt_result.catch (Xmpp.Xml.parse_trees atom_parser message.payload)
+             Lwt_result.catch (Xmlc.parse_trees atom_parser message.payload)
              >|= Result.to_option)
       >|= List.map (fun atom -> { from = jid; atom })
     in

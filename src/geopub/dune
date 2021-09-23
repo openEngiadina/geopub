@@ -1,8 +1,9 @@
 (executable
  (name main)
  (libraries brr reactor reactor_brr logs logs.lwt logs.browser js_of_ocaml
-   js_of_ocaml-lwt lwt_react leaflet loadable xmpp xmpp_websocket xmpp.roster
-   xmpp.disco xmpp.entity_capabilities xmpp.mam xmpp.pubsub syndic)
+   js_of_ocaml-lwt lwt_react leaflet loadable xmlc xmpp xmpp_websocket
+   xmpp.roster xmpp.disco xmpp.entity_capabilities xmpp.mam xmpp.pubsub
+   syndic)
  (modes js))
 
 (install

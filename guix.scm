@@ -208,6 +208,157 @@ and on the `js_of_ocaml` compiler and runtime – but not on its\nlibraries or s
 ")
     (license license:isc)))
 
+(define-public ocaml-pprint
+  (package
+    (name "ocaml-pprint")
+    (version "20200410")
+    (home-page "https://github.com/fpottier/pprint")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url home-page)
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32
+         "16xc0rd4yj1y9rrs9fbhidd08icy4pc1plx48hp0xs6vnkh1wxjm"))))
+    (build-system dune-build-system)
+    (synopsis "OCaml pretty-printing combinator library and rendering
+engine")
+    (description "This OCaml library offers a set of combinators for building
+so-called documents as well as an efficient engine for converting documents to
+a textual, fixed-width format.  The engine takes care of indentation and line
+breaks, while respecting the constraints imposed by the structure of the
+document and by the text width.")
+    (license license:lgpl2.0)))
+
+(define-public ocaml-crowbar
+  (package
+    (name "ocaml-crowbar")
+    (version "0.2")
+    (home-page "https://github.com/stedolan/crowbar")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url home-page)
+             (commit (string-append "v" version))))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32
+         "0wjfc9irvirfkic32ivvj6qb7r838w08b0d3vmngigbjpjyc9b14"))))
+    (build-system dune-build-system)
+    (arguments
+     ;; Tests require ocaml-xmldiff which requires OCaml 4.12.0
+     `(#:tests? #f))
+    (propagated-inputs
+     `(("ocaml-ocplib-endian" ,ocaml-ocplib-endian)
+       ("ocaml-cmdliner" ,ocaml-cmdliner)
+       ("ocaml-afl-persistent" ,ocaml-afl-persistent)))
+    (native-inputs
+     `(("ocaml-calendar" ,ocaml-calendar)
+       ("ocaml-fpath" ,ocaml-fpath)
+       ("ocaml-uucp" ,ocaml-uucp)
+       ("ocaml-uunf" ,ocaml-uunf)
+       ("ocaml-uutf" ,ocaml-uutf)
+       ("ocaml-pprint" ,ocaml-pprint)))
+    (synopsis "Ocaml library for tests, let a fuzzer find failing cases")
+    (description "Crowbar is a library for testing code, combining
+QuickCheck-style property-based testing and the magical bug-finding powers of
+@uref{http://lcamtuf.coredump.cx/afl/, afl-fuzz}.")
+    (license license:expat)))
+
+(define-public ocaml-afl-persistent
+  (package
+    (name "ocaml-afl-persistent")
+    (version "1.3")
+    (source
+      (origin
+        (method git-fetch)
+        (uri (git-reference
+              (url "https://github.com/stedolan/ocaml-afl-persistent")
+              (commit (string-append "v" version))))
+        (file-name (git-file-name name version))
+        (sha256
+          (base32
+           "06yyds2vcwlfr2nd3gvyrazlijjcrd1abnvkfpkaadgwdw3qam1i"))))
+    (build-system ocaml-build-system)
+    (arguments
+     '(#:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'build
+           (lambda _
+             (invoke "./build.sh")))
+         ;; XXX: The tests are already run in the build.sh script.
+         (delete 'check))))
+    (native-inputs
+     `(("opam" ,opam)))
+    (home-page "https://github.com/stedolan/ocaml-afl-persistent")
+    (synopsis "Use afl-fuzz in persistent mode")
+    (description
+      "afl-fuzz normally works by repeatedly forking the program being tested.
+Using this package, you can run afl-fuzz in ``persistent mode'', which avoids
+repeated forking and is much faster.")
+    (license license:expat)))
+
+(define-public ocaml-cstruct
+  (package
+    (name "ocaml-cstruct")
+    (version "6.0.1")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/mirage/ocaml-cstruct")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "0gpyr3cf393j1ir7i2m2qhx75l21w6ad7imdd73xn0jy3pjg4wsj"))))
+    (build-system dune-build-system)
+    (arguments
+     `(#:package "cstruct"
+       #:test-target "."))
+    (propagated-inputs
+     `(("ocaml-bigarray-compat" ,ocaml-bigarray-compat)))
+    (native-inputs
+     `(("ocaml-alcotest" ,ocaml-alcotest)))
+    (home-page "https://github.com/mirage/ocaml-cstruct")
+    (synopsis "Access C structures via a camlp4 extension")
+    (description "Cstruct is a library and syntax extension to make it easier
+to access C-like structures directly from OCaml.  It supports both reading and
+writing to these structures, and they are accessed via the Bigarray module.")
+    (license license:isc)))
+
+(define-public ocaml-eqaf
+  (package
+    (name "ocaml-eqaf")
+    (version "0.7")
+    (home-page "https://github.com/mirage/eqaf")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url home-page)
+             (commit (string-append "v" version))))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32
+         "06hsnnjax1kb3qsi3cj0nyyz8c2hj2gbw3h517gpjinpnwy2fr85"))))
+    (build-system dune-build-system)
+    (propagated-inputs
+     ;; required to build the eqaf.cstruct library (see https://github.com/mirage/eqaf/pull/27)
+     `(("ocaml-bigarray-compat" ,ocaml-bigarray-compat)
+       ("ocaml-cstruct" ,ocaml-cstruct)))
+    (native-inputs
+     `(("ocaml-alcotest" ,ocaml-alcotest)
+       ("ocaml-crowbar" ,ocaml-crowbar)))
+    (synopsis "OCaml library for constant-time equal function on string")
+    (description "This OCaml library provides an equal function on string in
+constant-time to avoid timing-attack with crypto stuff.")
+    (license license:expat)))
+
 (define-public ocaml-digestif
   (package
     (name "ocaml-digestif")
@@ -255,6 +406,32 @@ We provides implementation of:
  * RIPEMD160
 ")
     (license license:expat)))
+
+(define-public ocaml-lwt-ssl
+  (package
+    (name "ocaml-lwt-ssl")
+    (version "1.1.3")
+    (home-page "https://github.com/ocsigen/lwt_ssl")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url home-page)
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32
+         "0v417ch5zn0yknj156awa5mrq3mal08pbrvsyribbn63ix6f9y3p"))))
+    (build-system dune-build-system)
+    (arguments `(#:test-target "."))
+    (propagated-inputs
+     `(("ocaml-lwt" ,ocaml-lwt)
+       ("ocaml-ssl" ,ocaml-ssl)))
+    (properties `((upstream-name . "lwt_ssl")))
+    (synopsis "OpenSSL binding for OCaml with concurrent I/O")
+    (description "This OCaml library provides an Lwt-enabled wrapper around
+@code{ocaml-ssl}, that performs I/O concurrently.")
+    (license license:lgpl2.1+))) ; with linking exception
 
 (define-public ocaml-logs
   (package
@@ -304,10 +481,27 @@ message report is decoupled from logging and is handled by a reporter.")
        ("ocaml-lwt" ,ocaml-lwt)
        ("ocaml-markup" ,ocaml-markup)))))
 
+(define-public ocaml-alcotest-lwt
+  (package
+    (inherit ocaml-alcotest)
+    (name "ocaml-alcotest-lwt")
+    (arguments
+     `(#:package "alcotest-lwt"
+       #:test-target "."
+       ;; TODO fix tests
+       #:tests? #f))
+    (propagated-inputs
+     `(("ocaml-alcotest" ,ocaml-alcotest)
+       ("ocaml-lwt" ,ocaml-lwt)
+       ("ocaml-logs" ,ocaml-logs)))
+    (native-inputs
+     `(("ocaml-re" ,ocaml-re)
+       ("ocaml-cmdliner" ,ocaml-cmdliner)))))
+
 (define-public ocaml-xmpp
   (package
     (name "ocaml-xmpp")
-    (version "3d97672cfe5899fc37d58d5d8c95cfde5b654be1")
+    (version "7ef2483595d9c06e30c4970d358888058d1e03c1")
     (home-page "https://inqlab.net/git/ocaml-xmpp.git")
     (source
      (origin (method git-fetch)
@@ -316,11 +510,12 @@ message report is decoupled from logging and is handled by a reporter.")
                    (commit version)))
              (file-name (git-file-name name version))
              (sha256
-              (base32 "1nxjyl9lpf8a82v9cg0cblvcw1968601lrkj12b4nkxlgsf96ag9"))))
-    (arguments `(#:tests? #f))
+              (base32 "02qymb6bcfn0rl33asidihgk5khbggnjgx57hgm2jn501ni38ypd"))))
+    ;; (arguments `(#:tests? #f))
     (build-system dune-build-system)
     (native-inputs
      `(("alcotest" ,ocaml-alcotest)
+       ("ocaml-alcotest-lwt" ,ocaml-alcotest-lwt)
        ("qcheck" ,ocaml-qcheck)))
     (propagated-inputs
      `(("ocaml-lwt" ,ocaml-lwt)
@@ -337,6 +532,7 @@ message report is decoupled from logging and is handled by a reporter.")
        ("ocaml-cstruct" ,ocaml-cstruct)
        ("ocaml-base64" ,ocaml-base64)
        ("ocaml-brr" ,ocaml-brr)
+       ("ocaml-lwt-ssl" ,ocaml-lwt-ssl)
        ("js-of-ocaml" ,js-of-ocaml)))
     (synopsis #f)
     (description #f)

@@ -121,7 +121,8 @@ let contacts_add_outgoing_msg contacts (msg : Xmpp.Stanza.Message.t) =
 let make_outgoing_message client to' message =
   let from = Client.jid client in
   Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
-    Xmpp.Xml.[ make_element ~children:[ make_text message ] (Ns.client "body") ]
+    Xmlc.
+      [ make_element ~children:[ make_text message ] (Xmpp.Ns.client "body") ]
 
 let send_xmpp_message client message =
   let* () = Client.send_message client message in
@@ -135,9 +136,9 @@ let update ~send_msg model msg =
       |> Return.command (login ~send_msg jid password)
   (* Authentication succeeded *)
   | _, Authenticated model' -> L.Loaded model' |> Return.singleton
-  | _, Logout ->
-      (* TODO implement Client.disconnect *)
+  | L.Loaded model, Logout ->
       L.Idle |> Return.singleton
+      |> Return.command (Client.disconnect model.client >|= fun _ -> `NoOp)
   (* Handle incoming message *)
   | L.Loaded model, ReceiveMsg msg ->
       L.Loaded
@@ -157,7 +158,7 @@ let update ~send_msg model msg =
       let atom_entry = Atom.Entry.make post_content in
       let jid = Client.jid model.client in
       let item =
-        Xmpp.Xml.make_element
+        Xmlc.make_element
           ~children:[ Atom.Entry.to_xml atom_entry ]
           (Pubsub.Ns.pubsub "item")
       in

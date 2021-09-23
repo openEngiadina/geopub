@@ -1,0 +1,15 @@
+lib: [
+  "_build/install/default/lib/geopub/META"
+  "_build/install/default/lib/geopub/dune-package"
+  "_build/install/default/lib/geopub/opam"
+]
+share: [
+  "_build/install/default/share/geopub/geopub.js"
+  "_build/install/default/share/geopub/index.html"
+  "_build/install/default/share/geopub/leaflet.css"
+  "_build/install/default/share/geopub/sgraffito.svg"
+  "_build/install/default/share/geopub/style.css"
+]
+doc: [
+  "_build/install/default/doc/geopub/README.md"
+]

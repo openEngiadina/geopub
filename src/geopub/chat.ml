@@ -46,18 +46,18 @@ let contacts_sidebar send_msg ?selected_jid (model : Xmppg.model) =
 let view send_msg (model : Xmppg.model L.t) selected_jid =
   let message_body (message : Xmpp.Stanza.Message.t) =
     let parser =
-      Xmpp.Xml.Parser.(
+      Xmlc.Parser.(
         many
           (choice
              [
-               element (Xmpp.Xml.Ns.client "body") (fun _attrs ->
+               element (Xmpp.Ns.client "body") (fun _attrs ->
                    text >>| String.concat "" >>| Option.some);
                (ignore_element >>| fun _ -> None);
              ])
         >>| List.filter_map (fun x -> x)
         >>| String.concat "")
     in
-    Xmpp.Xml.parse_trees parser message.payload
+    Xmlc.parse_trees parser message.payload
   in
 
   let message_item (message : Xmpp.Stanza.Message.t) =
