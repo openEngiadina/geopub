@@ -138,6 +138,28 @@ body {
     padding-bottom: 20px;
 }
 
+.post-compose ul {
+    list-style-type: none;
+}
+
+.post-compose li {
+    display: flex;
+    flex-direction: row;
+}
+
+.post-compose label {
+    min-width: 120px;
+}
+
+.post-compose input {
+    flex-grow: 1;
+}
+
+.post-compose textarea {
+    height: 60px;
+    flex-grow: 1;
+}
+
 .posts {
     list-style-type: none;
     padding-left: 0;

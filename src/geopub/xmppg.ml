@@ -52,16 +52,17 @@ type msg =
   (* Send a message *)
   | SendMsg of Xmpp.Jid.t * string
   (* Publish a simple post *)
-  | PublishPost of string
+  | PublishPost of { title : string; content : string }
 
 let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
 
 let jid_opt = function L.Loaded model -> Option.some @@ jid model | _ -> None
 
-let init () = L.Idle |> Return.singleton
-(* |> Return.command
- *    @@ Lwt.return
- *         (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil")) *)
+let init () =
+  L.Idle |> Return.singleton
+  |> Return.command
+     @@ Lwt.return
+          (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil"))
 
 let get_roster_contacts client =
   let* roster = Roster.get client in
@@ -72,7 +73,13 @@ let get_roster_contacts client =
 
 let login ~send_msg jid password =
   let* client =
-    Client.create { ws_endpoint = Some "wss://movim.eu/xmpp" } jid ~password
+    Client.create
+      {
+        ws_endpoint =
+          (* use local prosody for development *)
+          Some "ws://localhost:5280/xmpp-websocket";
+      }
+      jid ~password
   in
   let* () = Client.connect client in
   let* ec_responder =
@@ -154,8 +161,8 @@ let update ~send_msg model msg =
         }
       |> Return.singleton
       |> Return.command (send_xmpp_message client message)
-  | L.Loaded model, PublishPost post_content ->
-      let atom_entry = Atom.Entry.make post_content in
+  | L.Loaded model, PublishPost { content; title } ->
+      let atom_entry = Atom.Entry.make ~title ~content () in
       let jid = Client.jid model.client in
       let item =
         Xmlc.make_element

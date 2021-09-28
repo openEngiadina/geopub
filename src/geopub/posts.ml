@@ -45,27 +45,69 @@ let compose_form send_msg _client =
         Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
       in
 
+      let post_title_value =
+        Form.Data.find form_data (Jstr.v "post-title") |> Option.get
+      in
+
+      let title =
+        match post_title_value with
+        | `String js -> Jstr.to_string js
+        | _ -> failwith "We need better error handling"
+      in
+
       let post_content_value =
         Form.Data.find form_data (Jstr.v "post-content") |> Option.get
       in
 
-      let post_content =
+      let content =
         match post_content_value with
         | `String js -> Jstr.to_string js
         | _ -> failwith "We need better error handling"
       in
 
-      send_msg @@ `XmppMsg (Xmppg.PublishPost post_content))
+      send_msg @@ `XmppMsg (Xmppg.PublishPost { title; content }))
     El.(
       form
         ~at:At.[ class' @@ Jstr.v "post-compose" ]
         [
-          input
-            ~at:At.[ type' @@ Jstr.v "text"; name @@ Jstr.v "post-content" ]
-            ();
-          input
-            ~at:At.[ type' @@ Jstr.v "submit"; value @@ Jstr.v "Publish" ]
-            ();
+          ul
+            [
+              li
+                [
+                  label ~at:At.[ for' @@ Jstr.v "post-title" ] [ txt' "title" ];
+                  input
+                    ~at:
+                      At.
+                        [
+                          id @@ Jstr.v "post-title";
+                          type' @@ Jstr.v "text";
+                          name @@ Jstr.v "post-title";
+                        ]
+                    ();
+                ];
+              li
+                [
+                  label
+                    ~at:At.[ for' @@ Jstr.v "post-content" ]
+                    [ txt' "content" ];
+                  textarea
+                    ~at:
+                      At.
+                        [
+                          id @@ Jstr.v "post-content";
+                          type' @@ Jstr.v "text";
+                          name @@ Jstr.v "post-content";
+                        ]
+                    [];
+                ];
+              li
+                [
+                  input
+                    ~at:
+                      At.[ type' @@ Jstr.v "submit"; value @@ Jstr.v "Publish" ]
+                    ();
+                ];
+            ];
         ])
 
 let post_view (post : Post.t) =
