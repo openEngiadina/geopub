@@ -89,8 +89,8 @@ let login ~send_msg jid password =
         "http://jabber.org/protocol/caps";
         "urn:xmpp:microblog:0";
         "urn:xmpp:microblog:0+notify";
-        "http://jabber.org/protocol/geoloc";
-        "http://jabber.org/protocol/geoloc+notify";
+        (* "http://jabber.org/protocol/geoloc"; *)
+        (* "http://jabber.org/protocol/geoloc+notify"; *)
       ]
       client
   in
@@ -135,6 +135,8 @@ let send_xmpp_message client message =
   let* () = Client.send_message client message in
   return @@ `NoOp
 
+let uri_of_jid jid = "xmpp:" ^ (jid |> Xmpp.Jid.bare |> Xmpp.Jid.to_string)
+
 let update ~send_msg model msg =
   match (model, msg) with
   (* Initiate authentication *)
@@ -162,7 +164,12 @@ let update ~send_msg model msg =
       |> Return.singleton
       |> Return.command (send_xmpp_message client message)
   | L.Loaded model, PublishPost { content; title } ->
-      let atom_entry = Atom.Entry.make ~title ~content () in
+      let jid = Client.jid model.client in
+      let author =
+        Atom.Author.make ~uri:(uri_of_jid jid)
+          (Option.value ~default:"blups" jid.local)
+      in
+      let atom_entry = Atom.Entry.make ~title ~content ~authors:[ author ] () in
       let jid = Client.jid model.client in
       let item =
         Xmlc.make_element

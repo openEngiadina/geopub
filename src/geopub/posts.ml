@@ -29,6 +29,8 @@ module Post = struct
       |> Lwt_list.filter_map_s (fun (message : Xmpp.Stanza.Message.t) ->
              (* Ignore the message if it failes to parse *)
              Lwt_result.catch (Xmlc.parse_trees atom_parser message.payload)
+             >|= Result.map_error (fun exn ->
+                     Console.log [ exn |> Printexc.to_string |> Jstr.v ])
              >|= Result.to_option)
       >|= List.map (fun atom -> { from = jid; atom })
     in
