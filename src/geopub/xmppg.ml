@@ -169,10 +169,14 @@ let update ~send_msg model msg =
         Atom.Author.make ~uri:(uri_of_jid jid)
           (Option.value ~default:"blups" jid.local)
       in
-      let atom_entry = Atom.Entry.make ~title ~content ~authors:[ author ] () in
+      let item_id = Client.generate_id model.client in
+      let atom_entry =
+        Atom.Entry.make ~title ~content ~authors:[ author ] ~id:item_id ()
+      in
       let jid = Client.jid model.client in
       let item =
         Xmlc.make_element
+          ~attributes:[ (("", "id"), item_id) ]
           ~children:[ Atom.Entry.to_xml atom_entry ]
           (Pubsub.Ns.pubsub "item")
       in

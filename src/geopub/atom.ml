@@ -56,9 +56,14 @@ module Author = struct
 end
 
 module Entry = struct
-  type t = { title : string; content : string; authors : Author.t list }
+  type t = {
+    id : string;
+    title : string;
+    content : string;
+    authors : Author.t list;
+  }
 
-  let make ~title ~content ~authors () = { title; content; authors }
+  let make ~title ~content ~authors ~id () = { id; title; content; authors }
 
   let to_xml entry =
     Xmlc.(
@@ -66,6 +71,7 @@ module Entry = struct
         ~attributes:[ (xmlns "xmlns", atom_uri) ]
         ~children:
           ([
+             make_element ~children:[ make_text entry.id ] (ns "id");
              make_element ~children:[ make_text entry.title ] (ns "title");
              make_element
                ~attributes:[ (("", "type"), "text") ]
@@ -76,6 +82,12 @@ module Entry = struct
         (ns "entry"))
 
   let parser =
+    let id_parser =
+      Xmlc.Parser.(
+        element (ns "id") (fun _attributes ->
+            text >>| List.hd >>| fun id ->
+            (ns "id", fun entry -> { entry with id })))
+    in
     let title_parser =
       Xmlc.Parser.(
         element (ns "title") (fun _attributes ->
@@ -88,7 +100,7 @@ module Entry = struct
             text >>| List.hd >>| fun content ->
             (ns "content", fun entry -> { entry with content })))
     in
-    let required_elements = [ ns "title"; ns "content" ] in
+    let required_elements = [ ns "id"; ns "title"; ns "content" ] in
     Xmlc.Parser.(
       (* The order of elements in an Atom entry is not specified -
          parsing requires some tricks. *)
@@ -97,6 +109,7 @@ module Entry = struct
           (* Parse child elements of entry into a list *)
           @@ choice
                [
+                 id_parser;
                  title_parser;
                  content_parser;
                  ( Author.parser >>= fun author ->
@@ -118,6 +131,6 @@ module Entry = struct
           (* Build entry by applying all the parsed field functions *)
           List.fold_left
             (fun entry (_name, field_f) -> field_f entry)
-            { title = ""; content = ""; authors = [] }
+            { id = ""; title = ""; content = ""; authors = [] }
             fields))
 end
