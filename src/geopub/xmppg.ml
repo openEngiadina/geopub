@@ -171,7 +171,8 @@ let update ~send_msg model msg =
       in
       let item_id = Client.generate_id model.client in
       let atom_entry =
-        Atom.Entry.make ~title ~content ~authors:[ author ] ~id:item_id ()
+        Atom.Entry.make ~title ~content ~authors:[ author ] ~id:item_id
+          ~updated:(Ptime_clock.now ()) ()
       in
       let jid = Client.jid model.client in
       let item =

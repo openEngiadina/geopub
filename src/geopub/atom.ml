@@ -58,12 +58,14 @@ end
 module Entry = struct
   type t = {
     id : string;
+    updated : Ptime.t;
     title : string;
     content : string;
     authors : Author.t list;
   }
 
-  let make ~title ~content ~authors ~id () = { id; title; content; authors }
+  let make ~title ~content ~authors ~id ~updated () =
+    { id; updated; title; content; authors }
 
   let to_xml entry =
     Xmlc.(
@@ -72,6 +74,9 @@ module Entry = struct
         ~children:
           ([
              make_element ~children:[ make_text entry.id ] (ns "id");
+             make_element
+               ~children:[ make_text @@ Ptime.to_rfc3339 entry.updated ]
+               (ns "updated");
              make_element ~children:[ make_text entry.title ] (ns "title");
              make_element
                ~attributes:[ (("", "type"), "text") ]
@@ -88,6 +93,15 @@ module Entry = struct
             text >>| List.hd >>| fun id ->
             (ns "id", fun entry -> { entry with id })))
     in
+    let updated_parser =
+      Xmlc.Parser.(
+        element (ns "updated") (fun _attributes ->
+            text >>| List.hd >>= fun updated_s ->
+            match Ptime.(of_rfc3339 updated_s |> rfc3339_error_to_msg) with
+            | Ok (updated, _, _) ->
+                return (ns "updated", fun entry -> { entry with updated })
+            | Error (`Msg msg) -> fail_with msg))
+    in
     let title_parser =
       Xmlc.Parser.(
         element (ns "title") (fun _attributes ->
@@ -100,7 +114,9 @@ module Entry = struct
             text >>| List.hd >>| fun content ->
             (ns "content", fun entry -> { entry with content })))
     in
-    let required_elements = [ ns "id"; ns "title"; ns "content" ] in
+    let required_elements =
+      [ ns "id"; ns "updated"; ns "title"; ns "content" ]
+    in
     Xmlc.Parser.(
       (* The order of elements in an Atom entry is not specified -
          parsing requires some tricks. *)
@@ -110,6 +126,7 @@ module Entry = struct
           @@ choice
                [
                  id_parser;
+                 updated_parser;
                  title_parser;
                  content_parser;
                  ( Author.parser >>= fun author ->
@@ -131,6 +148,12 @@ module Entry = struct
           (* Build entry by applying all the parsed field functions *)
           List.fold_left
             (fun entry (_name, field_f) -> field_f entry)
-            { id = ""; title = ""; content = ""; authors = [] }
+            {
+              id = "";
+              updated = Ptime.epoch;
+              title = "";
+              content = "";
+              authors = [];
+            }
             fields))
 end
