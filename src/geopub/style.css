@@ -133,9 +133,7 @@ body {
 .post-compose {
     width: 100%;
     border-bottom: solid 0.5px grey;
-    margin: 20px;
-    padding-top: 20px;
-    padding-bottom: 20px;
+    margin-right: 50px;
 }
 
 .post-compose ul {
@@ -160,26 +158,31 @@ body {
     flex-grow: 1;
 }
 
-.posts {
+/* The posts view */
+
+ul.posts {
+    margin: 0;
     list-style-type: none;
     padding-left: 0;
-    padding-righ: 0;
     width: 100%;
 }
 
-.post-item {
+.posts li {
     display: flex;
     flex-direction: column;
-    border-bottom: solid 0.5px grey;
-    margin: 20px;
-    padding-top: 20px;
-    padding-bottom: 20px;
+    border-bottom: solid 0.3px grey;
 }
 
-.post-jid {
+.post {
+    display: flex;
+    flex-direction: column;
+}
+
+.post-meta {
+    align-self: flex-end;
+    color: grey;
 }
 
 /* an individual atom entry */
 .atom-entry {
-    margin-left: 20px;
 }

@@ -113,17 +113,25 @@ let compose_form send_msg _client =
         ])
 
 let post_view (post : Post.t) =
-  let atom_view (entry : Atom.Entry.t) =
-    El.(p ~at:At.[ class' @@ Jstr.v "atom-entry" ] [ txt' entry.title ])
-  in
   El.(
     li
-      ~at:At.[ class' @@ Jstr.v "post-item" ]
       [
         div
-          ~at:At.[ class' @@ Jstr.v "post-jid" ]
-          [ txt' @@ Xmpp.Jid.to_string post.from ^ ":" ];
-        atom_view post.atom;
+          ~at:At.[ class' @@ Jstr.v "post" ]
+          [
+            h3 ~at:At.[ class' @@ Jstr.v "post-title" ] [ txt' post.atom.title ];
+            div
+              ~at:At.[ class' @@ Jstr.v "post-meta" ]
+              [
+                txt' @@ Xmpp.Jid.to_string post.from;
+                txt' " (";
+                txt' @@ Ptime.to_rfc3339 post.atom.updated;
+                txt' " )";
+              ];
+            p
+              ~at:At.[ class' @@ Jstr.v "post-content" ]
+              [ txt' post.atom.content ];
+          ];
       ])
 
 let view send_msg (model : Xmppg.model L.t) =
