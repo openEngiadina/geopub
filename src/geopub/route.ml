@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-type t = About | Map | Posts | Chat of Xmpp.Jid.t option | Account
+type t =
+  | About
+  | Map
+  | Posts
+  | Chat of Xmpp.Jid.t option
+  | Roster of Xmpp.Jid.t
+  | Account
 
 type action = [ `SetRoute of t ]

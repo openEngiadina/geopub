@@ -117,6 +117,7 @@ let view send_msg model =
     | Map -> return [ Leaflet.get_container model.map ]
     | Chat jid -> Chat.view send_msg model.xmpp jid
     | Posts -> Posts.view send_msg model.xmpp
+    | Roster jid -> Roster.view send_msg jid model.xmpp
     | Account -> return @@ Xmppg.account_view send_msg model.xmpp
     | About -> return [ about_view ]
   in

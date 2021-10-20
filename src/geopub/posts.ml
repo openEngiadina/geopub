@@ -140,8 +140,9 @@ let view send_msg (model : Xmppg.model L.t) =
       return
       @@ El.
            [
+             Roster.subscriptions_sidebar send_msg None model;
              div
-               ~at:At.[ class' @@ Jstr.v "text-content" ]
+               ~at:At.[ class' @@ Jstr.v "content" ]
                [
                  compose_form send_msg model.client;
                  ul
