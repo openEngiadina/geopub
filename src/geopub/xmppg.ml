@@ -41,6 +41,7 @@ type msg =
   | Login of Xmpp.Jid.t * string
   | Authenticated of model
   | Logout
+  | RosterPush of Roster.roster
   (* Handle incoming and outgoing (already sent) messages *)
   | ReceiveMsg of Xmpp.Stanza.Message.t
   (* Send a message *)
@@ -57,13 +58,6 @@ let init () =
   |> Return.command
      @@ Lwt.return
           (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil"))
-
-let get_roster_contacts client =
-  let* roster = Roster.get client in
-  roster
-  |> Xmpp.Jid.Map.map (fun (roster_item : Roster.Item.t) ->
-         { roster_item = Some roster_item; messages = [] })
-  |> return
 
 let login ~send_msg jid password =
   let* client =
@@ -95,9 +89,23 @@ let login ~send_msg jid password =
            | Xmpp.Stanza.Message msg -> send_msg @@ `XmppMsg (ReceiveMsg msg)
            | _ -> ())
   in
-  let* contacts = get_roster_contacts client in
+  let* roster_s = Roster.roster client in
+  let contacts =
+    roster_s |> S.value
+    |> Xmpp.Jid.Map.map (fun (roster_item : Roster.Item.t) ->
+           { roster_item = Some roster_item; messages = [] })
+  in
   let listener =
-    E.merge (fun _ _ -> ()) () [ E.stamp ec_responder (); msg_listener ]
+    E.merge
+      (fun _ _ -> ())
+      ()
+      [
+        E.stamp ec_responder ();
+        msg_listener;
+        (* Listen for roster_pushes *)
+        roster_s |> S.changes
+        |> E.map (fun roster -> send_msg @@ `XmppMsg (RosterPush roster));
+      ]
   in
   return @@ `XmppMsg (Authenticated { client; listener; contacts })
 
@@ -142,6 +150,18 @@ let update ~send_msg model msg =
   | L.Loaded model, Logout ->
       L.Idle |> Return.singleton
       |> Return.command (Client.disconnect model.client >|= fun _ -> `NoOp)
+  | L.Loaded model, RosterPush roster ->
+      let updated_contacts =
+        Xmpp.Jid.Map.merge
+          (fun _jid contact roster_item ->
+            match (contact, roster_item) with
+            | Some contact, _ -> Some { contact with roster_item }
+            | None, Some roster_item ->
+                Some { roster_item = Some roster_item; messages = [] }
+            | _ -> None)
+          model.contacts roster
+      in
+      L.Loaded { model with contacts = updated_contacts } |> Return.singleton
   (* Handle incoming message *)
   | L.Loaded model, ReceiveMsg msg ->
       L.Loaded
