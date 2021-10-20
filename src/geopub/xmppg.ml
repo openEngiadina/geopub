@@ -27,17 +27,11 @@ type contact = {
   messages : Xmpp.Stanza.Message.t list;
 }
 
-module JidMap = Map.Make (struct
-  type t = Xmpp.Jid.t
-
-  let compare a b = String.compare (Xmpp.Jid.to_string a) (Xmpp.Jid.to_string b)
-end)
-
 type model = {
   client : Client.t;
   (* Lwt thread that listens for XMPP stanzas and handles them *)
   listener : unit event;
-  contacts : contact JidMap.t;
+  contacts : contact Xmpp.Jid.Map.t;
 }
 
 type t = model L.t
@@ -67,9 +61,9 @@ let init () =
 let get_roster_contacts client =
   let* roster = Roster.get client in
   roster
-  |> List.map (fun (roster_item : Roster.Item.t) ->
-         (roster_item.jid, { roster_item = Some roster_item; messages = [] }))
-  |> List.to_seq |> JidMap.of_seq |> return
+  |> Xmpp.Jid.Map.map (fun (roster_item : Roster.Item.t) ->
+         { roster_item = Some roster_item; messages = [] })
+  |> return
 
 let login ~send_msg jid password =
   let* client =
@@ -110,7 +104,7 @@ let login ~send_msg jid password =
 let contacts_add_incoming_msg contacts (msg : Xmpp.Stanza.Message.t) =
   match msg.from with
   | Some from ->
-      JidMap.update (Xmpp.Jid.bare from)
+      Xmpp.Jid.Map.update (Xmpp.Jid.bare from)
         (function
           | Some contact ->
               Some { contact with messages = msg :: contact.messages }
@@ -119,7 +113,7 @@ let contacts_add_incoming_msg contacts (msg : Xmpp.Stanza.Message.t) =
   | None -> contacts
 
 let contacts_add_outgoing_msg contacts (msg : Xmpp.Stanza.Message.t) =
-  JidMap.update (Xmpp.Jid.bare msg.to')
+  Xmpp.Jid.Map.update (Xmpp.Jid.bare msg.to')
     (function
       | Some contact -> Some { contact with messages = msg :: contact.messages }
       | None -> Some { roster_item = None; messages = [ msg ] })

@@ -10,7 +10,6 @@ open Brr_io
 open Lwt
 open Lwt.Syntax
 module L = Loadable
-module JidMap = Xmppg.JidMap
 
 let ns_pubsub_event local = ("http://jabber.org/protocol/pubsub#event", local)
 
@@ -34,7 +33,7 @@ module Post = struct
              >|= Result.to_option)
       >|= List.map (fun atom -> { from = jid; atom })
     in
-    contacts |> JidMap.to_seq |> List.of_seq
+    contacts |> Xmpp.Jid.Map.to_seq |> List.of_seq
     |> Lwt_list.map_s (fun (jid, contact) -> of_contact jid contact)
     >|= List.flatten
 end

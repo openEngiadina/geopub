@@ -10,7 +10,6 @@ open Brr
 open Brr_io
 open Reactor_brr
 module L = Loadable
-module JidMap = Xmppg.JidMap
 
 let contacts_sidebar send_msg ?selected_jid (model : Xmppg.model) =
   let contact_item_el (jid, _contact) =
@@ -39,7 +38,7 @@ let contacts_sidebar send_msg ?selected_jid (model : Xmppg.model) =
       [
         ul
           ~at:At.[ class' @@ Jstr.v "roster" ]
-          (JidMap.to_seq model.contacts
+          (Xmpp.Jid.Map.to_seq model.contacts
           |> Seq.map contact_item_el |> List.of_seq);
       ])
 
@@ -132,7 +131,7 @@ let view send_msg (model : Xmppg.model L.t) selected_jid =
       match selected_jid with
       | Some selected_jid ->
           let contact =
-            JidMap.find_opt selected_jid model.contacts
+            Xmpp.Jid.Map.find_opt selected_jid model.contacts
             |> Option.value
                  ~default:
                    ({ roster_item = None; messages = [] } : Xmppg.contact)
