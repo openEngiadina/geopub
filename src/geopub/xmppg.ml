@@ -34,6 +34,13 @@ type model = {
   contacts : contact Xmpp.Jid.Map.t;
 }
 
+let contact_display_name model jid =
+  Option.bind (Xmpp.Jid.Map.find_opt jid model.contacts) (fun contact ->
+      match contact.roster_item with
+      | Some roster_item -> roster_item.name
+      | _ -> None)
+  |> Option.value ~default:Xmpp.Jid.(jid |> bare |> to_string)
+
 type t = model L.t
 
 type msg =
@@ -41,7 +48,13 @@ type msg =
   | Login of Xmpp.Jid.t * string
   | Authenticated of model
   | Logout
+  (* Roster management *)
   | RosterPush of Roster.roster
+  (* Subscription management *)
+  | PresenceSubscribe of Xmpp.Jid.t
+  | PresenceUnsubscribe of Xmpp.Jid.t
+  | PresenceApproveSubscription of Xmpp.Jid.t
+  | PresenceDenySubscription of Xmpp.Jid.t
   (* Handle incoming and outgoing (already sent) messages *)
   | ReceiveMsg of Xmpp.Stanza.Message.t
   (* Send a message *)
@@ -150,6 +163,7 @@ let update ~send_msg model msg =
   | L.Loaded model, Logout ->
       L.Idle |> Return.singleton
       |> Return.command (Client.disconnect model.client >|= fun _ -> `NoOp)
+  (* Roster management *)
   | L.Loaded model, RosterPush roster ->
       let updated_contacts =
         Xmpp.Jid.Map.merge
@@ -162,6 +176,25 @@ let update ~send_msg model msg =
           model.contacts roster
       in
       L.Loaded { model with contacts = updated_contacts } |> Return.singleton
+  (* Subscription Management *)
+  | L.Loaded model, PresenceSubscribe jid ->
+      L.Loaded model |> Return.singleton
+      |> Return.command
+           (Roster.presence_subscribe model.client jid >|= fun _ -> `NoOp)
+  | L.Loaded model, PresenceUnsubscribe jid ->
+      L.Loaded model |> Return.singleton
+      |> Return.command
+           (Roster.presence_unsubscribe model.client jid >|= fun _ -> `NoOp)
+  | L.Loaded model, PresenceApproveSubscription jid ->
+      L.Loaded model |> Return.singleton
+      |> Return.command
+           ( Roster.approve_presence_subscription model.client jid >|= fun _ ->
+             `NoOp )
+  | L.Loaded model, PresenceDenySubscription jid ->
+      L.Loaded model |> Return.singleton
+      |> Return.command
+           ( Roster.deny_presence_subscription model.client jid >|= fun _ ->
+             `NoOp )
   (* Handle incoming message *)
   | L.Loaded model, ReceiveMsg msg ->
       L.Loaded
