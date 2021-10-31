@@ -93,7 +93,8 @@ let topbar send_msg model =
         [
           make_entry "Map" Route.Map;
           make_entry "Posts" Route.Posts;
-          make_entry "Chat" (Route.Chat None);
+          (* Disable the chat for now *)
+          (* make_entry "Chat" (Route.Chat None); *)
           make_entry jid Route.Account;
         ]
   in
