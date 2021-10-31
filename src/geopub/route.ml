@@ -10,6 +10,7 @@ type t =
   | Posts
   | Chat of Xmpp.Jid.t option
   | Roster of Xmpp.Jid.t
+  | AddContact
   | Account
 
 type action = [ `SetRoute of t ]

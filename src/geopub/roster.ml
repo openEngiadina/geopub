@@ -6,6 +6,7 @@
 
 open Reactor_brr
 open Brr
+open Brr_io
 open Lwt
 module L = Loadable
 
@@ -40,6 +41,8 @@ let subscriptions_sidebar send_msg selected_jid (model : Xmppg.model) =
           ~at:At.[ class' @@ Jstr.v "roster" ]
           (Xmpp.Jid.Map.to_seq model.contacts
           |> Seq.map contact_item_el |> List.of_seq);
+        Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.AddContact)
+        @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Add contact" ];
       ])
 
 let contact_subscription_from (model : Xmppg.model) jid =
@@ -137,4 +140,59 @@ let view send_msg jid (model : Xmppg.model L.t) =
                    ];
                ];
            ]
+  | _ -> return_nil
+
+let view_add_contact send_msg (model : Xmppg.model L.t) =
+  match model with
+  | L.Loaded model ->
+      return
+        El.
+          [
+            subscriptions_sidebar send_msg None model;
+            div
+              [
+                Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.Posts)
+                @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to posts" ];
+                Evr.on_el ~default:false Form.Ev.submit (fun ev ->
+                    let form_data =
+                      Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
+                      @@ Ev.target ev
+                    in
+
+                    let jid_value =
+                      Form.Data.find form_data (Jstr.v "jid") |> Option.get
+                    in
+
+                    let jid =
+                      match jid_value with
+                      | `String js ->
+                          Jstr.to_string js |> Xmpp.Jid.of_string_exn
+                      | _ -> failwith "Invalid JID given while adding contact"
+                    in
+
+                    send_msg @@ `XmppMsg (Xmppg.AddContact jid))
+                @@ form
+                     [
+                       label ~at:At.[ for' @@ Jstr.v "jid" ] [ txt' "JID" ];
+                       input
+                         ~at:
+                           At.
+                             [
+                               id @@ Jstr.v "jid";
+                               name @@ Jstr.v "jid";
+                               type' @@ Jstr.v "text";
+                             ]
+                         ();
+                       input
+                         ~at:
+                           At.
+                             [
+                               id @@ Jstr.v "add";
+                               type' @@ Jstr.v "submit";
+                               value @@ Jstr.v "Add contact";
+                             ]
+                         ();
+                     ];
+              ];
+          ]
   | _ -> return_nil

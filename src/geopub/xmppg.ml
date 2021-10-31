@@ -50,6 +50,7 @@ type msg =
   | Logout
   (* Roster management *)
   | RosterPush of Roster.roster
+  | AddContact of Xmpp.Jid.t
   (* Subscription management *)
   | PresenceSubscribe of Xmpp.Jid.t
   | PresenceUnsubscribe of Xmpp.Jid.t
@@ -176,6 +177,11 @@ let update ~send_msg model msg =
           model.contacts roster
       in
       L.Loaded { model with contacts = updated_contacts } |> Return.singleton
+  | L.Loaded model, AddContact jid ->
+      L.Loaded model |> Return.singleton
+      |> Return.command
+           ( Roster.add_update model.client jid >|= fun _ ->
+             `SetRoute (Route.Roster jid) )
   (* Subscription Management *)
   | L.Loaded model, PresenceSubscribe jid ->
       L.Loaded model |> Return.singleton
