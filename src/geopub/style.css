@@ -62,6 +62,8 @@ body {
     margin: 50px;
     height: 100%;
     flex-flow: 1;
+    max-width: 700px;
+    flex-grow: 1;
 }
 
 .text-content {

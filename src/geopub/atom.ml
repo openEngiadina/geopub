@@ -54,27 +54,36 @@ module Entry = struct
     title : string;
     content : string;
     authors : Author.t list;
+    (* As described in [XEP-0277: Microblogging over XMPP](https://xmpp.org/extensions/xep-0277.html#geotagging) *)
+    geoloc : Geoloc.t option;
   }
 
-  let make ~title ~content ~authors ~id ~updated () =
-    { id; updated; title; content; authors }
+  let make ~title ~content ~authors ~id ~updated ?geoloc () =
+    { id; updated; title; content; authors; geoloc }
 
   let to_xml entry =
     Xmlc.(
       make_element
         ~attributes:[ (xmlns "xmlns", atom_uri) ]
         ~children:
-          ([
-             make_element ~children:[ make_text entry.id ] (ns "id");
-             make_element
-               ~children:[ make_text @@ Ptime.to_rfc3339 entry.updated ]
-               (ns "updated");
-             make_element ~children:[ make_text entry.title ] (ns "title");
-             make_element
-               ~attributes:[ (("", "type"), "text") ]
-               ~children:[ make_text entry.content ]
-               (ns "content");
-           ]
+          (List.filter_map
+             (fun x -> x)
+             [
+               Option.some
+               @@ make_element ~children:[ make_text entry.id ] (ns "id");
+               Option.some
+               @@ make_element
+                    ~children:[ make_text @@ Ptime.to_rfc3339 entry.updated ]
+                    (ns "updated");
+               Option.some
+               @@ make_element ~children:[ make_text entry.title ] (ns "title");
+               Option.some
+               @@ make_element
+                    ~attributes:[ (("", "type"), "text") ]
+                    ~children:[ make_text entry.content ]
+                    (ns "content");
+               Option.map (fun geoloc -> Geoloc.to_xml geoloc) entry.geoloc;
+             ]
           @ List.map Author.to_xml entry.authors)
         (ns "entry"))
 
@@ -113,6 +122,12 @@ module Entry = struct
           ( ns "author",
             fun entry -> { entry with authors = author :: entry.authors } ))
     in
+    let geoloc_parser =
+      Xmlc.Parser.(
+        Geoloc.parser >>= fun geoloc ->
+        return
+          (Geoloc.ns "geoloc", fun entry -> { entry with geoloc = Some geoloc }))
+    in
     Xmlc.Parser.(
       complex
         ~required:[ ns "id"; ns "updated"; ns "title"; ns "content" ]
@@ -125,8 +140,14 @@ module Entry = struct
               title = "";
               content = "";
               authors = [];
+              geoloc = None;
             })
         [
-          id_parser; updated_parser; title_parser; content_parser; author_parser;
+          id_parser;
+          updated_parser;
+          title_parser;
+          content_parser;
+          author_parser;
+          geoloc_parser;
         ])
 end

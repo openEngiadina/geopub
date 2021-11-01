@@ -121,12 +121,17 @@ let post_view (post : Post.t) =
             h3 ~at:At.[ class' @@ Jstr.v "post-title" ] [ txt' post.atom.title ];
             div
               ~at:At.[ class' @@ Jstr.v "post-meta" ]
-              [
-                txt' @@ Xmpp.Jid.to_string post.from;
-                txt' " (";
-                txt' @@ Ptime.to_rfc3339 post.atom.updated;
-                txt' " )";
-              ];
+              (List.filter_map
+                 (fun x -> x)
+                 [
+                   Option.some @@ txt' @@ Xmpp.Jid.to_string post.from;
+                   Option.some @@ txt' " (";
+                   Option.some @@ txt' @@ Ptime.to_rfc3339 post.atom.updated;
+                   Option.some @@ txt' " )";
+                   Option.map
+                     (fun _geoloc -> txt' "Show on map (TODO)")
+                     post.atom.geoloc;
+                 ]);
             p
               ~at:At.[ class' @@ Jstr.v "post-content" ]
               [ txt' post.atom.content ];
