@@ -29,30 +29,22 @@ module Author = struct
              ]))
 
   let parser =
-    let required_elements = [ ns "name" ] in
     Xmlc.Parser.(
-      element (ns "author") (fun _attributes ->
-          ( many
-          @@ any_element (fun element_name _attributes ->
-                 if element_name = ns "name" then
-                   text >>| List.hd >>| fun name ->
-                   (element_name, fun author -> { author with name })
-                 else if element_name = ns "uri" then
-                   text >>| List.hd >>| fun uri ->
-                   (element_name, fun author -> { author with uri = Some uri })
-                 else return (element_name, fun author -> author))
-          >>= fun fields ->
-            if
-              List.for_all
-                (fun req_element_name -> List.mem_assoc req_element_name fields)
-                required_elements
-            then return fields
-            else fail_with "Atom entry does not have a title." )
-          >>| fun fields ->
-          (* Build entry by applying all the parsed field functions *)
-          List.fold_left
-            (fun entry (_name, field_f) -> field_f entry)
-            { name = ""; uri = None } fields))
+      complex ~required:[ ns "name" ] ~ignore_other:true (ns "author")
+        (fun _attributes -> return { name = ""; uri = None })
+        [
+          (* instead of defining multiple parser, we just define one
+             `any_element` parser. Just an experiment to try different
+             styles (and this is probably more efficient). *)
+          any_element (fun element_name _attributes ->
+              if element_name = ns "name" then
+                text >>| List.hd >>| fun name ->
+                (element_name, fun author -> { author with name })
+              else if element_name = ns "uri" then
+                text >>| List.hd >>| fun uri ->
+                (element_name, fun author -> { author with uri = Some uri })
+              else return (element_name, fun author -> author));
+        ])
 end
 
 module Entry = struct
@@ -114,46 +106,27 @@ module Entry = struct
             text >>| List.hd >>| fun content ->
             (ns "content", fun entry -> { entry with content })))
     in
-    let required_elements =
-      [ ns "id"; ns "updated"; ns "title"; ns "content" ]
+    let author_parser =
+      Xmlc.Parser.(
+        Author.parser >>= fun author ->
+        return
+          ( ns "author",
+            fun entry -> { entry with authors = author :: entry.authors } ))
     in
     Xmlc.Parser.(
-      (* The order of elements in an Atom entry is not specified -
-         parsing requires some tricks. *)
-      element (ns "entry") (fun _attributes ->
-          ( many
-          (* Parse child elements of entry into a list *)
-          @@ choice
-               [
-                 id_parser;
-                 updated_parser;
-                 title_parser;
-                 content_parser;
-                 ( Author.parser >>= fun author ->
-                   return
-                     ( ns "author",
-                       fun entry ->
-                         { entry with authors = author :: entry.authors } ) );
-                 (signals >>= fun _ -> return (("", ""), fun x -> x));
-               ]
-          >>= fun fields ->
-            (* Check that all required fields are in the list *)
-            if
-              List.for_all
-                (fun req_element_name -> List.mem_assoc req_element_name fields)
-                required_elements
-            then return fields
-            else fail_with "Atom entry is missing a required element." )
-          >>| fun fields ->
-          (* Build entry by applying all the parsed field functions *)
-          List.fold_left
-            (fun entry (_name, field_f) -> field_f entry)
+      complex
+        ~required:[ ns "id"; ns "updated"; ns "title"; ns "content" ]
+        ~ignore_other:true (ns "entry")
+        (fun _attributes ->
+          return
             {
               id = "";
               updated = Ptime.epoch;
               title = "";
               content = "";
               authors = [];
-            }
-            fields))
+            })
+        [
+          id_parser; updated_parser; title_parser; content_parser; author_parser;
+        ])
 end
