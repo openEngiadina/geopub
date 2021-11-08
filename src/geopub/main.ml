@@ -115,7 +115,7 @@ let topbar send_msg model =
 let view send_msg model =
   let* main =
     match model.route with
-    | Map -> return [ Leaflet.Map.get_container model.map ]
+    | Map -> Mapg.view send_msg model.map
     | Chat jid -> Chat.view send_msg model.xmpp jid
     | Posts -> Posts.view send_msg model.xmpp
     | Roster jid -> Roster.view send_msg jid model.xmpp
