@@ -6,12 +6,12 @@
 
 open Brr
 
-type t = Leaflet.t
+type t = Leaflet.Map.t
 
 let create () =
   let map_container = El.div ~at:At.[ id (Jstr.v "map") ] [] in
-  let map = Leaflet.create map_container in
+  let map = Leaflet.Map.create map_container in
   let tile_layer = Leaflet.TileLayer.create_osm () in
   Leaflet.TileLayer.add_to map tile_layer;
-  Leaflet.(set_view map LatLng.(create 63.4275 10.4109) 11);
+  Leaflet.(Map.set_view map LatLng.(create 63.4275 10.4109) 11);
   map

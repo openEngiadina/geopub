@@ -10,16 +10,6 @@ let leaflet =
   | Some l -> l
   | None -> failwith "Could not load Leaflet"
 
-type t = Jv.t
-
-let create el = Jv.call leaflet "map" [| El.to_jv el |]
-
-let invalidate_size map = ignore @@ Jv.call map "invalidateSize" [| Jv.true' |]
-
-let fit_world map = ignore @@ Jv.call map "fitWorld" [||]
-
-let get_container map = Jv.call map "getContainer" [||] |> El.of_jv
-
 module LatLng = struct
   type t = Jv.t
 
@@ -27,12 +17,35 @@ module LatLng = struct
     Jv.call leaflet "latLng" [| Jv.of_float lat; Jv.of_float lng |]
 end
 
-let set_view map latlng zoom =
-  ignore @@ Jv.call map "setView" [| latlng; Jv.of_int zoom |]
+module Ev = struct
+  module MouseEvent = struct
+    type t = Jv.t
+
+    let latlng e = Jv.get e "latlng"
+  end
+end
+
+module Map = struct
+  type t = Jv.t
+
+  let create el = Jv.call leaflet "map" [| El.to_jv el |]
+
+  let invalidate_size map =
+    ignore @@ Jv.call map "invalidateSize" [| Jv.true' |]
+
+  let fit_world map = ignore @@ Jv.call map "fitWorld" [||]
+
+  let get_container map = Jv.call map "getContainer" [||] |> El.of_jv
+
+  let set_view map latlng zoom =
+    ignore @@ Jv.call map "setView" [| latlng; Jv.of_int zoom |]
+
+  let as_target map = Brr.Ev.target_of_jv map
+
+  let click = Brr.Ev.Type.create (Jstr.v "click")
+end
 
 module TileLayer = struct
-  type map = t
-
   type t = Jv.t
 
   let create_osm () =

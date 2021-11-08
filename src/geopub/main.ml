@@ -31,7 +31,7 @@ let update ~stop ~send_msg model msg =
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
-      Leaflet.invalidate_size model.map;
+      Leaflet.Map.invalidate_size model.map;
       Return.singleton model
   | `XmppMsg msg ->
       Xmppg.update
@@ -115,7 +115,7 @@ let topbar send_msg model =
 let view send_msg model =
   let* main =
     match model.route with
-    | Map -> return [ Leaflet.get_container model.map ]
+    | Map -> return [ Leaflet.Map.get_container model.map ]
     | Chat jid -> Chat.view send_msg model.xmpp jid
     | Posts -> Posts.view send_msg model.xmpp
     | Roster jid -> Roster.view send_msg jid model.xmpp
