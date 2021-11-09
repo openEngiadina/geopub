@@ -16,7 +16,15 @@ let listener_setup = ref false
 
 let create () =
   let map_container = El.div ~at:At.[ id (Jstr.v "map") ] [] in
-  let map = Leaflet.Map.create map_container in
+  let context_menu =
+    Leaflet_contextmenu.Menu.
+      [ Callback ("Hello", fun _ -> Console.log [ Jstr.v "Hello" ]) ]
+  in
+  let map =
+    Leaflet.Map.create
+      ~options:(Leaflet_contextmenu.options context_menu)
+      map_container
+  in
   let tile_layer = Leaflet.TileLayer.create_osm () in
   Leaflet.TileLayer.add_to tile_layer map;
   Leaflet.(Map.set_view map LatLng.(create 63.4275 10.4109) 11);

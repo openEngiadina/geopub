@@ -28,7 +28,8 @@ end
 module Map = struct
   type t = Jv.t
 
-  let create el = Jv.call leaflet "map" [| El.to_jv el |]
+  let create ?(options = Jv.null) el =
+    Jv.call leaflet "map" [| El.to_jv el; options |]
 
   let invalidate_size map =
     ignore @@ Jv.call map "invalidateSize" [| Jv.true' |]

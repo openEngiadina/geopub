@@ -30,7 +30,7 @@ end
 module Map : sig
   type t
 
-  val create : El.t -> t
+  val create : ?options:Jv.t -> El.t -> t
 
   val invalidate_size : t -> unit
 

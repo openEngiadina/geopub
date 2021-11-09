@@ -1,9 +1,9 @@
 (executable
  (name main)
  (libraries brr reactor reactor_brr logs logs.lwt logs.browser js_of_ocaml
-   js_of_ocaml-lwt lwt_react leaflet loadable xmlc xmpp xmpp_websocket
-   xmpp.roster xmpp.disco xmpp.entity_capabilities xmpp.mam xmpp.pubsub
-   ptime ptime.clock.jsoo)
+   js_of_ocaml-lwt lwt_react leaflet leaflet_contextmenu loadable xmlc xmpp
+   xmpp_websocket xmpp.roster xmpp.disco xmpp.entity_capabilities xmpp.mam
+   xmpp.pubsub ptime ptime.clock.jsoo)
  (modes js))
 
 (install
@@ -12,9 +12,11 @@
   ../../vendor/leaflet/leaflet.css
   (../../vendor/leaflet/images/layers-2x.png as images/layers-2x.png)
   (../../vendor/leaflet/images/layers.png as images/layers.png)
-  (../../vendor/leaflet/images/marker-icon-2x.png as images/marker-icon-2x.png)
+  (../../vendor/leaflet/images/marker-icon-2x.png as
+    images/marker-icon-2x.png)
   (../../vendor/leaflet/images/marker-icon.png as images/marker-icon.png)
   (../../vendor/leaflet/images/marker-shadow.png as images/marker-shadow.png)
+  ../../vendor/Leaflet.contextmenu/leaflet.contextmenu.css
   index.html
   sgraffito.svg
   (main.bc.js as geopub.js)
