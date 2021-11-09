@@ -223,7 +223,7 @@ let update ~send_msg model msg =
           (Option.value ~default:"blups" jid.local)
       in
       (* TODO figure out way to get a proper geoloc *)
-      let geoloc = Geoloc.make 0. 0. in
+      let geoloc = Geoloc.make 63.430553090000664 10.39512634277344 in
       let item_id = Client.generate_id model.client in
       let atom_entry =
         Atom.Entry.make ~title ~content ~authors:[ author ] ~id:item_id ~geoloc

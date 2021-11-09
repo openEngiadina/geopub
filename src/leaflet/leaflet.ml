@@ -62,5 +62,18 @@ module TileLayer = struct
           |];
       |]
 
-  let add_to map tile_layer = ignore @@ Jv.call tile_layer "addTo" [| map |]
+  let add_to tile_layer map = ignore @@ Jv.call tile_layer "addTo" [| map |]
+end
+
+module Marker = struct
+  type t = Jv.t
+
+  let create latlng = Jv.call leaflet "marker" [| latlng |]
+
+  let add_to marker map = ignore @@ Jv.call marker "addTo" [| map |]
+
+  let bind_popup marker el =
+    ignore @@ Jv.call marker "bindPopup" [| El.to_jv el |]
+
+  let open_popup marker = ignore @@ Jv.call marker "openPopup" [||]
 end

@@ -18,7 +18,7 @@ let create () =
   let map_container = El.div ~at:At.[ id (Jstr.v "map") ] [] in
   let map = Leaflet.Map.create map_container in
   let tile_layer = Leaflet.TileLayer.create_osm () in
-  Leaflet.TileLayer.add_to map tile_layer;
+  Leaflet.TileLayer.add_to tile_layer map;
   Leaflet.(Map.set_view map LatLng.(create 63.4275 10.4109) 11);
   map
 

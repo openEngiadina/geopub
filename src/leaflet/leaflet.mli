@@ -54,5 +54,19 @@ module TileLayer : sig
 
   val create_osm : unit -> t
 
-  val add_to : Map.t -> t -> unit
+  val add_to : t -> Map.t -> unit
+end
+
+module Marker : sig
+  type t
+
+  val create : LatLng.t -> t
+
+  val add_to : t -> Map.t -> unit
+
+  (** {2 Popup methods} *)
+
+  val bind_popup : t -> El.t -> unit
+
+  val open_popup : t -> unit
 end
