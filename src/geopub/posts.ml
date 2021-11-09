@@ -13,11 +13,19 @@ module L = Loadable
 
 let ns_pubsub_event local = ("http://jabber.org/protocol/pubsub#event", local)
 
-type post = { message : Xmpp.Stanza.Message.t; atom : Atom.Entry.t }
+module Post = struct
+  type t = { message : Xmpp.Stanza.Message.t; atom : Atom.Entry.t }
 
-type t = post list
+  let to_marker post =
+    match post.atom.geoloc with
+    | Some geoloc ->
+        geoloc |> Geoloc.to_latlng |> Leaflet.Marker.create |> Option.some
+    | _ -> None
+end
 
-type msg = ReceiveMessage of Xmpp.Stanza.Message.t | AddPost of post
+type t = Post.t list
+
+type msg = ReceiveMessage of Xmpp.Stanza.Message.t | AddPost of Post.t
 
 let init () = return_nil
 
@@ -33,12 +41,18 @@ let parse_message (message : Xmpp.Stanza.Message.t) =
   >|= Result.map (fun atom -> `PostsMsg (AddPost { message; atom }))
   >|= Result.value ~default:`NoOp
 
-let update ~send_msg model msg =
+let update ~send_msg map model msg =
   ignore send_msg;
   match msg with
   | ReceiveMessage message ->
       model |> Return.singleton |> Return.command (parse_message message)
-  | AddPost post -> post :: model |> Return.singleton
+  | AddPost post ->
+      (* Add marker to map *)
+      (* TODO this is a horrible mix of imperative and declarative code ... needs to be fixed *)
+      post |> Post.to_marker
+      |> Option.map (fun marker -> Leaflet.Marker.add_to marker map)
+      |> ignore;
+      post :: model |> Return.singleton
 
 let view_compose_form send_msg _client =
   ignore send_msg;
@@ -113,7 +127,7 @@ let view_compose_form send_msg _client =
             ];
         ])
 
-let view_post (post : post) =
+let view_post (post : Post.t) =
   El.(
     li
       [

@@ -83,3 +83,7 @@ let parser =
             ( ns "accuracy",
               fun geoloc -> { geoloc with accuracy = Some accuracy } ));
       ])
+
+(* Convert to Leaflet.LatLng *)
+
+let to_latlng geoloc = Leaflet.LatLng.create geoloc.latitude geoloc.longitude

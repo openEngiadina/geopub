@@ -10,6 +10,11 @@
  (section share)
  (files
   ../../vendor/leaflet/leaflet.css
+  (../../vendor/leaflet/images/layers-2x.png as images/layers-2x.png)
+  (../../vendor/leaflet/images/layers.png as images/layers.png)
+  (../../vendor/leaflet/images/marker-icon-2x.png as images/marker-icon-2x.png)
+  (../../vendor/leaflet/images/marker-icon.png as images/marker-icon.png)
+  (../../vendor/leaflet/images/marker-shadow.png as images/marker-shadow.png)
   index.html
   sgraffito.svg
   (main.bc.js as geopub.js)

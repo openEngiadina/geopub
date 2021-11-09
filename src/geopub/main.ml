@@ -17,14 +17,6 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 (* Model *)
 
-(* type msg =
- *   [ `InvalidateMapSize
- *   | `XmppMsg of
- *     Xmppg.msg
- *     (\* This msg is a helper to prevent cyclic dependencies between Xppg and Posts *\)
- *   | `ReceiveMsg of Xmpp.Stanza.Message.t
- *   | `PostsMsg of Posts.msg ] *)
-
 type model = { route : Route.t; map : Mapg.t; posts : Posts.t; xmpp : Xmppg.t }
 
 let init () =
@@ -51,14 +43,14 @@ let update ~stop ~send_msg model msg =
         ~send_msg:(fun msg ->
           let step = None in
           send_msg ?step msg)
-        model.posts msg
+        model.map model.posts msg
       |> Return.map (fun posts -> { model with posts })
   | `ReceiveMessage msg ->
       Posts.update
         ~send_msg:(fun msg ->
           let step = None in
           send_msg ?step msg)
-        model.posts (Posts.ReceiveMessage msg)
+        model.map model.posts (Posts.ReceiveMessage msg)
       |> Return.map (fun posts -> { model with posts })
   | _ -> Return.singleton model
 
