@@ -39,39 +39,33 @@ let subscriptions_sidebar send_msg selected_jid (model : Xmppg.model) =
         h3 [ txt' "Contacts" ];
         ul
           ~at:At.[ class' @@ Jstr.v "roster" ]
-          (Xmpp.Jid.Map.to_seq model.contacts
+          (Xmpp.Jid.Map.to_seq model.roster
           |> Seq.map contact_item_el |> List.of_seq);
         Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.AddContact)
         @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Add contact" ];
       ])
 
 let contact_subscription_from (model : Xmppg.model) jid =
-  Xmpp.Jid.Map.find_opt jid model.contacts
-  |> Option.map (fun (contact : Xmppg.contact) ->
-         match contact.roster_item with
-         | Some roster_item ->
-             let subscription =
-               roster_item.subscription |> Option.value ~default:"none"
-             in
-             (* contact is pre-approved *)
-             roster_item.approved |> Option.value ~default:false
-             (* contact is subscribed *)
-             || subscription = "from"
-             || subscription = "both"
-         | _ -> false)
+  Xmpp.Jid.Map.find_opt jid model.roster
+  |> Option.map (fun (roster_item : Xmppg.Roster.Item.t) ->
+         let subscription =
+           roster_item.subscription |> Option.value ~default:"none"
+         in
+         (* contact is pre-approved *)
+         roster_item.approved |> Option.value ~default:false
+         (* contact is subscribed *)
+         || subscription = "from"
+         || subscription = "both")
   |> Option.value ~default:false
 
 let contact_subscription_to (model : Xmppg.model) jid =
-  Xmpp.Jid.Map.find_opt jid model.contacts
-  |> Option.map (fun (contact : Xmppg.contact) ->
-         match contact.roster_item with
-         | Some roster_item ->
-             let subscription =
-               roster_item.subscription |> Option.value ~default:"none"
-             in
-             let ask = roster_item.ask |> Option.value ~default:"none" in
-             subscription = "to" || subscription = "both" || ask = "subscribe"
-         | _ -> false)
+  Xmpp.Jid.Map.find_opt jid model.roster
+  |> Option.map (fun (roster_item : Xmppg.Roster.Item.t) ->
+         let subscription =
+           roster_item.subscription |> Option.value ~default:"none"
+         in
+         let ask = roster_item.ask |> Option.value ~default:"none" in
+         subscription = "to" || subscription = "both" || ask = "subscribe")
   |> Option.value ~default:false
 
 let view send_msg jid (model : Xmppg.model L.t) =

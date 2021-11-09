@@ -17,13 +17,19 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 (* Model *)
 
-type msg = [ `InvalidateMapSize | `XmppMsg of Xmppg.msg ]
+(* type msg =
+ *   [ `InvalidateMapSize
+ *   | `XmppMsg of
+ *     Xmppg.msg
+ *     (\* This msg is a helper to prevent cyclic dependencies between Xppg and Posts *\)
+ *   | `ReceiveMsg of Xmpp.Stanza.Message.t
+ *   | `PostsMsg of Posts.msg ] *)
 
-type model = { route : Route.t; map : Mapg.t; xmpp : Xmppg.t }
+type model = { route : Route.t; map : Mapg.t; posts : Posts.t; xmpp : Xmppg.t }
 
 let init () =
   Return.map
-    (fun xmpp -> { route = About; map = Mapg.create (); xmpp })
+    (fun xmpp -> { route = About; map = Mapg.create (); posts = []; xmpp })
     (Xmppg.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
 
 let update ~stop ~send_msg model msg =
@@ -40,6 +46,20 @@ let update ~stop ~send_msg model msg =
           send_msg ?step msg)
         model.xmpp msg
       |> Return.map (fun xmpp -> { model with xmpp })
+  | `PostsMsg msg ->
+      Posts.update
+        ~send_msg:(fun msg ->
+          let step = None in
+          send_msg ?step msg)
+        model.posts msg
+      |> Return.map (fun posts -> { model with posts })
+  | `ReceiveMessage msg ->
+      Posts.update
+        ~send_msg:(fun msg ->
+          let step = None in
+          send_msg ?step msg)
+        model.posts (Posts.ReceiveMessage msg)
+      |> Return.map (fun posts -> { model with posts })
   | _ -> Return.singleton model
 
 (* View *)
@@ -116,8 +136,8 @@ let view send_msg model =
   let* main =
     match model.route with
     | Map -> Mapg.view send_msg model.map
-    | Chat jid -> Chat.view send_msg model.xmpp jid
-    | Posts -> Posts.view send_msg model.xmpp
+    (* | Chat jid -> Chat.view send_msg model.xmpp jid *)
+    | Posts -> Posts.view send_msg model.xmpp model.posts
     | Roster jid -> Roster.view send_msg jid model.xmpp
     | AddContact -> Roster.view_add_contact send_msg model.xmpp
     | Account -> return @@ Xmppg.account_view send_msg model.xmpp

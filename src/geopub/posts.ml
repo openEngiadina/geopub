@@ -4,41 +4,43 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
+open Reactor
 open Reactor_brr
 open Brr
 open Brr_io
 open Lwt
-open Lwt.Syntax
 module L = Loadable
 
 let ns_pubsub_event local = ("http://jabber.org/protocol/pubsub#event", local)
 
-module Post = struct
-  type t = { from : Xmpp.Jid.t; atom : Atom.Entry.t }
+type post = { message : Xmpp.Stanza.Message.t; atom : Atom.Entry.t }
 
-  let of_contacts contacts =
-    let atom_parser =
-      Xmlc.Parser.(
-        element (ns_pubsub_event "event") (fun _ ->
-            element (ns_pubsub_event "items") (fun _ ->
-                element (ns_pubsub_event "item") (fun _ -> Atom.Entry.parser))))
-    in
-    let of_contact jid (contact : Xmppg.contact) =
-      contact.messages
-      |> Lwt_list.filter_map_s (fun (message : Xmpp.Stanza.Message.t) ->
-             (* Ignore the message if it failes to parse *)
-             Lwt_result.catch (Xmlc.parse_trees atom_parser message.payload)
-             >|= Result.map_error (fun exn ->
-                     Console.log [ exn |> Printexc.to_string |> Jstr.v ])
-             >|= Result.to_option)
-      >|= List.map (fun atom -> { from = jid; atom })
-    in
-    contacts |> Xmpp.Jid.Map.to_seq |> List.of_seq
-    |> Lwt_list.map_s (fun (jid, contact) -> of_contact jid contact)
-    >|= List.flatten
-end
+type t = post list
 
-let compose_form send_msg _client =
+type msg = ReceiveMessage of Xmpp.Stanza.Message.t | AddPost of post
+
+let init () = return_nil
+
+let parse_message (message : Xmpp.Stanza.Message.t) =
+  let atom_parser =
+    Xmlc.Parser.(
+      element (ns_pubsub_event "event") (fun _ ->
+          element (ns_pubsub_event "items") (fun _ ->
+              element (ns_pubsub_event "item") (fun _ -> Atom.Entry.parser))))
+  in
+  (* Ignore the message if it failes to parse *)
+  Lwt_result.catch (Xmlc.parse_trees atom_parser message.payload)
+  >|= Result.map (fun atom -> `PostsMsg (AddPost { message; atom }))
+  >|= Result.value ~default:`NoOp
+
+let update ~send_msg model msg =
+  ignore send_msg;
+  match msg with
+  | ReceiveMessage message ->
+      model |> Return.singleton |> Return.command (parse_message message)
+  | AddPost post -> post :: model |> Return.singleton
+
+let view_compose_form send_msg _client =
   ignore send_msg;
   Evr.on_el ~default:false Form.Ev.submit
     (fun ev ->
@@ -111,7 +113,7 @@ let compose_form send_msg _client =
             ];
         ])
 
-let post_view (post : Post.t) =
+let view_post (post : post) =
   El.(
     li
       [
@@ -124,7 +126,9 @@ let post_view (post : Post.t) =
               (List.filter_map
                  (fun x -> x)
                  [
-                   Option.some @@ txt' @@ Xmpp.Jid.to_string post.from;
+                   Option.map
+                     (fun from -> txt' @@ Xmpp.Jid.to_string from)
+                     post.message.from;
                    Option.some @@ txt' " (";
                    Option.some @@ txt' @@ Ptime.to_rfc3339 post.atom.updated;
                    Option.some @@ txt' " )";
@@ -138,21 +142,20 @@ let post_view (post : Post.t) =
           ];
       ])
 
-let view send_msg (model : Xmppg.model L.t) =
-  match model with
-  | L.Loaded model ->
-      let* posts = Post.of_contacts model.contacts in
+let view send_msg xmpp posts =
+  match xmpp with
+  | L.Loaded xmpp ->
       return
       @@ El.
            [
-             Roster.subscriptions_sidebar send_msg None model;
+             Roster.subscriptions_sidebar send_msg None xmpp;
              div
                ~at:At.[ class' @@ Jstr.v "content" ]
                [
-                 compose_form send_msg model.client;
+                 view_compose_form send_msg xmpp.client;
                  ul
                    ~at:At.[ class' @@ Jstr.v "posts" ]
-                   (List.map post_view posts);
+                   (List.map view_post posts);
                ];
            ]
   | _ -> return_nil

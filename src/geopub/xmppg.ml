@@ -22,23 +22,16 @@ module Entity_capabilities = Xmpp_entity_capabilities.Make (Client)
 module Roster = Xmpp_roster.Make (Client)
 module Pubsub = Xmpp_pubsub.Make (Client)
 
-type contact = {
-  roster_item : Roster.Item.t option;
-  messages : Xmpp.Stanza.Message.t list;
-}
-
 type model = {
   client : Client.t;
   (* Lwt thread that listens for XMPP stanzas and handles them *)
   listener : unit event;
-  contacts : contact Xmpp.Jid.Map.t;
+  roster : Roster.roster;
 }
 
 let contact_display_name model jid =
-  Option.bind (Xmpp.Jid.Map.find_opt jid model.contacts) (fun contact ->
-      match contact.roster_item with
-      | Some roster_item -> roster_item.name
-      | _ -> None)
+  Option.bind (Xmpp.Jid.Map.find_opt jid model.roster) (fun roster_item ->
+      roster_item.name)
   |> Option.value ~default:Xmpp.Jid.(jid |> bare |> to_string)
 
 type t = model L.t
@@ -58,8 +51,6 @@ type msg =
   | PresenceDenySubscription of Xmpp.Jid.t
   (* Handle incoming and outgoing (already sent) messages *)
   | ReceiveMsg of Xmpp.Stanza.Message.t
-  (* Send a message *)
-  | SendMsg of Xmpp.Jid.t * string
   (* Publish a simple post *)
   | PublishPost of { title : string; content : string }
 
@@ -104,11 +95,7 @@ let login ~send_msg jid password =
            | _ -> ())
   in
   let* roster_s = Roster.roster client in
-  let contacts =
-    roster_s |> S.value
-    |> Xmpp.Jid.Map.map (fun (roster_item : Roster.Item.t) ->
-           { roster_item = Some roster_item; messages = [] })
-  in
+  let roster = roster_s |> S.value in
   let listener =
     E.merge
       (fun _ _ -> ())
@@ -121,25 +108,7 @@ let login ~send_msg jid password =
         |> E.map (fun roster -> send_msg @@ `XmppMsg (RosterPush roster));
       ]
   in
-  return @@ `XmppMsg (Authenticated { client; listener; contacts })
-
-let contacts_add_incoming_msg contacts (msg : Xmpp.Stanza.Message.t) =
-  match msg.from with
-  | Some from ->
-      Xmpp.Jid.Map.update (Xmpp.Jid.bare from)
-        (function
-          | Some contact ->
-              Some { contact with messages = msg :: contact.messages }
-          | None -> Some { roster_item = None; messages = [ msg ] })
-        contacts
-  | None -> contacts
-
-let contacts_add_outgoing_msg contacts (msg : Xmpp.Stanza.Message.t) =
-  Xmpp.Jid.Map.update (Xmpp.Jid.bare msg.to')
-    (function
-      | Some contact -> Some { contact with messages = msg :: contact.messages }
-      | None -> Some { roster_item = None; messages = [ msg ] })
-    contacts
+  return @@ `XmppMsg (Authenticated { client; listener; roster })
 
 let make_outgoing_message client to' message =
   let from = Client.jid client in
@@ -166,17 +135,7 @@ let update ~send_msg model msg =
       |> Return.command (Client.disconnect model.client >|= fun _ -> `NoOp)
   (* Roster management *)
   | L.Loaded model, RosterPush roster ->
-      let updated_contacts =
-        Xmpp.Jid.Map.merge
-          (fun _jid contact roster_item ->
-            match (contact, roster_item) with
-            | Some contact, _ -> Some { contact with roster_item }
-            | None, Some roster_item ->
-                Some { roster_item = Some roster_item; messages = [] }
-            | _ -> None)
-          model.contacts roster
-      in
-      L.Loaded { model with contacts = updated_contacts } |> Return.singleton
+      L.Loaded { model with roster } |> Return.singleton
   | L.Loaded model, AddContact jid ->
       L.Loaded model |> Return.singleton
       |> Return.command
@@ -203,19 +162,8 @@ let update ~send_msg model msg =
              `NoOp )
   (* Handle incoming message *)
   | L.Loaded model, ReceiveMsg msg ->
-      L.Loaded
-        { model with contacts = contacts_add_incoming_msg model.contacts msg }
-      |> Return.singleton
-  (* Send a message *)
-  | L.Loaded ({ client; _ } as model), SendMsg (to', message) ->
-      let message = make_outgoing_message client to' message in
-      L.Loaded
-        {
-          model with
-          contacts = contacts_add_outgoing_msg model.contacts message;
-        }
-      |> Return.singleton
-      |> Return.command (send_xmpp_message client message)
+      L.Loaded model |> Return.singleton
+      |> Return.command (return @@ `ReceiveMessage msg)
   | L.Loaded model, PublishPost { content; title } ->
       let jid = Client.jid model.client in
       let author =
