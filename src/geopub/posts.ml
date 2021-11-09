@@ -21,6 +21,32 @@ module Post = struct
     | Some geoloc ->
         geoloc |> Geoloc.to_latlng |> Leaflet.Marker.create |> Option.some
     | _ -> None
+
+  let view post =
+    El.(
+      div
+        ~at:At.[ class' @@ Jstr.v "post" ]
+        [
+          h3 ~at:At.[ class' @@ Jstr.v "post-title" ] [ txt' post.atom.title ];
+          div
+            ~at:At.[ class' @@ Jstr.v "post-meta" ]
+            (List.filter_map
+               (fun x -> x)
+               [
+                 Option.map
+                   (fun from -> txt' @@ Xmpp.Jid.to_string from)
+                   post.message.from;
+                 Option.some @@ txt' " (";
+                 Option.some @@ txt' @@ Ptime.to_rfc3339 post.atom.updated;
+                 Option.some @@ txt' " )";
+                 Option.map
+                   (fun _geoloc -> txt' "Show on map (TODO)")
+                   post.atom.geoloc;
+               ]);
+          p
+            ~at:At.[ class' @@ Jstr.v "post-content" ]
+            [ txt' post.atom.content ];
+        ])
 end
 
 type t = Post.t list
@@ -50,6 +76,7 @@ let update ~send_msg map model msg =
       (* Add marker to map *)
       (* TODO this is a horrible mix of imperative and declarative code ... needs to be fixed *)
       post |> Post.to_marker
+      |> Option.map (Leaflet.Marker.bind_popup (Post.view post))
       |> Option.map (fun marker -> Leaflet.Marker.add_to marker map)
       |> ignore;
       post :: model |> Return.singleton
@@ -127,35 +154,6 @@ let view_compose_form send_msg _client =
             ];
         ])
 
-let view_post (post : Post.t) =
-  El.(
-    li
-      [
-        div
-          ~at:At.[ class' @@ Jstr.v "post" ]
-          [
-            h3 ~at:At.[ class' @@ Jstr.v "post-title" ] [ txt' post.atom.title ];
-            div
-              ~at:At.[ class' @@ Jstr.v "post-meta" ]
-              (List.filter_map
-                 (fun x -> x)
-                 [
-                   Option.map
-                     (fun from -> txt' @@ Xmpp.Jid.to_string from)
-                     post.message.from;
-                   Option.some @@ txt' " (";
-                   Option.some @@ txt' @@ Ptime.to_rfc3339 post.atom.updated;
-                   Option.some @@ txt' " )";
-                   Option.map
-                     (fun _geoloc -> txt' "Show on map (TODO)")
-                     post.atom.geoloc;
-                 ]);
-            p
-              ~at:At.[ class' @@ Jstr.v "post-content" ]
-              [ txt' post.atom.content ];
-          ];
-      ])
-
 let view send_msg xmpp posts =
   match xmpp with
   | L.Loaded xmpp ->
@@ -169,7 +167,7 @@ let view send_msg xmpp posts =
                  view_compose_form send_msg xmpp.client;
                  ul
                    ~at:At.[ class' @@ Jstr.v "posts" ]
-                   (List.map view_post posts);
+                   (List.map (fun post -> li [ Post.view post ]) posts);
                ];
            ]
   | _ -> return_nil

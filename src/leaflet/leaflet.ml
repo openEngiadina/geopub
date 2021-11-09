@@ -72,8 +72,9 @@ module Marker = struct
 
   let add_to marker map = ignore @@ Jv.call marker "addTo" [| map |]
 
-  let bind_popup marker el =
-    ignore @@ Jv.call marker "bindPopup" [| El.to_jv el |]
+  let bind_popup el marker =
+    ignore @@ Jv.call marker "bindPopup" [| El.to_jv el |];
+    marker
 
   let open_popup marker = ignore @@ Jv.call marker "openPopup" [||]
 end

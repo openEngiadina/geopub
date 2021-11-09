@@ -66,7 +66,7 @@ module Marker : sig
 
   (** {2 Popup methods} *)
 
-  val bind_popup : t -> El.t -> unit
+  val bind_popup : El.t -> t -> t
 
   val open_popup : t -> unit
 end
