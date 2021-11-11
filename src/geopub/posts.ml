@@ -22,7 +22,7 @@ module Post = struct
         geoloc |> Geoloc.to_latlng |> Leaflet.Marker.create |> Option.some
     | _ -> None
 
-  let view post =
+  let view ~send_msg post =
     El.(
       div
         ~at:At.[ class' @@ Jstr.v "post" ]
@@ -41,9 +41,17 @@ module Post = struct
                  Option.some @@ br ();
                  Option.map
                    (fun (geoloc : Geoloc.t) ->
-                     txt'
-                       ((Float.to_string @@ geoloc.latitude)
-                       ^ ", " ^ Float.to_string @@ geoloc.longitude))
+                     Evr.on_el Ev.click (fun _ ->
+                         send_msg
+                         @@ `MapMsg (Mapg.SetView (Geoloc.to_latlng geoloc));
+                         send_msg @@ `SetRoute Route.Map)
+                     @@ a
+                          ~at:At.[ href @@ Jstr.v "#" ]
+                          [
+                            txt'
+                              ((Float.to_string @@ geoloc.latitude)
+                              ^ ", " ^ Float.to_string @@ geoloc.longitude);
+                          ])
                    post.atom.geoloc;
                ]);
           p
@@ -79,7 +87,7 @@ let update ~send_msg map model msg =
       (* Add marker to map *)
       (* TODO this is a horrible mix of imperative and declarative code ... needs to be fixed *)
       post |> Post.to_marker
-      |> Option.map (Leaflet.Marker.bind_popup (Post.view post))
+      |> Option.map (Leaflet.Marker.bind_popup (Post.view ~send_msg post))
       |> Option.map (fun marker ->
              Option.map (Leaflet.Marker.add_to marker) map)
       |> ignore;
@@ -207,7 +215,9 @@ let view send_msg latlng xmpp posts =
                  view_compose_form send_msg latlng;
                  ul
                    ~at:At.[ class' @@ Jstr.v "posts" ]
-                   (List.map (fun post -> li [ Post.view post ]) posts);
+                   (List.map
+                      (fun post -> li [ Post.view ~send_msg post ])
+                      posts);
                ];
            ]
   | _ -> return_nil

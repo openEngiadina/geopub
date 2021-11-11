@@ -14,7 +14,7 @@ type t = Leaflet.Map.t option
    Leaflet map. The Reactor init function does not pass this, only the
    update. So the map needs to be initialized with a message. Another
    thing that seems wrong with Reactor... *)
-type msg = Init
+type msg = Init | SetView of Leaflet.LatLng.t
 
 let create send_msg =
   let map_container = El.div ~at:At.[ id (Jstr.v "map") ] [] in
@@ -39,13 +39,17 @@ let create send_msg =
   @@ Leaflet.Map.as_target map;
   let tile_layer = Leaflet.TileLayer.create_osm () in
   Leaflet.TileLayer.add_to tile_layer map;
-  Leaflet.(Map.set_view map LatLng.(create 46.794896096 10.3003317118) 11);
   map
+  |> Leaflet.(Map.set_view LatLng.(create 46.794896096 10.3003317118) ~zoom:10)
 
 let update ~send_msg model msg =
   ignore send_msg;
   ignore model;
-  match msg with Init -> create send_msg |> Option.some |> Return.singleton
+  match msg with
+  | Init -> create send_msg |> Option.some |> Return.singleton
+  | SetView latlng ->
+      Option.map (fun map -> map |> Leaflet.Map.set_view latlng ~zoom:10) model
+      |> Return.singleton
 
 let view _send_msg map =
   match map with

@@ -38,7 +38,7 @@ module Map : sig
 
   val invalidate_size : t -> unit
 
-  val set_view : t -> LatLng.t -> int -> unit
+  val set_view : LatLng.t -> zoom:int -> t -> t
 
   val fit_world : t -> unit
 

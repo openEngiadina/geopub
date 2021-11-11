@@ -42,8 +42,9 @@ module Map = struct
 
   let get_container map = Jv.call map "getContainer" [||] |> El.of_jv
 
-  let set_view map latlng zoom =
-    ignore @@ Jv.call map "setView" [| latlng; Jv.of_int zoom |]
+  let set_view latlng ~zoom map =
+    ignore @@ Jv.call map "setView" [| latlng; Jv.of_int zoom |];
+    map
 
   let as_target map = Brr.Ev.target_of_jv map
 
