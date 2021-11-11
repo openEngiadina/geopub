@@ -77,7 +77,8 @@ let update ~send_msg map model msg =
       (* TODO this is a horrible mix of imperative and declarative code ... needs to be fixed *)
       post |> Post.to_marker
       |> Option.map (Leaflet.Marker.bind_popup (Post.view post))
-      |> Option.map (fun marker -> Leaflet.Marker.add_to marker map)
+      |> Option.map (fun marker ->
+             Option.map (Leaflet.Marker.add_to marker) map)
       |> ignore;
       post :: model |> Return.singleton
 

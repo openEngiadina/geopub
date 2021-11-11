@@ -21,15 +21,16 @@ type model = { route : Route.t; map : Mapg.t; posts : Posts.t; xmpp : Xmppg.t }
 
 let init () =
   Return.map
-    (fun xmpp -> { route = About; map = Mapg.create (); posts = []; xmpp })
+    (fun xmpp -> { route = About; map = None; posts = []; xmpp })
     (Xmppg.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
+  |> Return.command (return @@ `MapMsg Mapg.Init)
 
 let update ~stop ~send_msg model msg =
   ignore stop;
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
-      Leaflet.Map.invalidate_size model.map;
+      ignore @@ Option.map Leaflet.Map.invalidate_size model.map;
       Return.singleton model
   | `XmppMsg msg ->
       Xmppg.update
@@ -45,6 +46,13 @@ let update ~stop ~send_msg model msg =
           send_msg ?step msg)
         model.map model.posts msg
       |> Return.map (fun posts -> { model with posts })
+  | `MapMsg msg ->
+      Mapg.update
+        ~send_msg:(fun msg ->
+          let step = None in
+          send_msg ?step msg)
+        model.map msg
+      |> Return.map (fun map -> { model with map })
   | `ReceiveMessage msg ->
       Posts.update
         ~send_msg:(fun msg ->
