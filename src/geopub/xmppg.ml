@@ -39,7 +39,9 @@ type t = model L.t
 type msg =
   | NoOp
   | Login of Xmpp.Jid.t * string
-  | Authenticated of model
+  | Authenticated of Client.t
+  | ConnectionError of exn
+  | Initialized of model
   | Logout
   (* Roster management *)
   | RosterPush of Roster.roster
@@ -64,7 +66,7 @@ let init () =
      @@ Lwt.return
           (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil"))
 
-let login ~send_msg jid password =
+let login jid password =
   let* client =
     Client.create
       {
@@ -74,7 +76,12 @@ let login ~send_msg jid password =
       }
       jid ~password
   in
-  let* () = Client.connect client in
+  let* connected = Lwt_result.catch @@ Client.connect client in
+  match connected with
+  | Ok () -> return @@ `XmppMsg (Authenticated client)
+  | Error e -> return @@ `XmppMsg (ConnectionError e)
+
+let xmpp_init ~send_msg client =
   let* ec_responder =
     Entity_capabilities.advertise ~category:"client" ~type':"web" ~name:"GeoPub"
       ~node:"https://codeberg.org/openEngiadina/geopub"
@@ -108,7 +115,7 @@ let login ~send_msg jid password =
         |> E.map (fun roster -> send_msg @@ `XmppMsg (RosterPush roster));
       ]
   in
-  return @@ `XmppMsg (Authenticated { client; listener; roster })
+  return @@ `XmppMsg (Initialized { client; listener; roster })
 
 let make_outgoing_message client to' message =
   let from = Client.jid client in
@@ -127,10 +134,13 @@ let update ~send_msg model msg =
   match (model, msg) with
   (* Initiate authentication *)
   | _, Login (jid, password) ->
+      L.Loading |> Return.singleton |> Return.command (login jid password)
+  | _, ConnectionError _ -> L.Idle |> Return.singleton
+  | _, Authenticated client ->
       L.Loading |> Return.singleton
-      |> Return.command (login ~send_msg jid password)
+      |> Return.command (xmpp_init ~send_msg client)
   (* Authentication succeeded *)
-  | _, Authenticated model' -> L.Loaded model' |> Return.singleton
+  | _, Initialized model' -> L.Loaded model' |> Return.singleton
   | L.Loaded model, Logout ->
       L.Idle |> Return.singleton
       |> Return.command (Client.disconnect model.client >|= fun _ -> `NoOp)
