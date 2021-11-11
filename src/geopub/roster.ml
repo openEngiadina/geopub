@@ -77,7 +77,8 @@ let view send_msg jid (model : Xmppg.model L.t) =
              subscriptions_sidebar send_msg (Some jid) model;
              div
                [
-                 Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.Posts)
+                 Evr.on_el Ev.click (fun _ ->
+                     send_msg @@ `SetRoute (Route.Posts None))
                  @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to posts" ];
                  h2 [ txt' @@ Xmppg.contact_display_name model jid ];
                  dl
@@ -145,7 +146,8 @@ let view_add_contact send_msg (model : Xmppg.model L.t) =
             subscriptions_sidebar send_msg None model;
             div
               [
-                Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.Posts)
+                Evr.on_el Ev.click (fun _ ->
+                    send_msg @@ `SetRoute (Route.Posts None))
                 @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to posts" ];
                 Evr.on_el ~default:false Form.Ev.submit (fun ev ->
                     let form_data =

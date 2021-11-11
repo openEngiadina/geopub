@@ -112,7 +112,7 @@ let topbar send_msg model =
     | Some jid ->
         [
           make_entry "Map" Route.Map;
-          make_entry "Posts" Route.Posts;
+          make_entry "Posts" (Route.Posts None);
           (* Disable the chat for now *)
           (* make_entry "Chat" (Route.Chat None); *)
           make_entry jid Route.Account;
@@ -137,7 +137,7 @@ let view send_msg model =
     match model.route with
     | Map -> Mapg.view send_msg model.map
     (* | Chat jid -> Chat.view send_msg model.xmpp jid *)
-    | Posts -> Posts.view send_msg model.xmpp model.posts
+    | Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts
     | Roster jid -> Roster.view send_msg jid model.xmpp
     | AddContact -> Roster.view_add_contact send_msg model.xmpp
     | Account -> return @@ Xmppg.account_view send_msg model.xmpp

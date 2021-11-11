@@ -20,7 +20,13 @@ let create send_msg =
   let map_container = El.div ~at:At.[ id (Jstr.v "map") ] [] in
   let context_menu =
     Leaflet_contextmenu.Menu.
-      [ Callback ("Hello", fun _ -> send_msg @@ `SetRoute Route.About) ]
+      [
+        Callback
+          ( "Create post here",
+            fun e ->
+              let latlng = Leaflet.Ev.MouseEvent.latlng e in
+              send_msg @@ `SetRoute (Route.Posts (Some latlng)) );
+      ]
   in
   let map =
     Leaflet.Map.create

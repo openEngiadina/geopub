@@ -17,6 +17,10 @@ module LatLng : sig
   type t
 
   val create : float -> float -> t
+
+  val lat : t -> float
+
+  val lng : t -> float
 end
 
 module Ev : sig

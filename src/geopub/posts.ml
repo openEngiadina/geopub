@@ -82,7 +82,7 @@ let update ~send_msg map model msg =
       |> ignore;
       post :: model |> Return.singleton
 
-let view_compose_form send_msg _client =
+let view_compose_form send_msg latlng =
   ignore send_msg;
   Evr.on_el ~default:false Form.Ev.submit
     (fun ev ->
@@ -110,7 +110,18 @@ let view_compose_form send_msg _client =
         | _ -> failwith "We need better error handling"
       in
 
-      send_msg @@ `XmppMsg (Xmppg.PublishPost { title; content }))
+      let geoloc =
+        Option.map
+          (fun latlng -> Leaflet.LatLng.(Geoloc.make (lat latlng) (lng latlng)))
+          latlng
+      in
+
+      let make_atom author ~id =
+        Atom.Entry.make ~title ~content ?geoloc ~authors:[ author ] ~id
+          ~updated:(Ptime_clock.now ()) ()
+      in
+
+      send_msg @@ `XmppMsg (Xmppg.PublishPost make_atom))
     El.(
       form
         ~at:At.[ class' @@ Jstr.v "post-compose" ]
@@ -145,6 +156,31 @@ let view_compose_form send_msg _client =
                         ]
                     [];
                 ];
+              (match latlng with
+              | Some latlng ->
+                  li
+                    [
+                      label
+                        ~at:At.[ for' @@ Jstr.v "post-latlng" ]
+                        [ txt' "location" ];
+                      input
+                        ~at:
+                          At.
+                            [
+                              type' @@ Jstr.v "text";
+                              id @@ Jstr.v "post-latlng";
+                              name @@ Jstr.v "post-latlng";
+                              true' @@ Jstr.v "readonly";
+                              value
+                              @@ Jstr.v
+                                   ((Float.to_string
+                                   @@ Leaflet.LatLng.lat latlng)
+                                   ^ ", " ^ Float.to_string
+                                   @@ Leaflet.LatLng.lng latlng);
+                            ]
+                        ();
+                    ]
+              | _ -> txt' "");
               li
                 [
                   input
@@ -155,7 +191,7 @@ let view_compose_form send_msg _client =
             ];
         ])
 
-let view send_msg xmpp posts =
+let view send_msg latlng xmpp posts =
   match xmpp with
   | L.Loaded xmpp ->
       return
@@ -165,7 +201,7 @@ let view send_msg xmpp posts =
              div
                ~at:At.[ class' @@ Jstr.v "content" ]
                [
-                 view_compose_form send_msg xmpp.client;
+                 view_compose_form send_msg latlng;
                  ul
                    ~at:At.[ class' @@ Jstr.v "posts" ]
                    (List.map (fun post -> li [ Post.view post ]) posts);

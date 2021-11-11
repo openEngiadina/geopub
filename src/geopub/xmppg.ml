@@ -51,8 +51,8 @@ type msg =
   | PresenceDenySubscription of Xmpp.Jid.t
   (* Handle incoming and outgoing (already sent) messages *)
   | ReceiveMsg of Xmpp.Stanza.Message.t
-  (* Publish a simple post *)
-  | PublishPost of { title : string; content : string }
+  (* Publish a post *)
+  | PublishPost of (Atom.Author.t -> id:string -> Atom.Entry.t)
 
 let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
 
@@ -120,6 +120,7 @@ let send_xmpp_message client message =
   let* () = Client.send_message client message in
   return @@ `NoOp
 
+(* TODO move to Xmpp.Jid.to_uri *)
 let uri_of_jid jid = "xmpp:" ^ (jid |> Xmpp.Jid.bare |> Xmpp.Jid.to_string)
 
 let update ~send_msg model msg =
@@ -164,19 +165,14 @@ let update ~send_msg model msg =
   | L.Loaded model, ReceiveMsg msg ->
       L.Loaded model |> Return.singleton
       |> Return.command (return @@ `ReceiveMessage msg)
-  | L.Loaded model, PublishPost { content; title } ->
+  | L.Loaded model, PublishPost make_atom ->
       let jid = Client.jid model.client in
       let author =
         Atom.Author.make ~uri:(uri_of_jid jid)
           (Option.value ~default:"blups" jid.local)
       in
-      (* TODO figure out way to get a proper geoloc *)
-      let geoloc = Geoloc.make 63.430553090000664 10.39512634277344 in
       let item_id = Client.generate_id model.client in
-      let atom_entry =
-        Atom.Entry.make ~title ~content ~authors:[ author ] ~id:item_id ~geoloc
-          ~updated:(Ptime_clock.now ()) ()
-      in
+      let atom_entry = make_atom author ~id:item_id in
       let jid = Client.jid model.client in
       let item =
         Xmlc.make_element

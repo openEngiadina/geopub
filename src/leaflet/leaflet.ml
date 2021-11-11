@@ -15,6 +15,10 @@ module LatLng = struct
 
   let create lat lng =
     Jv.call leaflet "latLng" [| Jv.of_float lat; Jv.of_float lng |]
+
+  let lat latlng = Jv.get latlng "lat" |> Jv.to_float
+
+  let lng latlng = Jv.get latlng "lng" |> Jv.to_float
 end
 
 module Ev = struct
