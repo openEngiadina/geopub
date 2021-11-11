@@ -17,7 +17,7 @@ A second version was developed in ClojureScript (see branch `cljs`). The Clojure
 A development environment can be created with [Guix](https://guix.gnu.org/):
 
 ``` sh
-guix -- environment -l guix.scm
+guix shell -D -f guix.scm
 ```
 
 After this you can run `dune build @install` which will build GeoPub and place all necessary artifacts into `_build/install/default/share/geopub/`.
