@@ -39,7 +39,7 @@ let create send_msg =
   @@ Leaflet.Map.as_target map;
   let tile_layer = Leaflet.TileLayer.create_osm () in
   Leaflet.TileLayer.add_to tile_layer map;
-  Leaflet.(Map.set_view map LatLng.(create 63.4275 10.4109) 11);
+  Leaflet.(Map.set_view map LatLng.(create 46.794896096 10.3003317118) 11);
   map
 
 let update ~send_msg model msg =
