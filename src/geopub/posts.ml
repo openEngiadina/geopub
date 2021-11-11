@@ -36,11 +36,14 @@ module Post = struct
                  Option.map
                    (fun from -> txt' @@ Xmpp.Jid.to_string from)
                    post.message.from;
-                 Option.some @@ txt' " (";
+                 Option.some @@ br ();
                  Option.some @@ txt' @@ Ptime.to_rfc3339 post.atom.updated;
-                 Option.some @@ txt' " )";
+                 Option.some @@ br ();
                  Option.map
-                   (fun _geoloc -> txt' "Show on map (TODO)")
+                   (fun (geoloc : Geoloc.t) ->
+                     txt'
+                       ((Float.to_string @@ geoloc.latitude)
+                       ^ ", " ^ Float.to_string @@ geoloc.longitude))
                    post.atom.geoloc;
                ]);
           p

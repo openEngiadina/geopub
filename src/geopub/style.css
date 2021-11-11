@@ -177,17 +177,17 @@ ul.posts {
 }
 
 .posts li {
-    display: flex;
-    flex-direction: column;
     border-bottom: solid 0.3px grey;
 }
 
 .post {
     display: flex;
+    width: 100%;
     flex-direction: column;
 }
 
 .post-meta {
+    text-align: right;
     align-self: flex-end;
     color: grey;
 }
