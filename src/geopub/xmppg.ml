@@ -60,20 +60,19 @@ let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
 
 let jid_opt = function L.Loaded model -> Option.some @@ jid model | _ -> None
 
-let init () =
-  L.Idle |> Return.singleton
-  |> Return.command
-     @@ Lwt.return
-          (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil"))
+let init () = L.Idle |> Return.singleton
+(* |> Return.command
+ *    @@ Lwt.return
+ *         (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil")) *)
 
 let login jid password =
   let* client =
-    Client.create
-      {
-        ws_endpoint =
-          (* use local prosody for development *)
-          Some "ws://localhost:5280/xmpp-websocket";
-      }
+    Client.create Xmpp_websocket.default_options
+      (* {
+       *   ws_endpoint =
+       *     (\* use local prosody for development *\)
+       *     Some "ws://localhost:5280/xmpp-websocket";
+       * } *)
       jid ~password
   in
   let* connected = Lwt_result.catch @@ Client.connect client in
