@@ -24,6 +24,8 @@ module Pubsub = Xmpp_pubsub.Make (Client)
 
 type model = {
   client : Client.t;
+  (* The bound Jid. Keep it here so we don't have to do Lwt calls to get it. *)
+  jid : Xmpp.Jid.t;
   (* Lwt thread that listens for XMPP stanzas and handles them *)
   listener : unit event;
   roster : Roster.roster;
@@ -39,6 +41,7 @@ type t = model L.t
 type msg =
   | NoOp
   | Login of Xmpp.Jid.t * string
+  | LoginAnonymousDemo
   | Authenticated of Client.t
   | ConnectionError of exn
   | Initialized of model
@@ -56,7 +59,7 @@ type msg =
   (* Publish a post *)
   | PublishPost of (Atom.Author.t -> id:string -> Atom.Entry.t)
 
-let jid model = Client.jid model.client |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
+let jid model = model.jid |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
 
 let jid_opt = function L.Loaded model -> Option.some @@ jid model | _ -> None
 
@@ -67,13 +70,25 @@ let init () = L.Idle |> Return.singleton
 
 let login jid password =
   let* client =
-    Client.create Xmpp_websocket.default_options
+    Client.create
+      Xmpp_websocket.default_options
       (* {
        *   ws_endpoint =
        *     (\* use local prosody for development *\)
        *     Some "ws://localhost:5280/xmpp-websocket";
        * } *)
-      jid ~password
+      ~credentials:(`JidPassword (jid, password))
+  in
+  let* connected = Lwt_result.catch @@ Client.connect client in
+  match connected with
+  | Ok () -> return @@ `XmppMsg (Authenticated client)
+  | Error e -> return @@ `XmppMsg (ConnectionError e)
+
+let login_anonymous_demo () =
+  let* client =
+    Client.create
+      { ws_endpoint = Some "wss://openengiadina.net/xmpp-websocket" }
+      ~credentials:(`Anonymous "demo.openengiadina.net")
   in
   let* connected = Lwt_result.catch @@ Client.connect client in
   match connected with
@@ -81,6 +96,7 @@ let login jid password =
   | Error e -> return @@ `XmppMsg (ConnectionError e)
 
 let xmpp_init ~send_msg client =
+  let* jid = Client.jid client in
   let* ec_responder =
     Entity_capabilities.advertise ~category:"client" ~type':"web" ~name:"GeoPub"
       ~node:"https://codeberg.org/openEngiadina/geopub"
@@ -114,13 +130,16 @@ let xmpp_init ~send_msg client =
         |> E.map (fun roster -> send_msg @@ `XmppMsg (RosterPush roster));
       ]
   in
-  return @@ `XmppMsg (Initialized { client; listener; roster })
+  return @@ `XmppMsg (Initialized { jid; client; listener; roster })
 
 let make_outgoing_message client to' message =
-  let from = Client.jid client in
-  Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
-    Xmlc.
-      [ make_element ~children:[ make_text message ] (Xmpp.Ns.client "body") ]
+  let* from = Client.jid client in
+  return
+  @@ Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
+       Xmlc.
+         [
+           make_element ~children:[ make_text message ] (Xmpp.Ns.client "body");
+         ]
 
 let send_xmpp_message client message =
   let* () = Client.send_message client message in
@@ -134,6 +153,8 @@ let update ~send_msg model msg =
   (* Initiate authentication *)
   | _, Login (jid, password) ->
       L.Loading |> Return.singleton |> Return.command (login jid password)
+  | _, LoginAnonymousDemo ->
+      L.Loading |> Return.singleton |> Return.command (login_anonymous_demo ())
   | _, ConnectionError _ -> L.Idle |> Return.singleton
   | _, Authenticated client ->
       L.Loading |> Return.singleton
@@ -175,14 +196,12 @@ let update ~send_msg model msg =
       L.Loaded model |> Return.singleton
       |> Return.command (return @@ `ReceiveMessage msg)
   | L.Loaded model, PublishPost make_atom ->
-      let jid = Client.jid model.client in
       let author =
-        Atom.Author.make ~uri:(uri_of_jid jid)
-          (Option.value ~default:"blups" jid.local)
+        Atom.Author.make ~uri:(uri_of_jid model.jid)
+          (Option.value ~default:"blups" model.jid.local)
       in
       let item_id = Client.generate_id model.client in
       let atom_entry = make_atom author ~id:item_id in
-      let jid = Client.jid model.client in
       let item =
         Xmlc.make_element
           ~attributes:[ (("", "id"), item_id) ]
@@ -191,8 +210,8 @@ let update ~send_msg model msg =
       in
       L.Loaded model |> Return.singleton
       |> Return.command
-           ( Pubsub.publish ~to':jid ~node:"urn:xmpp:microblog:0" model.client
-               (Option.some @@ item)
+           ( Pubsub.publish ~to':(Xmpp.Jid.bare model.jid)
+               ~node:"urn:xmpp:microblog:0" model.client (Option.some @@ item)
            >|= fun _ -> `NoOp )
   | _, _ -> model |> Return.singleton
 
@@ -268,6 +287,13 @@ let login_view send_msg =
 
           send_msg @@ `XmppMsg (Login (jid, password)))
         login_form;
+      p
+        [
+          Evr.on_el Ev.click (fun _ -> send_msg (`XmppMsg LoginAnonymousDemo))
+          @@ a
+               ~at:At.[ href @@ Jstr.v "#" ]
+               [ txt' "Login anonymously with demo.opengiadina.net" ];
+        ];
     ]
 
 let account_view send_msg = function

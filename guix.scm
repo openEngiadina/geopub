@@ -501,7 +501,7 @@ message report is decoupled from logging and is handled by a reporter.")
 (define-public ocaml-xmpp
   (package
     (name "ocaml-xmpp")
-    (version "2c92786ca36fd767a6ce09df4504b5bcde5f190d")
+    (version "253a716af8681d1965dabebeb8fb742c023b69a2")
     (home-page "https://inqlab.net/git/ocaml-xmpp.git")
     (source
      (origin (method git-fetch)
@@ -510,7 +510,7 @@ message report is decoupled from logging and is handled by a reporter.")
                    (commit version)))
              (file-name (git-file-name name version))
              (sha256
-              (base32 "0v2hnrzj0cysgf608ma6pa2ibgs4i8rs0isclz6cw6rv2bi3v796"))))
+              (base32 "0y39icybdjaxf5vmwmk8pkmyd1j3lr2l7xrh3lzalh2lb4r53iqc"))))
     ;; (arguments `(#:tests? #f))
     (build-system dune-build-system)
     (native-inputs
