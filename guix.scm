@@ -2,12 +2,15 @@
  (guix packages)
  (guix download)
  (guix git-download)
- (guix build-system ocaml)
  (guix build-system dune)
+ (guix build-system ocaml)
  ((guix licenses) #:prefix license:)
+ (gnu packages base)
+ (gnu packages maths)
  (gnu packages multiprecision)
  (gnu packages pkg-config)
- (gnu packages ocaml))
+ (gnu packages ocaml)
+ (gnu packages rdf))
 
 (define-public ocaml-cbor
   (package
@@ -37,8 +40,8 @@
 (define-public ocaml-rdf
   (package
     (name "ocaml-rdf")
-    (version "212b22c60ea53da0667cad4a6c75e50fa2c6df63")
-    (home-page "https://inqlab.net/git/ocaml-rdf.git")
+    (version "4250db64c46e5207eae82b8b1b826da2ddd6359c")
+    (home-page "https://codeberg.org/openEngiadina/ocaml-rdf.git")
     (source
      (origin
       (method git-fetch)
@@ -47,7 +50,7 @@
             (commit version)))
       (file-name (git-file-name name version))
       (sha256
-       (base32 "0bi32gip7qsb8vf2xk492j46c7zaj2pib7rp17kmmbyv5zczna3l"))))
+       (base32 "1aq5qbmjflcj19w7wn9rx5zkcmqrw7pw0w65zq5s498qs1n56cfg"))))
     (build-system dune-build-system)
     (arguments `(#:tests? #f))
     (native-inputs
@@ -55,9 +58,16 @@
        ("qcheck" ,ocaml-qcheck)))
     (propagated-inputs
      `(("ocaml-uri" ,ocaml-uri)
-       ("yojson" ,ocaml-yojson)
-       ("cbor" ,ocaml-cbor)
-       ("angstrom" ,ocaml-angstrom)))
+       ("ocaml-yojson" ,ocaml-yojson)
+       ("ocaml-cbor" ,ocaml-cbor)
+       ("ocaml-angstrom" ,ocaml-angstrom)
+       ("ocaml-ctypes" ,ocaml-ctypes)
+       ("ocaml-xmlm" ,ocaml-xmlm)
+       ("ocaml-uunf" ,ocaml-uunf)
+       ("ocaml-uuidm" ,ocaml-uuidm)
+       ("ocaml-z3" ,ocaml-z3)
+       ("z3" ,z3)
+       ("serd" ,serd)))
     (synopsis "RDF library for OCaml")
     (description #f)
     (license license:agpl3+)))
