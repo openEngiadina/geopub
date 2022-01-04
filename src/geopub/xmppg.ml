@@ -60,9 +60,7 @@ type msg =
   | PublishPost of (Atom.Author.t -> id:string -> Atom.Entry.t)
 
 let jid model = model.jid |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
-
 let jid_opt = function L.Loaded model -> Option.some @@ jid model | _ -> None
-
 let init () = L.Idle |> Return.singleton
 (* |> Return.command
  *    @@ Lwt.return
@@ -103,9 +101,9 @@ let xmpp_init ~send_msg client =
       [
         "http://jabber.org/protocol/caps";
         "urn:xmpp:microblog:0";
-        "urn:xmpp:microblog:0+notify";
+        "urn:xmpp:microblog:0+notify"
         (* "http://jabber.org/protocol/geoloc"; *)
-        (* "http://jabber.org/protocol/geoloc+notify"; *)
+        (* "http://jabber.org/protocol/geoloc+notify"; *);
       ]
       client
   in
@@ -136,9 +134,9 @@ let make_outgoing_message client to' message =
   let* from = Client.jid client in
   return
   @@ Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
-       Xmlc.
+       Xmlc.Tree.
          [
-           make_element ~children:[ make_text message ] (Xmpp.Ns.client "body");
+           make_element ~children:[ make_data message ] (Xmpp.Ns.client "body");
          ]
 
 let send_xmpp_message client message =
@@ -203,7 +201,7 @@ let update ~send_msg model msg =
       let item_id = Client.generate_id model.client in
       let atom_entry = make_atom author ~id:item_id in
       let item =
-        Xmlc.make_element
+        Xmlc.Tree.make_element
           ~attributes:[ (("", "id"), item_id) ]
           ~children:[ Atom.Entry.to_xml atom_entry ]
           (Pubsub.Ns.pubsub "item")

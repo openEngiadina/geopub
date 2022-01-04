@@ -61,7 +61,6 @@ module Post = struct
 end
 
 type t = Post.t list
-
 type msg = ReceiveMessage of Xmpp.Stanza.Message.t | AddPost of Post.t
 
 let init () = return_nil
@@ -74,7 +73,8 @@ let parse_message (message : Xmpp.Stanza.Message.t) =
               element (ns_pubsub_event "item") (fun _ -> Atom.Entry.parser))))
   in
   (* Ignore the message if it failes to parse *)
-  Lwt_result.catch (Xmlc.parse_trees atom_parser message.payload)
+  Lwt_result.catch
+    (Xmlc.Tree.parse_trees atom_parser (List.to_seq message.payload))
   >|= Result.map (fun atom -> `PostsMsg (AddPost { message; atom }))
   >|= Result.value ~default:`NoOp
 
