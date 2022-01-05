@@ -1,5 +1,9 @@
 # Changelog
 
+## UNRELEASED
+
+- Update to Brr 0.0.2
+
 ## [0.3.0] - 2021-11-12
 
 Rewrite in OCaml, using XMPP and with a map for posts with geolocation.

@@ -177,14 +177,17 @@ Note is distributed under the ISC license.
 (define-public ocaml-brr
   (package
     (name "ocaml-brr")
-    (version "0.0.1")
+    (version "0.0.2")
     (source
       (origin
         (method url-fetch)
-        (uri "https://erratique.ch/software/brr/releases/brr-0.0.1.tbz")
-        (sha256
+        (uri
+	 (string-append
+	  "https://erratique.ch/software/brr/releases/brr-" version
+	  ".tbz"))
+	(sha256
           (base32
-            "1kaydz0cc8f2qlm88ifywzh88packqr0q70lda5p2f4vhcbxfp4h"))))
+            "1xf2sq2rszx5r2x01gc3krx20yh3wm6hwk15zfav0clm8afjsq6m"))))
     (build-system ocaml-build-system)
     (arguments `(#:build-flags (list "build" "--tests" "true")
                  #:phases
