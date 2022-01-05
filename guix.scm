@@ -566,6 +566,7 @@ message report is decoupled from logging and is handled by a reporter.")
        ("ocaml-brr" ,ocaml-brr)
        ("ocaml-rdf" ,ocaml-rdf)
        ("ocaml-xmpp" ,ocaml-xmpp)
+       ("ocaml-ptime" ,ocaml-ptime)
        ("js_of_ocaml" ,js-of-ocaml)))
     (propagated-inputs
      `(("uri" ,ocaml-uri)))
