@@ -40,12 +40,12 @@ body {
     max-height: 30px;
 }
 
-#menu ul {
+nav ul {
     list-style-type: none;
     padding: 0;
 }
 
-#menu li a {
+nav li a {
     color: white;
     text-decoration: none;
     font-size: 1.4em;

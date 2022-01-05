@@ -100,39 +100,6 @@ let about_view =
           ];
       ])
 
-let topbar send_msg model =
-  let on_click msg el = Evr.on_el Ev.click (fun _ -> send_msg msg) el in
-  let make_entry name route =
-    on_click (`SetRoute route)
-      El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])
-  in
-  let jid = Xmppg.jid_opt model.xmpp in
-  let entries =
-    match jid with
-    | None -> [ make_entry "Login" Route.Account ]
-    | Some jid ->
-        [
-          make_entry "Map" Route.Map;
-          make_entry "Posts" (Route.Posts None);
-          (* Disable the chat for now *)
-          (* make_entry "Chat" (Route.Chat None); *)
-          make_entry jid Route.Account;
-        ]
-  in
-  El.(
-    div
-      ~at:At.[ id (Jstr.v "topbar") ]
-      [
-        header
-          [
-            on_click (`SetRoute Route.About)
-            @@ a
-                 ~at:At.[ href @@ Jstr.v "#" ]
-                 [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
-          ];
-        nav [ ul entries ];
-      ])
-
 let menu send_msg model =
   let on_click msg el = Evr.on_el Ev.click (fun _ -> send_msg msg) el in
 
@@ -168,13 +135,20 @@ let menu send_msg model =
                   ];
               ];
             div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
-            nav [ ul [ make_nav_entry "Logout" Route.Account ] ];
+            nav
+              [
+                ul
+                  [
+                    on_click (`XmppMsg Xmppg.Logout)
+                    @@ li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Logout" ] ];
+                  ];
+              ];
           ])
   | None ->
       El.(
         nav
           ~at:At.[ id @@ Jstr.v "menu" ]
-          [ menu_header; nav [ ul [ make_nav_entry "Login" Route.Account ] ] ])
+          [ menu_header; nav [ ul [ make_nav_entry "Login" Route.Login ] ] ])
 
 let view send_msg model =
   let* main =
@@ -184,8 +158,8 @@ let view send_msg model =
     | Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts
     | Roster jid -> Roster.view send_msg jid model.xmpp
     | AddContact -> Roster.view_add_contact send_msg model.xmpp
-    | Account -> return @@ Xmppg.account_view send_msg model.xmpp
     | About -> return [ about_view ]
+    | Login -> return [ Login.view send_msg ]
   in
   return [ menu send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]
 

@@ -10,9 +10,6 @@ open Lwt
 open Lwt.Syntax
 open Lwt_react
 open Reactor
-open Reactor_brr
-open Brr
-open Brr_io
 module L = Loadable
 
 (* XMPP and various XEPs *)
@@ -158,7 +155,9 @@ let update ~send_msg model msg =
       L.Loading |> Return.singleton
       |> Return.command (xmpp_init ~send_msg client)
   (* Authentication succeeded *)
-  | _, Initialized model' -> L.Loaded model' |> Return.singleton
+  | _, Initialized model' ->
+      L.Loaded model' |> Return.singleton
+      |> Return.command (return @@ `SetRoute Route.Map)
   | L.Loaded model, Logout ->
       L.Idle |> Return.singleton
       |> Return.command (Client.disconnect model.client >|= fun _ -> `NoOp)
@@ -212,108 +211,3 @@ let update ~send_msg model msg =
                ~node:"urn:xmpp:microblog:0" model.client (Option.some @@ item)
            >|= fun _ -> `NoOp )
   | _, _ -> model |> Return.singleton
-
-(* View *)
-
-let login_view send_msg =
-  let login_form =
-    El.(
-      form
-        [
-          (* JID *)
-          label ~at:At.[ for' @@ Jstr.v "jid" ] [ txt' "JID" ];
-          input
-            ~at:
-              At.
-                [
-                  id @@ Jstr.v "jid";
-                  name @@ Jstr.v "jid";
-                  type' @@ Jstr.v "text";
-                ]
-            ();
-          (* Password *)
-          label ~at:At.[ for' @@ Jstr.v "password" ] [ txt' "Password" ];
-          input
-            ~at:
-              At.
-                [
-                  id @@ Jstr.v "password";
-                  name @@ Jstr.v "password";
-                  type' @@ Jstr.v "password";
-                ]
-            ();
-          (* Submit *)
-          input
-            ~at:
-              At.
-                [
-                  id @@ Jstr.v "submit";
-                  type' @@ Jstr.v "submit";
-                  value @@ Jstr.v "Login";
-                ]
-            ();
-        ])
-  in
-  El.
-    [
-      h1 [ txt' "Login" ];
-      p [ txt' "You may login using any XMPP account." ];
-      Evr.on_el ~default:false Form.Ev.submit
-        (fun ev ->
-          let form_data =
-            Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
-          in
-
-          let jid_value =
-            Form.Data.find form_data (Jstr.v "jid") |> Option.get
-          in
-          let password_value =
-            Form.Data.find form_data (Jstr.v "password") |> Option.get
-          in
-
-          let jid =
-            match jid_value with
-            | `String js -> Jstr.to_string js |> Xmpp.Jid.of_string_exn
-            | _ -> failwith "We need better error handling"
-          in
-
-          let password =
-            match password_value with
-            | `String js -> Jstr.to_string js
-            | _ -> failwith "We need better error handling"
-          in
-
-          send_msg @@ `XmppMsg (Login (jid, password)))
-        login_form;
-      p
-        [
-          Evr.on_el Ev.click (fun _ -> send_msg (`XmppMsg LoginAnonymousDemo))
-          @@ a
-               ~at:At.[ href @@ Jstr.v "#" ]
-               [ txt' "Login anonymously with demo.opengiadina.net" ];
-        ];
-    ]
-
-let account_view send_msg = function
-  | L.Idle ->
-      El.
-        [
-          div ~at:At.[ class' @@ Jstr.v "text-content" ] @@ login_view send_msg;
-        ]
-  | L.Loading ->
-      El.[ div ~at:At.[ class' @@ Jstr.v "text-content" ] [ txt' "Loading" ] ]
-  | L.Loaded model ->
-      El.
-        [
-          div
-            ~at:At.[ class' @@ Jstr.v "text-content" ]
-            [
-              h1 [ txt' "" ];
-              p [ txt' @@ "Authenticated as " ^ jid model ];
-              p
-                [
-                  Evr.on_el Ev.click (fun _ -> send_msg @@ `XmppMsg Logout)
-                  @@ button [ txt' "Logout" ];
-                ];
-            ];
-        ]

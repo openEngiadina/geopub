@@ -6,10 +6,10 @@
 
 type t =
   | About
+  | Login
   | Map
   | Posts of Leaflet.LatLng.t option
   | Roster of Xmpp.Jid.t
   | AddContact
-  | Account
 
 type action = [ `SetRoute of t ]
