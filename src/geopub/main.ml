@@ -133,6 +133,49 @@ let topbar send_msg model =
         nav [ ul entries ];
       ])
 
+let menu send_msg model =
+  let on_click msg el = Evr.on_el Ev.click (fun _ -> send_msg msg) el in
+
+  let jid = Xmppg.jid_opt model.xmpp in
+  let menu_header =
+    El.(
+      header
+        [
+          on_click (`SetRoute Route.About)
+          @@ a
+               ~at:At.[ href @@ Jstr.v "#" ]
+               [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
+        ])
+  in
+
+  let make_nav_entry name route =
+    on_click (`SetRoute route)
+      El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])
+  in
+  match jid with
+  | Some _ ->
+      El.(
+        nav
+          ~at:At.[ id @@ Jstr.v "menu" ]
+          [
+            menu_header;
+            nav
+              [
+                ul
+                  [
+                    make_nav_entry "Map" Route.Map;
+                    make_nav_entry "Posts" (Route.Posts None);
+                  ];
+              ];
+            div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
+            nav [ ul [ make_nav_entry "Logout" Route.Account ] ];
+          ])
+  | None ->
+      El.(
+        nav
+          ~at:At.[ id @@ Jstr.v "menu" ]
+          [ menu_header; nav [ ul [ make_nav_entry "Login" Route.Account ] ] ])
+
 let view send_msg model =
   let* main =
     match model.route with
@@ -144,7 +187,7 @@ let view send_msg model =
     | Account -> return @@ Xmppg.account_view send_msg model.xmpp
     | About -> return [ about_view ]
   in
-  return [ topbar send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]
+  return [ menu send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]
 
 (* A small hack to invalidate the size of the Leaflet map when it is
    dynamically loaded. If not it would not be displayed correctly until a
@@ -157,6 +200,7 @@ let observe_for_map el send_msg =
       | Some "map" -> send_msg `InvalidateMapSize
       | _ -> ()
     in
+
     records
     |> Jv.to_list (fun x -> x)
     |> List.map (fun record ->
