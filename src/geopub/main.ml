@@ -112,6 +112,7 @@ let menu send_msg model =
           @@ a
                ~at:At.[ href @@ Jstr.v "#" ]
                [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
+          txt' @@ Option.value ~default:"" jid;
         ])
   in
 
@@ -130,8 +131,9 @@ let menu send_msg model =
               [
                 ul
                   [
+                    make_nav_entry "Activity" (Route.Posts None);
                     make_nav_entry "Map" Route.Map;
-                    make_nav_entry "Posts" (Route.Posts None);
+                    make_nav_entry "Subscriptions" (Route.Posts None);
                   ];
               ];
             div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
@@ -159,7 +161,7 @@ let view send_msg model =
     | Roster jid -> Roster.view send_msg jid model.xmpp
     | AddContact -> Roster.view_add_contact send_msg model.xmpp
     | About -> return [ about_view ]
-    | Login -> return [ Login.view send_msg ]
+    | Login -> return [ Login.view send_msg model.xmpp ]
   in
   return [ menu send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]
 

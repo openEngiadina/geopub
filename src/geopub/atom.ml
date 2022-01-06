@@ -65,7 +65,7 @@ module Entry = struct
   let to_xml entry =
     Xmlc.Tree.(
       make_element
-        ~attributes:[ (Xmpp.Ns.xmlns "xmlns", atom_uri) ]
+        ~attributes:[ (Xmppl.Ns.xmlns "xmlns", atom_uri) ]
         ~children:
           (List.filter_map
              (fun x -> x)

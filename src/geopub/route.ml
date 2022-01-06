@@ -9,7 +9,7 @@ type t =
   | Login
   | Map
   | Posts of Leaflet.LatLng.t option
-  | Roster of Xmpp.Jid.t
+  | Roster of Xmppl.Jid.t
   | AddContact
 
 type action = [ `SetRoute of t ]

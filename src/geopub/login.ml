@@ -8,7 +8,7 @@ open Brr
 open Brr_io
 open Reactor_brr
 
-let view send_msg =
+let view send_msg model =
   let login_form =
     El.(
       form
@@ -53,38 +53,48 @@ let view send_msg =
       [
         h1 [ txt' "Login" ];
         p [ txt' "You may login using any XMPP account." ];
-        Evr.on_el ~default:false Form.Ev.submit
-          (fun ev ->
-            let form_data =
-              Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
-            in
+        (match model with
+        | Loadable.Idle ->
+            div
+              [
+                Evr.on_el ~default:false Form.Ev.submit
+                  (fun ev ->
+                    let form_data =
+                      Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
+                      @@ Ev.target ev
+                    in
 
-            let jid_value =
-              Form.Data.find form_data (Jstr.v "jid") |> Option.get
-            in
-            let password_value =
-              Form.Data.find form_data (Jstr.v "password") |> Option.get
-            in
+                    let jid_value =
+                      Form.Data.find form_data (Jstr.v "jid") |> Option.get
+                    in
+                    let password_value =
+                      Form.Data.find form_data (Jstr.v "password") |> Option.get
+                    in
 
-            let jid =
-              match jid_value with
-              | `String js -> Jstr.to_string js |> Xmpp.Jid.of_string_exn
-              | _ -> failwith "We need better error handling"
-            in
+                    let jid =
+                      match jid_value with
+                      | `String js ->
+                          Jstr.to_string js |> Xmppl.Jid.of_string_exn
+                      | _ -> failwith "We need better error handling"
+                    in
 
-            let password =
-              match password_value with
-              | `String js -> Jstr.to_string js
-              | _ -> failwith "We need better error handling"
-            in
+                    let password =
+                      match password_value with
+                      | `String js -> Jstr.to_string js
+                      | _ -> failwith "We need better error handling"
+                    in
 
-            send_msg @@ `XmppMsg (Xmppg.Login (jid, password)))
-          login_form;
-        p
-          [
-            Evr.on_el Ev.click (fun _ -> send_msg (`XmppMsg LoginAnonymousDemo))
-            @@ a
-                 ~at:At.[ href @@ Jstr.v "#" ]
-                 [ txt' "Login anonymously with demo.opengiadina.net" ];
-          ];
+                    send_msg @@ `XmppMsg (Xmppg.Login (jid, password)))
+                  login_form;
+                p
+                  [
+                    Evr.on_el Ev.click (fun _ ->
+                        send_msg (`XmppMsg LoginAnonymousDemo))
+                    @@ a
+                         ~at:At.[ href @@ Jstr.v "#" ]
+                         [ txt' "Login anonymously with demo.opengiadina.net" ];
+                  ];
+              ]
+        | Loadable.Loading -> txt' "Connecting..."
+        | Loadable.Loaded _ -> txt' "Already authenticated.");
       ])

@@ -14,30 +14,30 @@ module L = Loadable
 
 (* XMPP and various XEPs *)
 
-module Client = Xmpp_websocket.Client
-module Entity_capabilities = Xmpp_entity_capabilities.Make (Client)
-module Roster = Xmpp_roster.Make (Client)
-module Pubsub = Xmpp_pubsub.Make (Client)
+module Client = Xmppl_websocket.Client
+module Entity_capabilities = Xmppl_entity_capabilities.Make (Client)
+module Roster = Xmppl_roster.Make (Client)
+module Pubsub = Xmppl_pubsub.Make (Client)
 
 type model = {
   client : Client.t;
   (* The bound Jid. Keep it here so we don't have to do Lwt calls to get it. *)
-  jid : Xmpp.Jid.t;
+  jid : Xmppl.Jid.t;
   (* Lwt thread that listens for XMPP stanzas and handles them *)
   listener : unit event;
   roster : Roster.roster;
 }
 
 let contact_display_name model jid =
-  Option.bind (Xmpp.Jid.Map.find_opt jid model.roster) (fun roster_item ->
+  Option.bind (Xmppl.Jid.Map.find_opt jid model.roster) (fun roster_item ->
       roster_item.name)
-  |> Option.value ~default:Xmpp.Jid.(jid |> bare |> to_string)
+  |> Option.value ~default:Xmppl.Jid.(jid |> bare |> to_string)
 
 type t = model L.t
 
 type msg =
   | NoOp
-  | Login of Xmpp.Jid.t * string
+  | Login of Xmppl.Jid.t * string
   | LoginAnonymousDemo
   | Authenticated of Client.t
   | ConnectionError of exn
@@ -45,33 +45,35 @@ type msg =
   | Logout
   (* Roster management *)
   | RosterPush of Roster.roster
-  | AddContact of Xmpp.Jid.t
+  | AddContact of Xmppl.Jid.t
   (* Subscription management *)
-  | PresenceSubscribe of Xmpp.Jid.t
-  | PresenceUnsubscribe of Xmpp.Jid.t
-  | PresenceApproveSubscription of Xmpp.Jid.t
-  | PresenceDenySubscription of Xmpp.Jid.t
+  | PresenceSubscribe of Xmppl.Jid.t
+  | PresenceUnsubscribe of Xmppl.Jid.t
+  | PresenceApproveSubscription of Xmppl.Jid.t
+  | PresenceDenySubscription of Xmppl.Jid.t
   (* Handle incoming and outgoing (already sent) messages *)
-  | ReceiveMsg of Xmpp.Stanza.Message.t
+  | ReceiveMsg of Xmppl.Stanza.Message.t
   (* Publish a post *)
   | PublishPost of (Atom.Author.t -> id:string -> Atom.Entry.t)
 
-let jid model = model.jid |> Xmpp.Jid.bare |> Xmpp.Jid.to_string
+let jid model = model.jid |> Xmppl.Jid.bare |> Xmppl.Jid.to_string
 let jid_opt = function L.Loaded model -> Option.some @@ jid model | _ -> None
-let init () = L.Idle |> Return.singleton
-(* |> Return.command
- *    @@ Lwt.return
- *         (Login (Xmpp.Jid.of_string_exn "user@strawberry.local", "pencil")) *)
+
+let init () =
+  L.Idle |> Return.singleton
+  |> Return.command
+     @@ Lwt.return
+          (Login (Xmppl.Jid.of_string_exn "user@strawberry.local", "pencil"))
 
 let login jid password =
   let* client =
     Client.create
-      Xmpp_websocket.default_options
-      (* {
-       *   ws_endpoint =
-       *     (\* use local prosody for development *\)
-       *     Some "ws://localhost:5280/xmpp-websocket";
-       * } *)
+      (* Xmpp_websocket.default_options *)
+      {
+        ws_endpoint =
+          (* use local prosody for development *)
+          Some "ws://localhost:5280/xmpp-websocket";
+      }
       ~credentials:(`JidPassword (jid, password))
   in
   let* connected = Lwt_result.catch @@ Client.connect client in
@@ -108,7 +110,7 @@ let xmpp_init ~send_msg client =
     Client.stanzas client
     |> E.map (fun stanza ->
            match stanza with
-           | Xmpp.Stanza.Message msg -> send_msg @@ `XmppMsg (ReceiveMsg msg)
+           | Xmppl.Stanza.Message msg -> send_msg @@ `XmppMsg (ReceiveMsg msg)
            | _ -> ())
   in
   let* roster_s = Roster.roster client in
@@ -130,18 +132,18 @@ let xmpp_init ~send_msg client =
 let make_outgoing_message client to' message =
   let* from = Client.jid client in
   return
-  @@ Xmpp.Stanza.Message.make ~to' ~from ~type':"chat"
+  @@ Xmppl.Stanza.Message.make ~to' ~from ~type':"chat"
        Xmlc.Tree.
          [
-           make_element ~children:[ make_data message ] (Xmpp.Ns.client "body");
+           make_element ~children:[ make_data message ] (Xmppl.Ns.client "body");
          ]
 
 let send_xmpp_message client message =
   let* () = Client.send_message client message in
   return @@ `NoOp
 
-(* TODO move to Xmpp.Jid.to_uri *)
-let uri_of_jid jid = "xmpp:" ^ (jid |> Xmpp.Jid.bare |> Xmpp.Jid.to_string)
+(* TODO move to Xmppl.Jid.to_uri *)
+let uri_of_jid jid = "xmpp:" ^ (jid |> Xmppl.Jid.bare |> Xmppl.Jid.to_string)
 
 let update ~send_msg model msg =
   match (model, msg) with
@@ -161,6 +163,7 @@ let update ~send_msg model msg =
   | L.Loaded model, Logout ->
       L.Idle |> Return.singleton
       |> Return.command (Client.disconnect model.client >|= fun _ -> `NoOp)
+      |> Return.command (return @@ `SetRoute Route.Login)
   (* Roster management *)
   | L.Loaded model, RosterPush roster ->
       L.Loaded { model with roster } |> Return.singleton
@@ -207,7 +210,7 @@ let update ~send_msg model msg =
       in
       L.Loaded model |> Return.singleton
       |> Return.command
-           ( Pubsub.publish ~to':(Xmpp.Jid.bare model.jid)
+           ( Pubsub.publish ~to':(Xmppl.Jid.bare model.jid)
                ~node:"urn:xmpp:microblog:0" model.client (Option.some @@ item)
            >|= fun _ -> `NoOp )
   | _, _ -> model |> Return.singleton

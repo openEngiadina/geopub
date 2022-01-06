@@ -14,7 +14,7 @@ module L = Loadable
 let ns_pubsub_event local = ("http://jabber.org/protocol/pubsub#event", local)
 
 module Post = struct
-  type t = { message : Xmpp.Stanza.Message.t; atom : Atom.Entry.t }
+  type t = { message : Xmppl.Stanza.Message.t; atom : Atom.Entry.t }
 
   let to_marker post =
     match post.atom.geoloc with
@@ -34,7 +34,7 @@ module Post = struct
                (fun x -> x)
                [
                  Option.map
-                   (fun from -> txt' @@ Xmpp.Jid.to_string from)
+                   (fun from -> txt' @@ Xmppl.Jid.to_string from)
                    post.message.from;
                  Option.some @@ br ();
                  Option.some @@ txt' @@ Ptime.to_rfc3339 post.atom.updated;
@@ -61,11 +61,11 @@ module Post = struct
 end
 
 type t = Post.t list
-type msg = ReceiveMessage of Xmpp.Stanza.Message.t | AddPost of Post.t
+type msg = ReceiveMessage of Xmppl.Stanza.Message.t | AddPost of Post.t
 
 let init () = return_nil
 
-let parse_message (message : Xmpp.Stanza.Message.t) =
+let parse_message (message : Xmppl.Stanza.Message.t) =
   let atom_parser =
     Xmlc.Parser.(
       element (ns_pubsub_event "event") (fun _ ->

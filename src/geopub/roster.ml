@@ -39,14 +39,14 @@ let subscriptions_sidebar send_msg selected_jid (model : Xmppg.model) =
         h3 [ txt' "Contacts" ];
         ul
           ~at:At.[ class' @@ Jstr.v "roster" ]
-          (Xmpp.Jid.Map.to_seq model.roster
+          (Xmppl.Jid.Map.to_seq model.roster
           |> Seq.map contact_item_el |> List.of_seq);
         Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.AddContact)
         @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Add contact" ];
       ])
 
 let contact_subscription_from (model : Xmppg.model) jid =
-  Xmpp.Jid.Map.find_opt jid model.roster
+  Xmppl.Jid.Map.find_opt jid model.roster
   |> Option.map (fun (roster_item : Xmppg.Roster.Item.t) ->
          let subscription =
            roster_item.subscription |> Option.value ~default:"none"
@@ -59,7 +59,7 @@ let contact_subscription_from (model : Xmppg.model) jid =
   |> Option.value ~default:false
 
 let contact_subscription_to (model : Xmppg.model) jid =
-  Xmpp.Jid.Map.find_opt jid model.roster
+  Xmppl.Jid.Map.find_opt jid model.roster
   |> Option.map (fun (roster_item : Xmppg.Roster.Item.t) ->
          let subscription =
            roster_item.subscription |> Option.value ~default:"none"
@@ -84,7 +84,7 @@ let view send_msg jid (model : Xmppg.model L.t) =
                  dl
                    [
                      dt [ txt' "JID" ];
-                     dd [ txt' @@ Xmpp.Jid.to_string jid ];
+                     dd [ txt' @@ Xmppl.Jid.to_string jid ];
                      dt [ txt' "Send posts and presence updates" ];
                      dd
                        [
@@ -162,7 +162,7 @@ let view_add_contact send_msg (model : Xmppg.model L.t) =
                     let jid =
                       match jid_value with
                       | `String js ->
-                          Jstr.to_string js |> Xmpp.Jid.of_string_exn
+                          Jstr.to_string js |> Xmppl.Jid.of_string_exn
                       | _ -> failwith "Invalid JID given while adding contact"
                     in
 

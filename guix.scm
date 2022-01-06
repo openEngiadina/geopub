@@ -511,11 +511,11 @@ message report is decoupled from logging and is handled by a reporter.")
      `(("ocaml-re" ,ocaml-re)
        ("ocaml-cmdliner" ,ocaml-cmdliner)))))
 
-(define-public ocaml-xmpp
+(define-public ocaml-xmppl
   (package
-    (name "ocaml-xmpp")
-    (version "2cb6a66308045af405731159eabd5619af7ba432")
-    (home-page "https://inqlab.net/git/ocaml-xmpp.git")
+    (name "ocaml-xmppl")
+    (version "ee9c22e19cc4e41b3ddb5dae5c9096df3ba9128f")
+    (home-page "https://codeberg.org/openEngiadina/ocaml-xmppl.git")
     (source
      (origin (method git-fetch)
              (uri (git-reference
@@ -523,7 +523,7 @@ message report is decoupled from logging and is handled by a reporter.")
                    (commit version)))
              (file-name (git-file-name name version))
              (sha256
-              (base32 "1f5km6zjn21dwz21grp7z93hk9d9s168mx9rba30rhwkzvdxzys5"))))
+              (base32 "1d0yvs6q91nc854ff0hr8rmgxgi1xczjpvfm1b6zfi6k1m0kbbif"))))
     ;; (arguments `(#:tests? #f))
     (build-system dune-build-system)
     (native-inputs
@@ -565,11 +565,10 @@ message report is decoupled from logging and is handled by a reporter.")
        ("ocaml-lwt-react" ,ocaml-lwt-react)
        ("ocaml-brr" ,ocaml-brr)
        ("ocaml-rdf" ,ocaml-rdf)
-       ("ocaml-xmpp" ,ocaml-xmpp)
+       ("uri" ,ocaml-uri)
+       ("ocaml-xmppl" ,ocaml-xmppl)
        ("ocaml-ptime" ,ocaml-ptime)
        ("js_of_ocaml" ,js-of-ocaml)))
-    (propagated-inputs
-     `(("uri" ,ocaml-uri)))
     (home-page "https://gitlab.com/openengiadina/geopub")
     (synopsis #f)
     (description #f)
