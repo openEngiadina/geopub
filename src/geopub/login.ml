@@ -84,7 +84,7 @@ let view send_msg model =
                       | _ -> failwith "We need better error handling"
                     in
 
-                    send_msg @@ `XmppMsg (Xmppg.Login (jid, password)))
+                    send_msg @@ `XmppMsg (Xmpp.Login (jid, password)))
                   login_form;
                 p
                   [

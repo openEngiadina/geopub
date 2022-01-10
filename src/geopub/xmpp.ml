@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-(* This module provides the GeoPub XMPP functionality (Xmppg is short for XMPP GeoPub) *)
+(* This module provides the GeoPub XMPP functionality *)
 
 open Lwt
 open Lwt.Syntax

@@ -10,7 +10,7 @@ open Brr_io
 open Lwt
 module L = Loadable
 
-let subscriptions_sidebar send_msg selected_jid (model : Xmppg.model) =
+let subscriptions_sidebar send_msg selected_jid (model : Xmpp.model) =
   let contact_item_el (jid, _contact) =
     El.(
       li
@@ -29,7 +29,7 @@ let subscriptions_sidebar send_msg selected_jid (model : Xmppg.model) =
           Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute (Route.Roster jid))
           @@ a
                ~at:At.[ href @@ Jstr.v "#" ]
-               [ txt' @@ Xmppg.contact_display_name model jid ];
+               [ txt' @@ Xmpp.contact_display_name model jid ];
         ])
   in
   El.(
@@ -45,9 +45,9 @@ let subscriptions_sidebar send_msg selected_jid (model : Xmppg.model) =
         @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Add contact" ];
       ])
 
-let contact_subscription_from (model : Xmppg.model) jid =
+let contact_subscription_from (model : Xmpp.model) jid =
   Xmppl.Jid.Map.find_opt jid model.roster
-  |> Option.map (fun (roster_item : Xmppg.Roster.Item.t) ->
+  |> Option.map (fun (roster_item : Xmpp.Roster.Item.t) ->
          let subscription =
            roster_item.subscription |> Option.value ~default:"none"
          in
@@ -58,9 +58,9 @@ let contact_subscription_from (model : Xmppg.model) jid =
          || subscription = "both")
   |> Option.value ~default:false
 
-let contact_subscription_to (model : Xmppg.model) jid =
+let contact_subscription_to (model : Xmpp.model) jid =
   Xmppl.Jid.Map.find_opt jid model.roster
-  |> Option.map (fun (roster_item : Xmppg.Roster.Item.t) ->
+  |> Option.map (fun (roster_item : Xmpp.Roster.Item.t) ->
          let subscription =
            roster_item.subscription |> Option.value ~default:"none"
          in
@@ -68,7 +68,7 @@ let contact_subscription_to (model : Xmppg.model) jid =
          subscription = "to" || subscription = "both" || ask = "subscribe")
   |> Option.value ~default:false
 
-let view send_msg jid (model : Xmppg.model L.t) =
+let view send_msg jid (model : Xmpp.model L.t) =
   match model with
   | L.Loaded model ->
       return
@@ -80,7 +80,7 @@ let view send_msg jid (model : Xmppg.model L.t) =
                  Evr.on_el Ev.click (fun _ ->
                      send_msg @@ `SetRoute (Route.Posts None))
                  @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to posts" ];
-                 h2 [ txt' @@ Xmppg.contact_display_name model jid ];
+                 h2 [ txt' @@ Xmpp.contact_display_name model jid ];
                  dl
                    [
                      dt [ txt' "JID" ];
@@ -91,11 +91,11 @@ let view send_msg jid (model : Xmppg.model L.t) =
                          Evr.on_el Ev.click (fun _ ->
                              if contact_subscription_from model jid then
                                send_msg
-                               @@ `XmppMsg (Xmppg.PresenceDenySubscription jid)
+                               @@ `XmppMsg (Xmpp.PresenceDenySubscription jid)
                              else
                                send_msg
                                @@ `XmppMsg
-                                    (Xmppg.PresenceApproveSubscription jid))
+                                    (Xmpp.PresenceApproveSubscription jid))
                          @@ input
                               ~at:
                                 At.(
@@ -115,10 +115,9 @@ let view send_msg jid (model : Xmppg.model L.t) =
                          Evr.on_el Ev.click (fun _ ->
                              if contact_subscription_to model jid then
                                send_msg
-                               @@ `XmppMsg (Xmppg.PresenceUnsubscribe jid)
+                               @@ `XmppMsg (Xmpp.PresenceUnsubscribe jid)
                              else
-                               send_msg
-                               @@ `XmppMsg (Xmppg.PresenceSubscribe jid))
+                               send_msg @@ `XmppMsg (Xmpp.PresenceSubscribe jid))
                          @@ input
                               ~at:
                                 At.(
@@ -137,7 +136,7 @@ let view send_msg jid (model : Xmppg.model L.t) =
            ]
   | _ -> return_nil
 
-let view_add_contact send_msg (model : Xmppg.model L.t) =
+let view_add_contact send_msg (model : Xmpp.model L.t) =
   match model with
   | L.Loaded model ->
       return
@@ -166,7 +165,7 @@ let view_add_contact send_msg (model : Xmppg.model L.t) =
                       | _ -> failwith "Invalid JID given while adding contact"
                     in
 
-                    send_msg @@ `XmppMsg (Xmppg.AddContact jid))
+                    send_msg @@ `XmppMsg (Xmpp.AddContact jid))
                 @@ form
                      [
                        label ~at:At.[ for' @@ Jstr.v "jid" ] [ txt' "JID" ];

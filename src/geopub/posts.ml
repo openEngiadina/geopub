@@ -132,7 +132,7 @@ let view_compose_form send_msg latlng =
           ~updated:(Ptime_clock.now ()) ()
       in
 
-      send_msg @@ `XmppMsg (Xmppg.PublishPost make_atom))
+      send_msg @@ `XmppMsg (Xmpp.PublishPost make_atom))
     El.(
       form
         ~at:At.[ class' @@ Jstr.v "post-compose" ]

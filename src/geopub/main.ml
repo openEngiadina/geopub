@@ -17,12 +17,12 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 (* Model *)
 
-type model = { route : Route.t; map : Mapg.t; posts : Posts.t; xmpp : Xmppg.t }
+type model = { route : Route.t; map : Mapg.t; posts : Posts.t; xmpp : Xmpp.t }
 
 let init () =
   Return.map
     (fun xmpp -> { route = About; map = None; posts = []; xmpp })
-    (Xmppg.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
+    (Xmpp.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
   |> Return.command (return @@ `MapMsg Mapg.Init)
 
 let update ~stop ~send_msg model msg =
@@ -33,7 +33,7 @@ let update ~stop ~send_msg model msg =
       ignore @@ Option.map Leaflet.Map.invalidate_size model.map;
       Return.singleton model
   | `XmppMsg msg ->
-      Xmppg.update
+      Xmpp.update
         ~send_msg:(fun msg ->
           let step = None in
           send_msg ?step msg)
@@ -103,7 +103,7 @@ let about_view =
 let menu send_msg model =
   let on_click msg el = Evr.on_el Ev.click (fun _ -> send_msg msg) el in
 
-  let jid = Xmppg.jid_opt model.xmpp in
+  let jid = Xmpp.jid_opt model.xmpp in
   let menu_header =
     El.(
       header
@@ -133,7 +133,6 @@ let menu send_msg model =
                   [
                     make_nav_entry "Activity" (Route.Posts None);
                     make_nav_entry "Map" Route.Map;
-                    make_nav_entry "Subscriptions" (Route.Posts None);
                   ];
               ];
             div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
@@ -141,7 +140,8 @@ let menu send_msg model =
               [
                 ul
                   [
-                    on_click (`XmppMsg Xmppg.Logout)
+                    make_nav_entry "" (Route.Posts None);
+                    on_click (`XmppMsg Xmpp.Logout)
                     @@ li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Logout" ] ];
                   ];
               ];
