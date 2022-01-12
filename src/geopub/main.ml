@@ -43,6 +43,7 @@ type msg =
   | `Logout
   | (* XMPP *)
     `XmppLoginResult of (Xmpp.model, exn) Result.t
+  | `XmppStanza of Xmpp.Stanza.t
   | (* Sub-components *)
     `PostsMsg of Posts.msg
   | `MapMsg of Mapg.msg
@@ -54,13 +55,12 @@ let init () : (model, msg Lwt.t) Return.t =
   |> Return.singleton
   (* Initialize map *)
   |> Return.command (return @@ `MapMsg Mapg.Init)
-  (* dev login *)
-  |> Return.command (return `LoginDev)
+(* dev login *)
+(* |> Return.command (return `LoginDev) *)
 
 let update ~stop ~send_msg model msg =
   ignore stop;
-  ignore send_msg;
-  Console.log [ msg ];
+  let send_msg msg = send_msg ?step:None msg in
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
@@ -70,35 +70,28 @@ let update ~stop ~send_msg model msg =
   | `LoginDev ->
       { model with xmpp = Loadable.Loading }
       |> Return.singleton
-      |> Return.command @@ Xmpp.login_dev ()
+      |> Return.command @@ Xmpp.login_dev send_msg ()
   | `LoginDemo ->
       { model with xmpp = Loadable.Loading }
       |> Return.singleton
-      |> Return.command @@ Xmpp.login_anonymous_demo ()
+      |> Return.command @@ Xmpp.login_anonymous_demo send_msg ()
   | `Login (jid, password) ->
       { model with xmpp = Loadable.Loading }
       |> Return.singleton
-      |> Return.command @@ Xmpp.login jid password
-  | `Logout -> model |> Return.singleton
+      |> Return.command @@ Xmpp.login send_msg jid password
+  | `Logout -> init ()
   (* XMPP *)
   | `XmppLoginResult (Ok client) ->
-      { model with xmpp = Loadable.Loaded client } |> Return.singleton
+      { model with xmpp = Loadable.Loaded client; route = Route.Posts None }
+      |> Return.singleton
   | `XmppLoginResult (Error _) ->
       { model with route = Route.Login; xmpp = Loadable.Idle }
       |> Return.singleton
   | `PostsMsg msg ->
-      Posts.update
-        ~send_msg:(fun msg ->
-          let step = None in
-          send_msg ?step msg)
-        model.map model.posts msg
+      Posts.update ~send_msg model.map model.posts msg
       |> Return.map (fun posts -> { model with posts })
   | `MapMsg msg ->
-      Mapg.update
-        ~send_msg:(fun msg ->
-          let step = None in
-          send_msg ?step msg)
-        model.map msg
+      Mapg.update ~send_msg model.map msg
       |> Return.map (fun map -> { model with map })
   (* | `ReceiveMessage msg ->
    *     Posts.update
