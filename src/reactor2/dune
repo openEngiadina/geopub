@@ -1,0 +1,9 @@
+(library
+ (name reactor2)
+ (modules reactor2)
+ (libraries lwt lwt_react))
+
+(executable
+  (name test)
+  (modules test)
+  (libraries lwt lwt_react lwt.unix reactor2))
