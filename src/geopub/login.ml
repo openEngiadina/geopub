@@ -84,12 +84,11 @@ let view send_msg model =
                       | _ -> failwith "We need better error handling"
                     in
 
-                    send_msg @@ `XmppMsg (Xmpp.Login (jid, password)))
+                    send_msg @@ `Login (jid, password))
                   login_form;
                 p
                   [
-                    Evr.on_el Ev.click (fun _ ->
-                        send_msg (`XmppMsg LoginAnonymousDemo))
+                    Evr.on_el Ev.click (fun _ -> send_msg `LoginDemo)
                     @@ a
                          ~at:At.[ href @@ Jstr.v "#" ]
                          [ txt' "Login anonymously with demo.opengiadina.net" ];

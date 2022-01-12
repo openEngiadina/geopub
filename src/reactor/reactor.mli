@@ -52,10 +52,7 @@ module App : sig
   (** [create ~init:init ~update:update] creates an app described by the provided [init] and [update] functions. *)
 
   val start : ('a, 'model, 'msg) t -> unit
-
   val model : ('a, 'model, 'msg) t -> 'model React.signal
-
   val send : ('a, 'model, 'msg) t -> ?step:React.step -> 'msg -> unit
-
   val result : ('a, 'model, 'msg) t -> ('a, exn) Lwt_result.t
 end

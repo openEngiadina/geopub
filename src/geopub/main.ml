@@ -17,28 +17,75 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 (* Model *)
 
-type model = { route : Route.t; map : Mapg.t; posts : Posts.t; xmpp : Xmpp.t }
+type model = {
+  route : Route.t;
+  map : Mapg.t;
+  posts : Posts.t;
+  xmpp : Xmpp.model Loadable.t;
+}
 
-let init () =
-  Return.map
-    (fun xmpp -> { route = About; map = None; posts = []; xmpp })
-    (Xmpp.init () |> Return.map_cmd (Lwt.map (fun msg -> `XmppMsg msg)))
+let xmpp_state model =
+  match model.xmpp with
+  | Loadable.Loaded xmpp -> Xmpp.state xmpp
+  | _ -> Xmpp.Client.Disconnected
+
+(* Messages *)
+
+type msg =
+  [ (* Navigation *)
+    `SetRoute of Route.t
+  | (* Hack to fix map *)
+    `InvalidateMapSize
+  | (* Authentication *)
+    `Login of Xmpp.Jid.t * string
+  | `LoginDev
+  | `LoginDemo
+  | `Logout
+  | (* XMPP *)
+    `XmppLoginResult of (Xmpp.model, exn) Result.t
+  | (* Sub-components *)
+    `PostsMsg of Posts.msg
+  | `MapMsg of Mapg.msg
+  | (* A hack and code smell *)
+    `NoOp ]
+
+let init () : (model, msg Lwt.t) Return.t =
+  { route = Route.About; map = None; posts = []; xmpp = Loadable.Idle }
+  |> Return.singleton
+  (* Initialize map *)
   |> Return.command (return @@ `MapMsg Mapg.Init)
+  (* dev login *)
+  |> Return.command (return `LoginDev)
 
 let update ~stop ~send_msg model msg =
   ignore stop;
+  ignore send_msg;
+  Console.log [ msg ];
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
       ignore @@ Option.map Leaflet.Map.invalidate_size model.map;
-      Return.singleton model
-  | `XmppMsg msg ->
-      Xmpp.update
-        ~send_msg:(fun msg ->
-          let step = None in
-          send_msg ?step msg)
-        model.xmpp msg
-      |> Return.map (fun xmpp -> { model with xmpp })
+      Return.singleton model (* Authentication *)
+  (* TODO *)
+  | `LoginDev ->
+      { model with xmpp = Loadable.Loading }
+      |> Return.singleton
+      |> Return.command @@ Xmpp.login_dev ()
+  | `LoginDemo ->
+      { model with xmpp = Loadable.Loading }
+      |> Return.singleton
+      |> Return.command @@ Xmpp.login_anonymous_demo ()
+  | `Login (jid, password) ->
+      { model with xmpp = Loadable.Loading }
+      |> Return.singleton
+      |> Return.command @@ Xmpp.login jid password
+  | `Logout -> model |> Return.singleton
+  (* XMPP *)
+  | `XmppLoginResult (Ok client) ->
+      { model with xmpp = Loadable.Loaded client } |> Return.singleton
+  | `XmppLoginResult (Error _) ->
+      { model with route = Route.Login; xmpp = Loadable.Idle }
+      |> Return.singleton
   | `PostsMsg msg ->
       Posts.update
         ~send_msg:(fun msg ->
@@ -53,13 +100,13 @@ let update ~stop ~send_msg model msg =
           send_msg ?step msg)
         model.map msg
       |> Return.map (fun map -> { model with map })
-  | `ReceiveMessage msg ->
-      Posts.update
-        ~send_msg:(fun msg ->
-          let step = None in
-          send_msg ?step msg)
-        model.map model.posts (Posts.ReceiveMessage msg)
-      |> Return.map (fun posts -> { model with posts })
+  (* | `ReceiveMessage msg ->
+   *     Posts.update
+   *       ~send_msg:(fun msg ->
+   *         let step = None in
+   *         send_msg ?step msg)
+   *       model.map model.posts (Posts.ReceiveMessage msg)
+   *     |> Return.map (fun posts -> { model with posts }) *)
   | _ -> Return.singleton model
 
 (* View *)
@@ -100,11 +147,10 @@ let about_view =
           ];
       ])
 
-let menu send_msg model =
+let menu send_msg (model : model) =
   let on_click msg el = Evr.on_el Ev.click (fun _ -> send_msg msg) el in
 
-  let jid = Xmpp.jid_opt model.xmpp in
-  let menu_header =
+  let menu_header jid =
     El.(
       header
         [
@@ -112,7 +158,7 @@ let menu send_msg model =
           @@ a
                ~at:At.[ href @@ Jstr.v "#" ]
                [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
-          txt' @@ Option.value ~default:"" jid;
+          txt' @@ Option.value ~default:"" @@ Option.map Xmpp.Jid.to_string jid;
         ])
   in
 
@@ -120,13 +166,13 @@ let menu send_msg model =
     on_click (`SetRoute route)
       El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])
   in
-  match jid with
-  | Some _ ->
+  match xmpp_state model with
+  | Xmpp.Client.Connected jid ->
       El.(
         nav
           ~at:At.[ id @@ Jstr.v "menu" ]
           [
-            menu_header;
+            menu_header (Some jid);
             nav
               [
                 ul
@@ -141,27 +187,30 @@ let menu send_msg model =
                 ul
                   [
                     make_nav_entry "" (Route.Posts None);
-                    on_click (`XmppMsg Xmpp.Logout)
+                    on_click `Logout
                     @@ li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Logout" ] ];
                   ];
               ];
           ])
-  | None ->
+  | Xmpp.Client.Disconnected ->
       El.(
         nav
           ~at:At.[ id @@ Jstr.v "menu" ]
-          [ menu_header; nav [ ul [ make_nav_entry "Login" Route.Login ] ] ])
+          [
+            menu_header None; nav [ ul [ make_nav_entry "Login" Route.Login ] ];
+          ])
 
 let view send_msg model =
   let* main =
     match model.route with
-    | Map -> Mapg.view send_msg model.map
+    | Route.Map -> Mapg.view send_msg model.map
     (* | Chat jid -> Chat.view send_msg model.xmpp jid *)
-    | Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts
-    | Roster jid -> Roster.view send_msg jid model.xmpp
-    | AddContact -> Roster.view_add_contact send_msg model.xmpp
-    | About -> return [ about_view ]
-    | Login -> return [ Login.view send_msg model.xmpp ]
+    | Route.Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts
+    (* | Roster jid -> Roster.view send_msg jid model.xmpp *)
+    (* | AddContact -> Roster.view_add_contact send_msg model.xmpp *)
+    | Route.About -> return [ about_view ]
+    | Route.Login -> return [ Login.view send_msg model.xmpp ]
+    | _ -> return []
   in
   return [ menu send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]
 

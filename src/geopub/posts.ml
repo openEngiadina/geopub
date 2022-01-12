@@ -132,7 +132,8 @@ let view_compose_form send_msg latlng =
           ~updated:(Ptime_clock.now ()) ()
       in
 
-      send_msg @@ `XmppMsg (Xmpp.PublishPost make_atom))
+      (* send_msg @@ `XmppMsg (Xmpp.PublishPost make_atom) *)
+      ignore make_atom)
     El.(
       form
         ~at:At.[ class' @@ Jstr.v "post-compose" ]
@@ -204,11 +205,11 @@ let view_compose_form send_msg latlng =
 
 let view send_msg latlng xmpp posts =
   match xmpp with
-  | L.Loaded xmpp ->
+  | L.Loaded _xmpp ->
       return
       @@ El.
            [
-             Roster.subscriptions_sidebar send_msg None xmpp;
+             (* Roster.subscriptions_sidebar send_msg None xmpp; *)
              div
                ~at:At.[ class' @@ Jstr.v "content" ]
                [
