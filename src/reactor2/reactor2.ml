@@ -1,5 +1,5 @@
 (*
- * SPDX-FileCopyrightText: 2021 pukkamustard <pukkamustard@posteo.net>
+ * SPDX-FileCopyrightText: 2021, 2022 pukkamustard <pukkamustard@posteo.net>
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
@@ -36,47 +36,62 @@ module App = struct
   type ('a, 'model, 'msg) subscriptions = 'model -> 'msg E.t
 
   let create ~init ~update ~subscriptions =
-    ignore subscriptions;
-
     (* app result and resolver *)
     let result, resolver = Lwt.task () in
     let on_exception e = Lwt.wakeup resolver (Error e) in
     let on_stop a = Lwt.wakeup resolver (Ok a) in
 
-    let msg_e, send_msg = E.create () in
+    let msg_e, send_msg = Lwt_stream.create () in
 
     (* let msg_stream, send_msg = Lwt_stream.create () in *)
     let run_effects (model, cmds) =
       List.iter
-        (fun cmd -> Lwt.on_any cmd (fun msg -> send_msg msg) on_exception)
+        (fun cmd ->
+          Lwt.on_any cmd (fun msg -> send_msg @@ Some msg) on_exception)
         cmds;
       model
+    in
+
+    let run_subscriptions (model, old_subscriptions) =
+      (* TODO is this atomic? Could a message be dropped while switching over? Probably shoud use E.switch... *)
+      E.stop old_subscriptions;
+      (model, subscriptions model |> E.map (fun msg -> send_msg @@ Some msg))
     in
 
     (* run the initial effects *)
     let init_model = run_effects @@ init () in
 
     let model =
-      S.fix ~eq:( == ) (Return.singleton init_model) (fun return_s ->
+      S.fix ~eq:( == )
+        ((init_model, E.never) |> run_subscriptions |> Return.singleton)
+        (fun return_s ->
+          let msg_e = E.of_stream msg_e in
+
           let update_e =
             E.map
               (fun msg return ->
-                Return.bind (fun model -> update ~stop:on_stop model msg) return
-                |> run_effects |> Return.singleton)
+                Return.bind
+                  (fun (model, subscription_e) ->
+                    update ~stop:on_stop model msg
+                    |> Return.map (fun model -> (model, subscription_e)))
+                  return
+                |> run_effects |> run_subscriptions |> Return.singleton)
               msg_e
           in
           let return_s = S.accum update_e (S.value return_s) in
-          (return_s, S.map fst return_s))
+
+          ( return_s,
+            S.map (fun ((model, _subscription_e), _cmds) -> model) return_s ))
     in
 
     (* stop the msg events when resolving return *)
     let result =
       result >>= fun value ->
-      E.stop msg_e;
+      send_msg None;
       return value
     in
 
-    { send = (fun msg -> send_msg ?step:None msg); model; result }
+    { send = (fun msg -> send_msg (Some msg)); model; result }
 
   let model t = t.model
   let send t msg = t.send msg
