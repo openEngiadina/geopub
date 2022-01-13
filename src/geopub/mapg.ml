@@ -17,7 +17,7 @@ type t = Leaflet.Map.t option
 type msg = Init | SetView of Leaflet.LatLng.t
 
 let create send_msg =
-  let map_container = El.div ~at:At.[ id (Jstr.v "map") ] [] in
+  let map_container = El.div ~at:At.[ id @@ Jstr.v "map" ] [] in
   let context_menu =
     Leaflet_contextmenu.Menu.
       [
@@ -28,6 +28,7 @@ let create send_msg =
               send_msg @@ `SetRoute (Route.Posts (Some latlng)) );
       ]
   in
+
   let map =
     Leaflet.Map.create
       ~options:(Leaflet_contextmenu.options context_menu)

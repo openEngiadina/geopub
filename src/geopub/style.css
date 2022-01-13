@@ -56,25 +56,25 @@ nav li a {
 #main {
     flex-grow: 1;
     overflow: auto;
-    display: flex;
 }
 
 .content {
     margin: 50px;
     height: 100%;
     flex-flow: 1;
-    max-width: 700px;
+    max-width: 800px;
     flex-grow: 1;
 }
 
 .text-content {
     width: 50vw;
-    max-width: 700px;
+    max-width: 800px;
     height: 100%;
     margin: auto;
 }
 
 #map {
+    flex-grow: 1;
     height: 100%;
     width: 100%;
 }
@@ -85,38 +85,6 @@ nav li a {
     margin: 10px;
 }
 
-
-/* Chat */
-
-.chat {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 10px;
-}
-
-.chat-compose {
-    width: 100%;
-}
-
-.messages {
-    flex-grow: 1;
-    overflow-y: auto;
-    margin: 10px;
-    list-style-type: none;
-}
-
-.message {
-    paddig: 5px;
-}
-
-.message-from {
-    font-weight: lighter;
-}
-
-.message-body {
-    margin-left: 2em;
-}
 
 /* Roster */
 
@@ -168,31 +136,63 @@ nav li a {
     flex-grow: 1;
 }
 
-/* The posts view */
+/* The activity timeline view */
 
-ul.posts {
+ul.activity {
     margin: 0;
     list-style-type: none;
     padding-left: 0;
     width: 100%;
 }
 
-.posts li {
+.activity li {
     border-bottom: solid 0.3px grey;
 }
 
-.post {
+
+/* Individual post */
+
+.activity article {
+    margin-top: 20px;
     display: flex;
-    width: 100%;
     flex-direction: column;
 }
 
-.post-meta {
+.activity article header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.activity article .post-from {
+    min-width: 33%;
+}
+
+.activity article .post-title {
+    min-width: 33%;
+}
+
+.activity article .post-date {
+    min-width: 33%;
+}
+
+
+.activity article .post-date {
     text-align: right;
-    align-self: flex-end;
     color: grey;
 }
 
-/* an individual atom entry */
-.atom-entry {
+.activity article .post-content {
+    flex-grow: 1;
+}
+
+
+.activity article footer {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.article article .post-geoloc {
+    flex-grow: 1;
 }

@@ -8,6 +8,7 @@ type t =
   | About
   | Login
   | Map
+  | Activity
   | Posts of Leaflet.LatLng.t option
   | Roster of Xmppl.Jid.t
   | AddContact

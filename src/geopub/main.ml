@@ -20,7 +20,7 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 type model = {
   route : Route.t;
   map : Mapg.t;
-  posts : Posts.t;
+  posts : Xep_0277.Post.t list;
   xmpp : Xmpp.model Loadable.t;
 }
 
@@ -40,9 +40,12 @@ type msg =
     `XmppLoginResult of (Xmpp.model, exn) Result.t
   | `XmppStateUpdate of Xmpp.Client.state
   | `XmppStanza of Xmpp.Stanza.t
+  | (* Database *)
+    `DatabaseAdd of (Xep_0277.Post.t, exn) Result.t
+  | (* Map      *)
+    `ViewOnMap of Xep_0277.Post.t
   | (* Sub-components *)
-    `PostsMsg of Posts.msg
-  | `MapMsg of Mapg.msg
+    `MapMsg of Mapg.msg
   | (* A hack and code smell *)
     `NoOp ]
 
@@ -60,8 +63,8 @@ let update ~stop model msg =
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
       ignore @@ Option.map Leaflet.Map.invalidate_size model.map;
-      Return.singleton model (* Authentication *)
-  (* TODO *)
+      model |> Return.singleton
+  (* Authentication *)
   | `LoginDev ->
       { model with xmpp = Loadable.Loading }
       |> Return.singleton
@@ -77,7 +80,7 @@ let update ~stop model msg =
   | `Logout -> init ()
   (* XMPP *)
   | `XmppLoginResult (Ok xmpp) ->
-      { model with xmpp = Loadable.Loaded xmpp; route = Route.Posts None }
+      { model with xmpp = Loadable.Loaded xmpp; route = Route.Activity }
       |> Return.singleton
       (* Manually cause a XmppStateUpdate *)
       |> Return.command
@@ -93,11 +96,15 @@ let update ~stop model msg =
           Loadable.map (fun xmpp : Xmpp.model -> { xmpp with state }) model.xmpp;
       }
       |> Return.singleton
-  | `XmppStanza _stanza -> model |> Return.singleton
+  | `XmppStanza (Xmpp.Stanza.Message message) ->
+      model |> Return.singleton
+      |> Return.command
+           (Xep_0277.parse message >|= fun post -> `DatabaseAdd post)
+  (* Database *)
+  | `DatabaseAdd (Ok post) ->
+      { model with posts = post :: model.posts } |> Return.singleton
+  | `ViewOnMap _post -> { model with route = Route.Map } |> Return.singleton
   (* Components *)
-  | `PostsMsg msg ->
-      Posts.update ~send_msg:(fun _ -> ()) model.map model.posts msg
-      |> Return.map (fun posts -> { model with posts })
   | `MapMsg msg ->
       Mapg.update ~send_msg:(fun _ -> ()) model.map msg
       |> Return.map (fun map -> { model with map })
@@ -123,7 +130,7 @@ let subscriptions model =
 let about_view =
   El.(
     div
-      ~at:At.[ class' @@ Jstr.v "text-content" ]
+      ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "text-content" ]
       [
         h1 [ txt' "GeoPub" ];
         p [ txt' "Version 0.4.0-dev" ];
@@ -186,7 +193,7 @@ let menu send_msg (model : model) =
               [
                 ul
                   [
-                    make_nav_entry "Activity" (Route.Posts None);
+                    make_nav_entry "Activity" Route.Activity;
                     make_nav_entry "Map" Route.Map;
                   ];
               ];
@@ -195,7 +202,7 @@ let menu send_msg (model : model) =
               [
                 ul
                   [
-                    make_nav_entry "" (Route.Posts None);
+                    make_nav_entry "Subscriptions" Route.Activity;
                     on_click `Logout
                     @@ li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Logout" ] ];
                   ];
@@ -210,18 +217,19 @@ let menu send_msg (model : model) =
           ])
 
 let view send_msg model =
-  let* main =
+  let* content =
     match model.route with
     | Route.Map -> Mapg.view send_msg model.map
     (* | Chat jid -> Chat.view send_msg model.xmpp jid *)
-    | Route.Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts
+    (* | Route.Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts *)
     (* | Roster jid -> Roster.view send_msg jid model.xmpp *)
     (* | AddContact -> Roster.view_add_contact send_msg model.xmpp *)
+    | Route.Activity -> return @@ Activity.view ~send_msg model.posts
     | Route.About -> return [ about_view ]
     | Route.Login -> return [ Login.view send_msg model.xmpp ]
     | _ -> return []
   in
-  return [ menu send_msg model; El.(div ~at:At.[ id @@ Jstr.v "main" ] main) ]
+  return (menu send_msg model :: content)
 
 (* A small hack to invalidate the size of the Leaflet map when it is
    dynamically loaded. If not it would not be displayed correctly until a
@@ -229,8 +237,7 @@ let view send_msg model =
 let observe_for_map el send_msg =
   let observer records _obs =
     let on_node node =
-      let el = El.to_jv node in
-      match Jv.(to_option to_string @@ get el "id") with
+      match Jv.(to_option to_string @@ get node "id") with
       | Some "map" -> send_msg `InvalidateMapSize
       | _ -> ()
     in
@@ -238,13 +245,12 @@ let observe_for_map el send_msg =
     records
     |> Jv.to_list (fun x -> x)
     |> List.map (fun record ->
-           Jv.to_list (fun node -> El.children @@ El.of_jv node)
-           @@ Jv.get record "addedNodes")
-    |> List.flatten |> List.flatten |> List.iter on_node
+           Jv.to_list (fun x -> x) @@ Jv.get record "addedNodes")
+    |> List.flatten |> List.iter on_node
   in
   let mutation_observer = Jv.get Jv.global "MutationObserver" in
   let observer = Jv.new' mutation_observer [| Jv.repr observer |] in
-  let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.true') |] in
+  let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
   ignore @@ Jv.call observer "observe" [| El.to_jv el; opts |]
 
 (* Start the application *)

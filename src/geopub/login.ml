@@ -49,7 +49,13 @@ let view send_msg model =
   in
   El.(
     div
-      ~at:At.[ id @@ Jstr.v "login"; class' @@ Jstr.v "text-content" ]
+      ~at:
+        At.
+          [
+            id @@ Jstr.v "main";
+            class' @@ Jstr.v "login";
+            class' @@ Jstr.v "text-content";
+          ]
       [
         h1 [ txt' "Login" ];
         p [ txt' "You may login using any XMPP account." ];
