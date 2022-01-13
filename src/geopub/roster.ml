@@ -7,10 +7,8 @@
 open Reactor_brr
 open Brr
 open Brr_io
-open Lwt
-module L = Loadable
 
-let subscriptions_sidebar send_msg selected_jid (model : Xmpp.model) =
+let view_roster ~send_msg xmpp roster =
   let contact_item_el (jid, _contact) =
     El.(
       li
@@ -19,34 +17,34 @@ let subscriptions_sidebar send_msg selected_jid (model : Xmpp.model) =
              (fun x -> x)
              At.
                [
-                 Option.some @@ class' @@ Jstr.v "roster-item";
-                 Option.bind selected_jid (fun selected_jid ->
-                     if selected_jid = jid then
-                       Option.some @@ class' @@ Jstr.v "roster-item-selected"
-                     else None);
+                 Option.some @@ class' @@ Jstr.v "roster-item"
+                 (* Option.bind selected_jid (fun selected_jid ->
+                  *     if selected_jid = jid then
+                  *       Option.some @@ class' @@ Jstr.v "roster-item-selected"
+                  *     else None); *);
                ])
         [
-          Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute (Route.Roster jid))
+          Evr.on_el Ev.click (fun _ ->
+              send_msg @@ `SetRoute (Route.RosterItem jid))
           @@ a
                ~at:At.[ href @@ Jstr.v "#" ]
-               [ txt' @@ Xmpp.contact_display_name model jid ];
+               [ txt' @@ Xmpp.display_name xmpp jid ];
         ])
   in
   El.(
     div
-      ~at:At.[ class' @@ Jstr.v "sidebar" ]
+      ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
       [
         h3 [ txt' "Contacts" ];
         ul
           ~at:At.[ class' @@ Jstr.v "roster" ]
-          (Xmppl.Jid.Map.to_seq model.roster
-          |> Seq.map contact_item_el |> List.of_seq);
+          (Xmpp.Jid.Map.to_seq roster |> Seq.map contact_item_el |> List.of_seq);
         Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.AddContact)
         @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Add contact" ];
       ])
 
-let contact_subscription_from (model : Xmpp.model) jid =
-  Xmppl.Jid.Map.find_opt jid model.roster
+let contact_subscription_from roster jid =
+  Xmppl.Jid.Map.find_opt jid roster
   |> Option.map (fun (roster_item : Xmpp.Roster.Item.t) ->
          let subscription =
            roster_item.subscription |> Option.value ~default:"none"
@@ -58,8 +56,8 @@ let contact_subscription_from (model : Xmpp.model) jid =
          || subscription = "both")
   |> Option.value ~default:false
 
-let contact_subscription_to (model : Xmpp.model) jid =
-  Xmppl.Jid.Map.find_opt jid model.roster
+let contact_subscription_to roster jid =
+  Xmppl.Jid.Map.find_opt jid roster
   |> Option.map (fun (roster_item : Xmpp.Roster.Item.t) ->
          let subscription =
            roster_item.subscription |> Option.value ~default:"none"
@@ -68,126 +66,103 @@ let contact_subscription_to (model : Xmpp.model) jid =
          subscription = "to" || subscription = "both" || ask = "subscribe")
   |> Option.value ~default:false
 
-let view send_msg jid (model : Xmpp.model L.t) =
-  match model with
-  | L.Loaded model ->
-      return
-      @@ El.
-           [
-             subscriptions_sidebar send_msg (Some jid) model;
-             div
-               [
-                 Evr.on_el Ev.click (fun _ ->
-                     send_msg @@ `SetRoute (Route.Posts None))
-                 @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to posts" ];
-                 h2 [ txt' @@ Xmpp.contact_display_name model jid ];
-                 dl
-                   [
-                     dt [ txt' "JID" ];
-                     dd [ txt' @@ Xmppl.Jid.to_string jid ];
-                     dt [ txt' "Send posts and presence updates" ];
-                     dd
-                       [
-                         Evr.on_el Ev.click (fun _ ->
-                             if contact_subscription_from model jid then
-                               send_msg
-                               @@ `XmppMsg (Xmpp.PresenceDenySubscription jid)
-                             else
-                               send_msg
-                               @@ `XmppMsg
-                                    (Xmpp.PresenceApproveSubscription jid))
-                         @@ input
-                              ~at:
-                                At.(
-                                  List.filter_map
-                                    (fun x -> x)
-                                    [
-                                      Some (type' @@ Jstr.v "checkbox");
-                                      (if contact_subscription_from model jid
-                                      then Some checked
-                                      else None);
-                                    ])
-                              ();
-                       ];
-                     dt [ txt' "Receive posts and presence updates" ];
-                     dd
-                       [
-                         Evr.on_el Ev.click (fun _ ->
-                             if contact_subscription_to model jid then
-                               send_msg
-                               @@ `XmppMsg (Xmpp.PresenceUnsubscribe jid)
-                             else
-                               send_msg @@ `XmppMsg (Xmpp.PresenceSubscribe jid))
-                         @@ input
-                              ~at:
-                                At.(
-                                  List.filter_map
-                                    (fun x -> x)
-                                    [
-                                      Some (type' @@ Jstr.v "checkbox");
-                                      (if contact_subscription_to model jid then
-                                       Some checked
-                                      else None);
-                                    ])
-                              ();
-                       ];
-                   ];
-               ];
-           ]
-  | _ -> return_nil
-
-let view_add_contact send_msg (model : Xmpp.model L.t) =
-  match model with
-  | L.Loaded model ->
-      return
-        El.
+let view_contact ~send_msg jid xmpp roster =
+  El.(
+    div
+      ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
+      [
+        Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.Roster)
+        @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to all contacts" ];
+        h2 [ txt' @@ Xmpp.display_name xmpp jid ];
+        dl
           [
-            subscriptions_sidebar send_msg None model;
-            div
+            dt [ txt' "JID" ];
+            dd [ txt' @@ Xmppl.Jid.to_string jid ];
+            dt [ txt' "Send posts and presence updates" ];
+            dd
               [
                 Evr.on_el Ev.click (fun _ ->
-                    send_msg @@ `SetRoute (Route.Posts None))
-                @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to posts" ];
-                Evr.on_el ~default:false Form.Ev.submit (fun ev ->
-                    let form_data =
-                      Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
-                      @@ Ev.target ev
-                    in
-
-                    let jid_value =
-                      Form.Data.find form_data (Jstr.v "jid") |> Option.get
-                    in
-
-                    let jid =
-                      match jid_value with
-                      | `String js ->
-                          Jstr.to_string js |> Xmppl.Jid.of_string_exn
-                      | _ -> failwith "Invalid JID given while adding contact"
-                    in
-
-                    send_msg @@ `XmppMsg (Xmpp.AddContact jid))
-                @@ form
-                     [
-                       label ~at:At.[ for' @@ Jstr.v "jid" ] [ txt' "JID" ];
-                       input
-                         ~at:
-                           At.
-                             [
-                               id @@ Jstr.v "jid";
-                               name @@ Jstr.v "jid";
-                               type' @@ Jstr.v "text";
-                             ]
-                         ();
-                       input
-                         ~at:
-                           At.
-                             [
-                               id @@ Jstr.v "add";
-                               type' @@ Jstr.v "submit";
-                               value @@ Jstr.v "Add contact";
-                             ]
-                         ();
-                     ];
+                    if contact_subscription_from roster jid then
+                      send_msg @@ `XmppPresenceDenySubscription jid
+                    else send_msg @@ `XmppPresenceApproveSubscription jid)
+                @@ input
+                     ~at:
+                       At.(
+                         List.filter_map
+                           (fun x -> x)
+                           [
+                             Some (type' @@ Jstr.v "checkbox");
+                             (if contact_subscription_from roster jid then
+                              Some checked
+                             else None);
+                           ])
+                     ();
               ];
-          ]
-  | _ -> return_nil
+            dt [ txt' "Receive posts and presence updates" ];
+            dd
+              [
+                Evr.on_el Ev.click (fun _ ->
+                    if contact_subscription_to roster jid then
+                      send_msg @@ `XmppPresenceUnsubscribe jid
+                    else send_msg @@ `XmppPresenceSubscribe jid)
+                @@ input
+                     ~at:
+                       At.(
+                         List.filter_map
+                           (fun x -> x)
+                           [
+                             Some (type' @@ Jstr.v "checkbox");
+                             (if contact_subscription_to roster jid then
+                              Some checked
+                             else None);
+                           ])
+                     ();
+              ];
+          ];
+      ])
+
+let view_add_contact ~send_msg =
+  El.(
+    div
+      [
+        Evr.on_el Ev.click (fun _ -> send_msg @@ `SetRoute Route.Roster)
+        @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Back to all contacts" ];
+        Evr.on_el ~default:false Form.Ev.submit (fun ev ->
+            let form_data =
+              Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
+            in
+
+            let jid_value =
+              Form.Data.find form_data (Jstr.v "jid") |> Option.get
+            in
+
+            let jid =
+              match jid_value with
+              | `String js -> Jstr.to_string js |> Xmppl.Jid.of_string_exn
+              | _ -> failwith "Invalid JID given while adding contact"
+            in
+
+            send_msg @@ `XmppRosterAddContact jid)
+        @@ form
+             [
+               label ~at:At.[ for' @@ Jstr.v "jid" ] [ txt' "JID" ];
+               input
+                 ~at:
+                   At.
+                     [
+                       id @@ Jstr.v "jid";
+                       name @@ Jstr.v "jid";
+                       type' @@ Jstr.v "text";
+                     ]
+                 ();
+               input
+                 ~at:
+                   At.
+                     [
+                       id @@ Jstr.v "add";
+                       type' @@ Jstr.v "submit";
+                       value @@ Jstr.v "Add contact";
+                     ]
+                 ();
+             ];
+      ])

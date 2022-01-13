@@ -10,3 +10,5 @@ let map f = function
   | Idle -> Idle
   | Loading -> Loading
   | Loaded v -> Loaded (f v)
+
+let to_option = function Idle -> None | Loading -> None | Loaded v -> Some v

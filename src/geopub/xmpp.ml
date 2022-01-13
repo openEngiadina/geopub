@@ -25,6 +25,7 @@ type model = {
   client : Client.t;
   state : Client.state;
   ec_responder : unit E.t;
+  roster : Roster.roster S.t;
 }
 
 (* Initialization *)
@@ -48,7 +49,8 @@ let connect client =
   Lwt_result.(
     catch @@ Client.connect client >>= fun _ ->
     let* ec_responder = start_ec_responder client in
-    return { client; state = Client.Disconnected; ec_responder })
+    let* roster = Roster.roster client in
+    return { client; state = Client.Disconnected; ec_responder; roster })
   >|= fun r -> `XmppLoginResult r
 
 let login jid password =
@@ -77,16 +79,30 @@ let subscriptions model =
       S.changes @@ Client.state model.client
       |> E.map (fun state -> `XmppStateUpdate state);
       Client.stanzas model.client |> E.map (fun stanza -> `XmppStanza stanza);
+      S.changes @@ model.roster
+      |> E.map (fun roster -> `XmppRosterUpdate roster);
     ]
 
 (* Roster management *)
 
-let roster client = Roster.roster client
-let roster_add client jid = Roster.add_update client jid
+let roster_add xmpp jid = Roster.add_update xmpp.client jid >|= fun _ -> `NoOp
+
+let display_name xmpp jid =
+  Option.bind
+    (Jid.Map.find_opt (Jid.bare jid) (S.value xmpp.roster))
+    (fun (item : Roster.Item.t) -> item.name)
+  |> Option.value ~default:(Jid.to_string @@ Jid.bare jid)
 
 (* Presence subscription management *)
 
-let presense_subscribe = Roster.presence_subscribe
-let presence_unsubscribe = Roster.presence_unsubscribe
-let approve_presence_subscription = Roster.approve_presence_subscription
-let deny_presence_subscription = Roster.deny_presence_subscription
+let presence_subscribe xmpp jid =
+  Roster.presence_subscribe xmpp.client jid >|= fun _ -> `NoOp
+
+let presence_unsubscribe xmpp jid =
+  Roster.presence_unsubscribe xmpp.client jid >|= fun _ -> `NoOp
+
+let approve_presence_subscription xmpp jid =
+  Roster.approve_presence_subscription xmpp.client jid >|= fun _ -> `NoOp
+
+let deny_presence_subscription xmpp jid =
+  Roster.deny_presence_subscription xmpp.client jid >|= fun _ -> `NoOp

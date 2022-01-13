@@ -22,6 +22,7 @@ type model = {
   map : Mapg.t;
   posts : Xep_0277.Post.t list;
   xmpp : Xmpp.model Loadable.t;
+  roster : Xmpp.Roster.roster;
 }
 
 (* Messages *)
@@ -39,7 +40,13 @@ type msg =
   | (* XMPP *)
     `XmppLoginResult of (Xmpp.model, exn) Result.t
   | `XmppStateUpdate of Xmpp.Client.state
+  | `XmppRosterUpdate of Xmpp.Roster.roster
+  | `XmppRosterAddContact of Xmpp.Jid.t
   | `XmppStanza of Xmpp.Stanza.t
+  | `XmppPresenceDenySubscription of Xmpp.Jid.t
+  | `XmppPresenceApproveSubscription of Xmpp.Jid.t
+  | `XmppPresenceUnsubscribe of Xmpp.Jid.t
+  | `XmppPresenceSubscribe of Xmpp.Jid.t
   | (* Database *)
     `DatabaseAdd of (Xep_0277.Post.t, exn) Result.t
   | (* Map      *)
@@ -48,7 +55,13 @@ type msg =
     `NoOp ]
 
 let init () : (model, msg) Return.t =
-  { route = Route.About; map = Mapg.init (); posts = []; xmpp = Loadable.Idle }
+  {
+    route = Route.About;
+    map = Mapg.init ();
+    posts = [];
+    xmpp = Loadable.Idle;
+    roster = Xmpp.Jid.Map.empty;
+  }
   |> Return.singleton
   (* dev login *)
   |> Return.command (return `LoginDev)
@@ -82,6 +95,7 @@ let update ~stop model msg =
       |> Return.command
            (return
            @@ `XmppStateUpdate (S.value @@ Xmpp.Client.state xmpp.client))
+      |> Return.command (return @@ `XmppRosterUpdate (S.value @@ xmpp.roster))
   | `XmppLoginResult (Error _) ->
       { model with route = Route.Login; xmpp = Loadable.Idle }
       |> Return.singleton
@@ -92,10 +106,44 @@ let update ~stop model msg =
           Loadable.map (fun xmpp : Xmpp.model -> { xmpp with state }) model.xmpp;
       }
       |> Return.singleton
+  | `XmppRosterUpdate roster ->
+      Console.log [ Jstr.v @@ "RosterUpdate" ];
+      { model with roster } |> Return.singleton
+  | `XmppRosterAddContact jid ->
+      model |> Return.singleton
+      |> Return.command
+           (model.xmpp |> Loadable.to_option
+           |> Option.map (fun xmpp -> Xmpp.roster_add xmpp jid)
+           |> Option.value ~default:(return `NoOp))
   | `XmppStanza (Xmpp.Stanza.Message message) ->
       model |> Return.singleton
       |> Return.command
            (Xep_0277.parse message >|= fun post -> `DatabaseAdd post)
+  | `XmppPresenceDenySubscription jid ->
+      model |> Return.singleton
+      |> Return.command
+           (model.xmpp |> Loadable.to_option
+           |> Option.map (fun xmpp -> Xmpp.deny_presence_subscription xmpp jid)
+           |> Option.value ~default:(return `NoOp))
+  | `XmppPresenceApproveSubscription jid ->
+      model |> Return.singleton
+      |> Return.command
+           (model.xmpp |> Loadable.to_option
+           |> Option.map (fun xmpp ->
+                  Xmpp.approve_presence_subscription xmpp jid)
+           |> Option.value ~default:(return `NoOp))
+  | `XmppPresenceSubscribe jid ->
+      model |> Return.singleton
+      |> Return.command
+           (model.xmpp |> Loadable.to_option
+           |> Option.map (fun xmpp -> Xmpp.presence_subscribe xmpp jid)
+           |> Option.value ~default:(return `NoOp))
+  | `XmppPresenceUnsubscribe jid ->
+      model |> Return.singleton
+      |> Return.command
+           (model.xmpp |> Loadable.to_option
+           |> Option.map (fun xmpp -> Xmpp.presence_unsubscribe xmpp jid)
+           |> Option.value ~default:(return `NoOp))
   (* Database *)
   | `DatabaseAdd (Ok post) ->
       {
@@ -200,7 +248,7 @@ let menu send_msg (model : model) =
               [
                 ul
                   [
-                    make_nav_entry "Subscriptions" Route.Activity;
+                    make_nav_entry "Contacts" Route.Roster;
                     on_click `Logout
                     @@ li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "Logout" ] ];
                   ];
@@ -217,16 +265,23 @@ let menu send_msg (model : model) =
 let view send_msg model =
   let* content =
     match model.route with
-    | Route.Map -> return @@ [ Mapg.view ~send_msg model.map ]
-    (* | Chat jid -> Chat.view send_msg model.xmpp jid *)
-    (* | Route.Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts *)
-    (* | Roster jid -> Roster.view send_msg jid model.xmpp *)
-    (* | AddContact -> Roster.view_add_contact send_msg model.xmpp *)
-    | Route.Activity -> return @@ Activity.view ~send_msg model.posts
     | Route.About -> return [ about_view ]
     | Route.Login -> return [ Login.view send_msg model.xmpp ]
-    | _ -> return []
+    | Route.Activity -> return @@ Activity.view ~send_msg model.posts
+    | Route.Map -> return @@ [ Mapg.view ~send_msg model.map ]
+    | Route.Roster -> (
+        match model.xmpp with
+        | Loadable.Loaded xmpp ->
+            return @@ [ Roster.view_roster ~send_msg xmpp model.roster ]
+        | _ -> return @@ [])
+    | Route.RosterItem jid -> (
+        match model.xmpp with
+        | Loadable.Loaded xmpp ->
+            return @@ [ Roster.view_contact ~send_msg jid xmpp model.roster ]
+        | _ -> return @@ [])
+    | Route.AddContact -> return @@ [ Roster.view_add_contact ~send_msg ]
   in
+
   return (menu send_msg model :: content)
 
 (* A small hack to invalidate the size of the Leaflet map when it is
@@ -256,7 +311,7 @@ let observe_for_map el send_msg =
 let main =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
-  Logs.set_level @@ Some Logs.Info;
+  Logs.set_level @@ Some Logs.Debug;
 
   (* Initialize the application *)
   let geopub = App.create ~init ~update ~subscriptions in
