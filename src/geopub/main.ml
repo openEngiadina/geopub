@@ -115,8 +115,7 @@ let subscriptions model =
       | Loadable.Loaded xmpp -> Xmpp.subscriptions xmpp
       | _ -> E.never);
       (* TODO handle create post here *)
-      Mapg.subscriptions model.map
-      |> E.map (function Mapg.CreatePost _latlng -> `NoOp);
+      Mapg.subscriptions model.map |> E.map (fun _ -> `NoOp);
     ]
 
 (* View *)

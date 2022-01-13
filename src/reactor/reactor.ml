@@ -54,7 +54,8 @@ module App = struct
 
     let run_subscriptions (model, old_subscriptions) =
       (* TODO is this atomic? Could a message be dropped while switching over? Probably shoud use E.switch... *)
-      E.stop old_subscriptions;
+      (* strong stop is only for JavaScript. How to unset if not in Javascript land? *)
+      E.stop ~strong:true old_subscriptions;
       (model, subscriptions model |> E.map (fun msg -> send_msg @@ Some msg))
     in
 

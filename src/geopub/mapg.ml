@@ -5,10 +5,9 @@
  *)
 
 open Brr
-open Lwt_react
 
-type msg = CreatePost of Leaflet.LatLng.t
-type t = { events : msg E.t; leaflet : Leaflet.Map.t }
+type msg = CreatePost of Leaflet.LatLng.t | Click of Leaflet.LatLng.t
+type t = { events : msg Lwt_stream.t; leaflet : Leaflet.Map.t }
 
 (* We need a Init message to pass the `send_msg` function to the
    Leaflet map. The Reactor init function does not pass this, only the
@@ -17,7 +16,7 @@ type t = { events : msg E.t; leaflet : Leaflet.Map.t }
 (* type msg = Init | SetView of Leaflet.LatLng.t *)
 
 let init () =
-  let events, send_msg = E.create () in
+  let events, send_msg = Lwt_stream.create () in
   let map_container = El.div ~at:At.[ id @@ Jstr.v "map" ] [] in
 
   (* create a context menu *)
@@ -28,7 +27,7 @@ let init () =
           ( "Create post here",
             fun e ->
               let latlng = Leaflet.Ev.MouseEvent.latlng e in
-              send_msg @@ CreatePost latlng );
+              send_msg @@ Option.some @@ CreatePost latlng );
       ]
   in
 
@@ -41,7 +40,8 @@ let init () =
 
   (* Set up a listener for clicks on the map (currently not used) *)
   Ev.listen Leaflet.Map.click (fun e ->
-      Console.log [ e |> Ev.as_type |> Leaflet.Ev.MouseEvent.latlng ])
+      let latlng = e |> Ev.as_type |> Leaflet.Ev.MouseEvent.latlng in
+      send_msg @@ Option.some @@ Click latlng)
   @@ Leaflet.Map.as_target map;
 
   (* add the OSM tile layer *)
@@ -71,7 +71,7 @@ let add_post post model =
 
 (* Subscription and view *)
 
-let subscriptions model = model.events
+let subscriptions model = model.events |> Lwt_react.E.of_stream
 
 let view ~send_msg model =
   ignore send_msg;
