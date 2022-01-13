@@ -69,6 +69,9 @@ let add_post post model =
       model
   | None -> model
 
+let set_view latlng model =
+  { model with leaflet = Leaflet.Map.set_view latlng ~zoom:10 model.leaflet }
+
 (* Subscription and view *)
 
 let subscriptions model = model.events |> Lwt_react.E.of_stream

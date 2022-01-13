@@ -15,11 +15,8 @@ let ns_pubsub_event local = ("http://jabber.org/protocol/pubsub#event", local)
 module Post = struct
   type t = { message : Xmppl.Stanza.Message.t; atom : Atom.Entry.t }
 
-  let to_marker post =
-    match post.atom.geoloc with
-    | Some geoloc ->
-        geoloc |> Geoloc.to_latlng |> Leaflet.Marker.create |> Option.some
-    | _ -> None
+  let to_latlng post = Option.map Geoloc.to_latlng post.atom.geoloc
+  let to_marker post = Option.map Leaflet.Marker.create @@ to_latlng post
 end
 
 let parse (message : Xmppl.Stanza.Message.t) =

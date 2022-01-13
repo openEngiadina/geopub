@@ -104,7 +104,12 @@ let update ~stop model msg =
         posts = post :: model.posts;
       }
       |> Return.singleton
-  | `ViewOnMap _post -> { model with route = Route.Map } |> Return.singleton
+  | `ViewOnMap post -> (
+      match Xep_0277.Post.to_latlng post with
+      | Some latlng ->
+          { model with route = Route.Map; map = Mapg.set_view latlng model.map }
+          |> Return.singleton
+      | None -> model |> Return.singleton)
   (* Catch all *)
   | _ -> Return.singleton model
 
