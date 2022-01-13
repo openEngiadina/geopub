@@ -44,16 +44,12 @@ type msg =
     `DatabaseAdd of (Xep_0277.Post.t, exn) Result.t
   | (* Map      *)
     `ViewOnMap of Xep_0277.Post.t
-  | (* Sub-components *)
-    `MapMsg of Mapg.msg
   | (* A hack and code smell *)
     `NoOp ]
 
 let init () : (model, msg) Return.t =
-  { route = Route.About; map = None; posts = []; xmpp = Loadable.Idle }
+  { route = Route.About; map = Mapg.init (); posts = []; xmpp = Loadable.Idle }
   |> Return.singleton
-  (* Initialize map *)
-  |> Return.command (return @@ `MapMsg Mapg.Init)
   (* dev login *)
   |> Return.command (return `LoginDev)
 
@@ -62,7 +58,7 @@ let update ~stop model msg =
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
-      ignore @@ Option.map Leaflet.Map.invalidate_size model.map;
+      Mapg.invalidate_size model.map;
       model |> Return.singleton
   (* Authentication *)
   | `LoginDev ->
@@ -102,19 +98,14 @@ let update ~stop model msg =
            (Xep_0277.parse message >|= fun post -> `DatabaseAdd post)
   (* Database *)
   | `DatabaseAdd (Ok post) ->
-      { model with posts = post :: model.posts } |> Return.singleton
+      {
+        model with
+        map = Mapg.add_post post model.map;
+        posts = post :: model.posts;
+      }
+      |> Return.singleton
   | `ViewOnMap _post -> { model with route = Route.Map } |> Return.singleton
-  (* Components *)
-  | `MapMsg msg ->
-      Mapg.update ~send_msg:(fun _ -> ()) model.map msg
-      |> Return.map (fun map -> { model with map })
-  (* | `ReceiveMessage msg ->
-   *     Posts.update
-   *       ~send_msg:(fun msg ->
-   *         let step = None in
-   *         send_msg ?step msg)
-   *       model.map model.posts (Posts.ReceiveMessage msg)
-   *     |> Return.map (fun posts -> { model with posts }) *)
+  (* Catch all *)
   | _ -> Return.singleton model
 
 let subscriptions model =
@@ -123,6 +114,9 @@ let subscriptions model =
       (match model.xmpp with
       | Loadable.Loaded xmpp -> Xmpp.subscriptions xmpp
       | _ -> E.never);
+      (* TODO handle create post here *)
+      Mapg.subscriptions model.map
+      |> E.map (function Mapg.CreatePost _latlng -> `NoOp);
     ]
 
 (* View *)
@@ -219,7 +213,7 @@ let menu send_msg (model : model) =
 let view send_msg model =
   let* content =
     match model.route with
-    | Route.Map -> Mapg.view send_msg model.map
+    | Route.Map -> return @@ [ Mapg.view ~send_msg model.map ]
     (* | Chat jid -> Chat.view send_msg model.xmpp jid *)
     (* | Route.Posts latlng -> Posts.view send_msg latlng model.xmpp model.posts *)
     (* | Roster jid -> Roster.view send_msg jid model.xmpp *)
