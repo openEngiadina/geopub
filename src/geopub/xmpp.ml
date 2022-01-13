@@ -23,14 +23,11 @@ module Pubsub = Xmppl_pubsub.Make (Client)
 
 type model = {
   client : Client.t;
-  state_s : Client.state S.t;
-  stanza_listener : unit E.t;
+  state : Client.state;
   ec_responder : unit E.t;
 }
 
-let state model = S.value model.state_s
-
-(* Initialize XMPP session and listen for stanzas *)
+(* Initialization *)
 
 let start_ec_responder client =
   (* Initiate Entity Cababilities (XEP-0115) responder *)
@@ -47,41 +44,40 @@ let start_ec_responder client =
   (* ignore the JIDs of who made queried our capabilities *)
   >|= fun e -> E.stamp e ()
 
-(* Authentication *)
-
-let connect send_msg client =
-  ignore send_msg;
+let connect client =
   Lwt_result.(
     catch @@ Client.connect client >>= fun _ ->
     let* ec_responder = start_ec_responder client in
-    return
-      {
-        client;
-        state_s = Client.state client;
-        stanza_listener =
-          Client.stanzas client
-          |> E.map (fun stanza -> send_msg @@ `XmppStanza stanza);
-        ec_responder;
-      })
+    return { client; state = Client.Disconnected; ec_responder })
   >|= fun r -> `XmppLoginResult r
 
-let login send_msg jid password =
+let login jid password =
   Client.create Xmppl_websocket.default_options
     ~credentials:(`JidPassword (jid, password))
-  >>= connect send_msg
+  >>= connect
 
-let login_dev send_msg () =
+let login_dev () =
   let jid = "user@strawberry.local" |> Xmppl.Jid.of_string_exn in
   Client.create
     { ws_endpoint = Some "ws://localhost:5280/xmpp-websocket" }
     ~credentials:(`JidPassword (jid, "pencil"))
-  >>= connect send_msg
+  >>= connect
 
-let login_anonymous_demo send_msg () =
+let login_anonymous_demo () =
   Client.create
     { ws_endpoint = Some "wss://openengiadina.net/xmpp-websocket" }
     ~credentials:(`Anonymous "demo.openengiadina.net")
-  >>= connect send_msg
+  >>= connect
+
+(* Subscription *)
+
+let subscriptions model =
+  E.select
+    [
+      S.changes @@ Client.state model.client
+      |> E.map (fun state -> `XmppStateUpdate state);
+      Client.stanzas model.client |> E.map (fun stanza -> `XmppStanza stanza);
+    ]
 
 (* Roster management *)
 

@@ -78,10 +78,12 @@ module App = struct
                 |> run_effects |> run_subscriptions |> Return.singleton)
               msg_e
           in
-          let return_s = S.accum update_e (S.value return_s) in
+          let return_s = S.accum ~eq:( == ) update_e (S.value return_s) in
 
           ( return_s,
-            S.map (fun ((model, _subscription_e), _cmds) -> model) return_s ))
+            S.map ~eq:( == )
+              (fun ((model, _subscription_e), _cmds) -> model)
+              return_s ))
     in
 
     (* stop the msg events when resolving return *)

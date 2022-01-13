@@ -24,11 +24,6 @@ type model = {
   xmpp : Xmpp.model Loadable.t;
 }
 
-let xmpp_state model =
-  match model.xmpp with
-  | Loadable.Loaded xmpp -> Xmpp.state xmpp
-  | _ -> Xmpp.Client.Disconnected
-
 (* Messages *)
 
 type msg =
@@ -43,6 +38,7 @@ type msg =
   | `Logout
   | (* XMPP *)
     `XmppLoginResult of (Xmpp.model, exn) Result.t
+  | `XmppStateUpdate of Xmpp.Client.state
   | `XmppStanza of Xmpp.Stanza.t
   | (* Sub-components *)
     `PostsMsg of Posts.msg
@@ -55,12 +51,11 @@ let init () : (model, msg) Return.t =
   |> Return.singleton
   (* Initialize map *)
   |> Return.command (return @@ `MapMsg Mapg.Init)
-(* dev login *)
-(* |> Return.command (return `LoginDev) *)
+  (* dev login *)
+  |> Return.command (return `LoginDev)
 
 let update ~stop model msg =
   ignore stop;
-  let send_msg _msg = () in
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
@@ -70,28 +65,41 @@ let update ~stop model msg =
   | `LoginDev ->
       { model with xmpp = Loadable.Loading }
       |> Return.singleton
-      |> Return.command @@ Xmpp.login_dev send_msg ()
+      |> Return.command @@ Xmpp.login_dev ()
   | `LoginDemo ->
       { model with xmpp = Loadable.Loading }
       |> Return.singleton
-      |> Return.command @@ Xmpp.login_anonymous_demo send_msg ()
+      |> Return.command @@ Xmpp.login_anonymous_demo ()
   | `Login (jid, password) ->
       { model with xmpp = Loadable.Loading }
       |> Return.singleton
-      |> Return.command @@ Xmpp.login send_msg jid password
+      |> Return.command @@ Xmpp.login jid password
   | `Logout -> init ()
   (* XMPP *)
-  | `XmppLoginResult (Ok client) ->
-      { model with xmpp = Loadable.Loaded client; route = Route.Posts None }
+  | `XmppLoginResult (Ok xmpp) ->
+      { model with xmpp = Loadable.Loaded xmpp; route = Route.Posts None }
       |> Return.singleton
+      (* Manually cause a XmppStateUpdate *)
+      |> Return.command
+           (return
+           @@ `XmppStateUpdate (S.value @@ Xmpp.Client.state xmpp.client))
   | `XmppLoginResult (Error _) ->
       { model with route = Route.Login; xmpp = Loadable.Idle }
       |> Return.singleton
+  | `XmppStateUpdate state ->
+      {
+        model with
+        xmpp =
+          Loadable.map (fun xmpp : Xmpp.model -> { xmpp with state }) model.xmpp;
+      }
+      |> Return.singleton
+  | `XmppStanza _stanza -> model |> Return.singleton
+  (* Components *)
   | `PostsMsg msg ->
-      Posts.update ~send_msg model.map model.posts msg
+      Posts.update ~send_msg:(fun _ -> ()) model.map model.posts msg
       |> Return.map (fun posts -> { model with posts })
   | `MapMsg msg ->
-      Mapg.update ~send_msg model.map msg
+      Mapg.update ~send_msg:(fun _ -> ()) model.map msg
       |> Return.map (fun map -> { model with map })
   (* | `ReceiveMessage msg ->
    *     Posts.update
@@ -102,7 +110,13 @@ let update ~stop model msg =
    *     |> Return.map (fun posts -> { model with posts }) *)
   | _ -> Return.singleton model
 
-let subscriptions _model = E.never
+let subscriptions model =
+  E.select
+    [
+      (match model.xmpp with
+      | Loadable.Loaded xmpp -> Xmpp.subscriptions xmpp
+      | _ -> E.never);
+    ]
 
 (* View *)
 
@@ -161,8 +175,8 @@ let menu send_msg (model : model) =
     on_click (`SetRoute route)
       El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])
   in
-  match xmpp_state model with
-  | Xmpp.Client.Connected jid ->
+  match model.xmpp with
+  | Loadable.Loaded { state = Xmpp.Client.Connected jid; _ } ->
       El.(
         nav
           ~at:At.[ id @@ Jstr.v "menu" ]
@@ -187,7 +201,7 @@ let menu send_msg (model : model) =
                   ];
               ];
           ])
-  | Xmpp.Client.Disconnected ->
+  | _ ->
       El.(
         nav
           ~at:At.[ id @@ Jstr.v "menu" ]
