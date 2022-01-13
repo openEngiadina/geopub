@@ -50,7 +50,7 @@ type msg =
   | (* A hack and code smell *)
     `NoOp ]
 
-let init () : (model, msg Lwt.t) Return.t =
+let init () : (model, msg) Return.t =
   { route = Route.About; map = None; posts = []; xmpp = Loadable.Idle }
   |> Return.singleton
   (* Initialize map *)
@@ -58,9 +58,9 @@ let init () : (model, msg Lwt.t) Return.t =
 (* dev login *)
 (* |> Return.command (return `LoginDev) *)
 
-let update ~stop ~send_msg model msg =
+let update ~stop model msg =
   ignore stop;
-  let send_msg msg = send_msg ?step:None msg in
+  let send_msg _msg = () in
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
   | `InvalidateMapSize ->
@@ -101,6 +101,8 @@ let update ~stop ~send_msg model msg =
    *       model.map model.posts (Posts.ReceiveMessage msg)
    *     |> Return.map (fun posts -> { model with posts }) *)
   | _ -> Return.singleton model
+
+let subscriptions _model = E.never
 
 (* View *)
 
@@ -239,7 +241,7 @@ let main =
   Logs.set_level @@ Some Logs.Info;
 
   (* Initialize the application *)
-  let geopub = App.create ~init ~update in
+  let geopub = App.create ~init ~update ~subscriptions in
 
   let body = Document.body G.document in
 
@@ -253,7 +255,6 @@ let main =
   S.keep @@ S.map (El.set_children body) ui;
 
   (* Start the application and return the result *)
-  App.start geopub;
   App.result geopub
 
 let () =

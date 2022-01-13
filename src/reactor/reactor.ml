@@ -1,5 +1,5 @@
 (*
- * SPDX-FileCopyrightText: 2021 pukkamustard <pukkamustard@posteo.net>
+ * SPDX-FileCopyrightText: 2021, 2022 pukkamustard <pukkamustard@posteo.net>
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
@@ -8,105 +8,92 @@ open Lwt
 open Lwt_react
 
 module Return = struct
-  type ('model, 'cmd) t = 'model * 'cmd list
+  type ('model, 'msg) t = 'model * 'msg Lwt.t list
 
   let singleton model = (model, [])
-
   let command cmd (model, cmds) = (model, cmd :: cmds)
-
   let commands cmds_to_add (model, cmds) = (model, cmds_to_add @ cmds)
-
   let map f (model, cmds) = (f model, cmds)
-
-  let map_cmd f (model, cmds) = (model, List.map f cmds)
+  let map_cmd f (model, cmds) = (model, List.map (fun p -> Lwt.map f p) cmds)
 
   let bind f (model, cmds) =
     let model_f, cmds_f = f model in
     (model_f, cmds @ cmds_f)
-
-  let run runner (model, cmds) =
-    List.iter runner cmds;
-    model
 end
 
 module App = struct
   type ('a, 'model, 'msg) t = {
-    start : unit Lwt.u;
-    send : ?step:React.step -> 'msg -> unit;
-    model_signal : 'model Lwt_react.signal;
+    send : 'msg -> unit;
+    model : 'model S.t;
     result : ('a, exn) Lwt_result.t;
-    cmd_u : unit event;
   }
 
-  type ('model, 'msg) init = unit -> ('model, 'msg Lwt.t) Return.t
+  type ('model, 'msg) init = unit -> ('model, 'msg) Return.t
 
   type ('a, 'model, 'msg) update =
-    stop:('a -> unit) ->
-    send_msg:(?step:React.step -> 'msg -> unit) ->
-    'model ->
-    'msg ->
-    ('model, 'msg Lwt.t) Return.t
+    stop:('a -> unit) -> 'model -> 'msg -> ('model, 'msg) Return.t
 
-  let create ~init ~update =
-    (* set equality for model signal to phyisical equality *)
-    let eq a b = a == b in
+  type ('a, 'model, 'msg) subscriptions = 'model -> 'msg E.t
 
-    (* message events *)
-    let msg_e, send_msg = E.create () in
-
-    (* command events *)
-    let cmd_e, send_cmd = E.create () in
-
+  let create ~init ~update ~subscriptions =
     (* app result and resolver *)
     let result, resolver = Lwt.task () in
     let on_exception e = Lwt.wakeup resolver (Error e) in
     let on_stop a = Lwt.wakeup resolver (Ok a) in
 
-    (* run the commands and send results on as messages *)
-    let cmd_u = cmd_e |> E.map (fun t -> Lwt.on_any t send_msg on_exception) in
+    let msg_e, send_msg = Lwt_stream.create () in
 
-    (* we need the initial model but can not run initial effects
-       before the msg handling is set up *)
-    let wait_for_start, start = Lwt.wait () in
-    let init_model =
-      init ()
-      |> Return.map_cmd (fun cmd -> wait_for_start >>= fun () -> cmd)
-      |> Return.run send_cmd
+    (* let msg_stream, send_msg = Lwt_stream.create () in *)
+    let run_effects (model, cmds) =
+      List.iter
+        (fun cmd ->
+          Lwt.on_any cmd (fun msg -> send_msg @@ Some msg) on_exception)
+        cmds;
+      model
     in
 
-    (* run update function on message event *)
-    (* Note: we need to use fold_s to ensure atomic updates *)
-    let model_signal =
-      S.fold_s ~eq
-        (fun model msg ->
-          try
-            update ~stop:on_stop ~send_msg model msg
-            |> Return.run send_cmd |> return
-          with e ->
-            on_exception e;
-            model |> return)
-        init_model msg_e
+    let run_subscriptions (model, old_subscriptions) =
+      (* TODO is this atomic? Could a message be dropped while switching over? Probably shoud use E.switch... *)
+      E.stop old_subscriptions;
+      (model, subscriptions model |> E.map (fun msg -> send_msg @@ Some msg))
     in
 
-    (* stop events and signal *)
+    (* run the initial effects *)
+    let init_model = run_effects @@ init () in
+
+    let model =
+      S.fix ~eq:( == )
+        ((init_model, E.never) |> run_subscriptions |> Return.singleton)
+        (fun return_s ->
+          let msg_e = E.of_stream msg_e in
+
+          let update_e =
+            E.map
+              (fun msg return ->
+                Return.bind
+                  (fun (model, subscription_e) ->
+                    update ~stop:on_stop model msg
+                    |> Return.map (fun model -> (model, subscription_e)))
+                  return
+                |> run_effects |> run_subscriptions |> Return.singleton)
+              msg_e
+          in
+          let return_s = S.accum update_e (S.value return_s) in
+
+          ( return_s,
+            S.map (fun ((model, _subscription_e), _cmds) -> model) return_s ))
+    in
+
+    (* stop the msg events when resolving return *)
     let result =
       result >>= fun value ->
-      Lwt_react.E.stop msg_e;
-      Lwt_react.E.stop cmd_e;
-      Lwt_react.S.stop model_signal;
+      send_msg None;
       return value
     in
 
-    (* Catch any other possible exceptions (e.g. Cancel) *)
-    let result = Lwt.catch (fun () -> result) (fun e -> return @@ Error e) in
+    { send = (fun msg -> send_msg (Some msg)); model; result }
 
-    { start; send = send_msg; model_signal; result; cmd_u }
-
-  let start t = Lwt.wakeup t.start ()
-
-  let model t = t.model_signal
-
-  let send t ?step msg = t.send ?step msg
-
+  let model t = t.model
+  let send t msg = t.send msg
   let result t = t.result
 end
