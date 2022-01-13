@@ -6,4 +6,4 @@ prod:
 
 .PHONY: deploy
 deploy: prod
-	rsync -rav -L -e ssh _build/install/default/share/geopub/ pukkamustard@qfwfq.inqlab.net:/srv/http/geopub.openengiadina.net/ --delete
+	rsync -rav -L -e ssh _build/install/default/share/geopub/ qfwfq:/srv/http/geopub.openengiadina.net/ --delete
