@@ -268,6 +268,10 @@ let get_note graph subject : Note.t option =
   |> Option.some |> option_apply id |> option_apply content
   |> option_apply (Some geoloc)
 
+let get_geoloc graph subject : Geoloc.t option =
+  (* Option.bind has wrong argument order... *)
+  get_note graph subject |> fun o -> Option.bind o (fun note -> note.geoloc)
+
 let view_note ~send_msg (note : Note.t) =
   El.
     [
@@ -290,8 +294,15 @@ let view_note ~send_msg (note : Note.t) =
            ]);
     ]
 
+let get_object graph subject =
+  Rdf.Graph.objects subject (Rdf.Triple.Predicate.of_iri @@ as' "object") graph
+  |> seq_next
+  |> Option.map Rdf.Triple.Object.to_term
+  |> fun o ->
+  Option.bind o (fun o -> Rdf.Term.to_iri o)
+  |> Option.map Rdf.Triple.Subject.of_iri
+
 let view_activity ~send_msg graph subject =
-  ignore send_msg;
   let from =
     Rdf.Graph.objects subject (Rdf.Triple.Predicate.of_iri @@ as' "actor") graph
     |> seq_next
@@ -309,15 +320,7 @@ let view_activity ~send_msg graph subject =
          Rdf.Literal.canonical
   in
   let note =
-    Rdf.Graph.objects subject
-      (Rdf.Triple.Predicate.of_iri @@ as' "object")
-      graph
-    |> seq_next
-    |> Option.map Rdf.Triple.Object.to_term
-    |> fun o ->
-    Option.bind o (fun o -> Rdf.Term.to_iri o)
-    |> Option.map Rdf.Triple.Subject.of_iri
-    |> fun s -> Option.bind s (get_note graph)
+    get_object graph subject |> fun s -> Option.bind s (get_note graph)
   in
   let note_el =
     note |> Option.map (view_note ~send_msg) |> Option.value ~default:[]

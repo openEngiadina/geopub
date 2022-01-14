@@ -62,6 +62,17 @@ let init () =
 
 let invalidate_size model = Leaflet.Map.invalidate_size model.leaflet
 
+let add_geoloc geoloc model =
+  let marker = Geoloc.to_latlng geoloc |> Leaflet.Marker.create in
+  Leaflet.Marker.add_to marker model.leaflet;
+  model
+
+let add_rdf rdf model =
+  Activitystreams.activities rdf
+  |> Seq.filter_map (Activitystreams.get_object rdf)
+  |> Seq.filter_map (Activitystreams.get_geoloc rdf)
+  |> Seq.fold_left (fun model geoloc -> add_geoloc geoloc model) model
+
 let add_post post model =
   match post |> Xep_0277.Post.to_marker with
   | Some marker ->

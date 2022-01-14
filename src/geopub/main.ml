@@ -128,9 +128,7 @@ let update ~stop model msg =
           Loadable.map (fun xmpp : Xmpp.model -> { xmpp with state }) model.xmpp;
       }
       |> Return.singleton
-  | `XmppRosterUpdate roster ->
-      Console.log [ Jstr.v @@ "RosterUpdate" ];
-      { model with roster } |> Return.singleton
+  | `XmppRosterUpdate roster -> { model with roster } |> Return.singleton
   | `XmppRosterAddContact jid ->
       model |> Return.singleton
       |> Return.command
@@ -182,8 +180,12 @@ let update ~stop model msg =
       }
       |> Return.singleton
   | `AddRdf (Ok rdf) ->
-      Format.printf "%a" Rdf.Graph.pp rdf;
-      { model with graph = Rdf.Graph.union model.graph rdf } |> Return.singleton
+      {
+        model with
+        graph = Rdf.Graph.union model.graph rdf;
+        map = Mapg.add_rdf rdf model.map;
+      }
+      |> Return.singleton
   | `ViewOnMap geoloc ->
       {
         model with
@@ -359,7 +361,8 @@ let observe_for_map el send_msg =
 let main =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
-  Logs.set_level @@ Some Logs.Debug;
+  (* Logs.set_level @@ Some Logs.Debug; *)
+  Logs.set_level @@ Some Logs.Info;
 
   (* Initialize random generator *)
   Random.self_init ();
