@@ -2,7 +2,7 @@
 
 .PHONY: prod
 prod:
-	dune build @install -p geopub
+	dune build @install
 
 .PHONY: deploy
 deploy: prod

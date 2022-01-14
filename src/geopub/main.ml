@@ -71,8 +71,8 @@ let init () : (model, msg) Return.t =
     roster = Xmpp.Jid.Map.empty;
   }
   |> Return.singleton
-  (* dev login *)
-  |> Return.command (return `LoginDev)
+(* dev login *)
+(* |> Return.command (return `LoginDev) *)
 
 let command_with_xmpp_conected f =
   Return.bind (fun model ->
