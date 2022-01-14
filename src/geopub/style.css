@@ -6,6 +6,7 @@ body {
     display: flex;
     height: 100vh;
     flex-direction: row;
+    overflow: hidden;
 }
 
 /* Common components */
@@ -55,18 +56,19 @@ nav li a {
 
 #main {
     flex-grow: 1;
+    align-self: flex-start;
     overflow: auto;
+    margin-right: auto;
 }
 
 .content {
-    margin: 50px;
+    padding: 50px;
     height: 100%;
-    flex-flow: 1;
     max-width: 800px;
-    flex-grow: 1;
 }
 
 .text-content {
+    padding: 50px;
     width: 50vw;
     max-width: 800px;
     height: 100%;
@@ -83,6 +85,16 @@ nav li a {
     background-color: #e9f7ff;
     width: 300px;
     margin: 10px;
+}
+
+/* Action Bar */
+
+#action-bar {
+    height: 100vh;
+    margin-left: auto;
+    width: 30vw;
+    max-width: 30vw;
+    border-left: 1px solid black;
 }
 
 
@@ -110,7 +122,6 @@ nav li a {
 /* post compose form */
 .post-compose {
     width: 100%;
-    border-bottom: solid 0.5px grey;
     margin-right: 50px;
 }
 

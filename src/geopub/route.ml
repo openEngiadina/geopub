@@ -13,4 +13,4 @@ type t =
   | RosterItem of Xmpp.Jid.t
   | AddContact
 
-type action = [ `SetRoute of t ]
+type action = NewPost of Leaflet.LatLng.t option

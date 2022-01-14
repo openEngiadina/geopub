@@ -1,5 +1,5 @@
 (*
- * SPDX-FileCopyrightText: 2021 pukkamustard <pukkamustard@posteo.net>
+ * SPDX-FileCopyrightText: 2021, 2022 pukkamustard <pukkamustard@posteo.net>
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
@@ -19,6 +19,7 @@ module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
 
 type model = {
   route : Route.t;
+  action_bar : Route.action option;
   map : Mapg.t;
   posts : Xep_0277.Post.t list;
   xmpp : Xmpp.model Loadable.t;
@@ -30,6 +31,7 @@ type model = {
 type msg =
   [ (* Navigation *)
     `SetRoute of Route.t
+  | `SetActionBar of Route.action option
   | (* Hack to fix map *)
     `InvalidateMapSize
   | (* Authentication *)
@@ -47,6 +49,8 @@ type msg =
   | `XmppPresenceApproveSubscription of Xmpp.Jid.t
   | `XmppPresenceUnsubscribe of Xmpp.Jid.t
   | `XmppPresenceSubscribe of Xmpp.Jid.t
+  | (* ActivityStreams *)
+    `PostActivityStreamsNote of Activitystreams.Note.t
   | (* Database *)
     `DatabaseAdd of (Xep_0277.Post.t, exn) Result.t
   | (* Map      *)
@@ -57,6 +61,7 @@ type msg =
 let init () : (model, msg) Return.t =
   {
     route = Route.About;
+    action_bar = None;
     map = Mapg.init ();
     posts = [];
     xmpp = Loadable.Idle;
@@ -66,10 +71,24 @@ let init () : (model, msg) Return.t =
   (* dev login *)
   |> Return.command (return `LoginDev)
 
+let command_with_xmpp_conected f =
+  Return.bind (fun model ->
+      match model.xmpp with
+      | Loadable.Loaded ({ state = Xmpp.Client.Connected jid; _ } as xmpp) ->
+          model |> Return.singleton |> Return.command (f jid xmpp)
+      | _ -> model |> Return.singleton)
+
+let post_activitystreams_note note jid xmpp =
+  ignore xmpp;
+  let create_id, create = note |> Activitystreams.Note.as_create jid in
+  let* as_xml = Activitystreams.rdf_to_xml create in
+  Xmpp.publish_activitystreams jid xmpp create_id as_xml >|= fun _ -> `NoOp
+
 let update ~stop model msg =
   ignore stop;
   match msg with
   | `SetRoute r -> Return.singleton { model with route = r }
+  | `SetActionBar action_bar -> { model with action_bar } |> Return.singleton
   | `InvalidateMapSize ->
       Mapg.invalidate_size model.map;
       model |> Return.singleton
@@ -144,6 +163,9 @@ let update ~stop model msg =
            (model.xmpp |> Loadable.to_option
            |> Option.map (fun xmpp -> Xmpp.presence_unsubscribe xmpp jid)
            |> Option.value ~default:(return `NoOp))
+  | `PostActivityStreamsNote note ->
+      model |> Return.singleton
+      |> command_with_xmpp_conected (post_activitystreams_note note)
   (* Database *)
   | `DatabaseAdd (Ok post) ->
       {
@@ -168,7 +190,11 @@ let subscriptions model =
       | Loadable.Loaded xmpp -> Xmpp.subscriptions xmpp
       | _ -> E.never);
       (* TODO handle create post here *)
-      Mapg.subscriptions model.map |> E.map (fun _ -> `NoOp);
+      Mapg.subscriptions model.map
+      |> E.map (function
+           | Mapg.CreatePost latlng ->
+               `SetActionBar (Option.some @@ Route.NewPost (Some latlng))
+           | _ -> `NoOp);
     ]
 
 (* View *)
@@ -220,7 +246,10 @@ let menu send_msg (model : model) =
           @@ a
                ~at:At.[ href @@ Jstr.v "#" ]
                [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
-          txt' @@ Option.value ~default:"" @@ Option.map Xmpp.Jid.to_string jid;
+          txt' @@ Option.value ~default:""
+          @@ Option.map
+               (fun jid -> jid |> Xmpp.Jid.bare |> Xmpp.Jid.to_string)
+               jid;
         ])
   in
 
@@ -263,6 +292,13 @@ let menu send_msg (model : model) =
           ])
 
 let view send_msg model =
+  let* action_bar =
+    match model.action_bar with
+    | Some (Route.NewPost latlng) ->
+        return @@ [ Activitystreams.view_compose ?latlng ~send_msg ]
+    | None -> return_nil
+  in
+
   let* content =
     match model.route with
     | Route.About -> return [ about_view ]
@@ -282,7 +318,7 @@ let view send_msg model =
     | Route.AddContact -> return @@ [ Roster.view_add_contact ~send_msg ]
   in
 
-  return (menu send_msg model :: content)
+  return (menu send_msg model :: (content @ action_bar))
 
 (* A small hack to invalidate the size of the Leaflet map when it is
    dynamically loaded. If not it would not be displayed correctly until a
@@ -312,6 +348,9 @@ let main =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
   Logs.set_level @@ Some Logs.Debug;
+
+  (* Initialize random generator *)
+  Random.self_init ();
 
   (* Initialize the application *)
   let geopub = App.create ~init ~update ~subscriptions in

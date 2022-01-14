@@ -35,7 +35,7 @@ let view_roster ~send_msg xmpp roster =
     div
       ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
       [
-        h3 [ txt' "Contacts" ];
+        h2 [ txt' "Contacts" ];
         ul
           ~at:At.[ class' @@ Jstr.v "roster" ]
           (Xmpp.Jid.Map.to_seq roster |> Seq.map contact_item_el |> List.of_seq);

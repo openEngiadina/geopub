@@ -37,7 +37,9 @@ let start_ec_responder client =
     [
       "http://jabber.org/protocol/caps";
       "urn:xmpp:microblog:0";
-      "urn:xmpp:microblog:0+notify"
+      "urn:xmpp:microblog:0+notify";
+      "http://openengiadina.net/protocol/xmpp/rdf";
+      "http://openengiadina.net/protocol/xmpp/rdf+notify"
       (* "http://jabber.org/protocol/geoloc"; *)
       (* "http://jabber.org/protocol/geoloc+notify"; *);
     ]
@@ -50,6 +52,7 @@ let connect client =
     catch @@ Client.connect client >>= fun _ ->
     let* ec_responder = start_ec_responder client in
     let* roster = Roster.roster client in
+
     return { client; state = Client.Disconnected; ec_responder; roster })
   >|= fun r -> `XmppLoginResult r
 
@@ -92,6 +95,18 @@ let display_name xmpp jid =
     (Jid.Map.find_opt (Jid.bare jid) (S.value xmpp.roster))
     (fun (item : Roster.Item.t) -> item.name)
   |> Option.value ~default:(Jid.to_string @@ Jid.bare jid)
+
+(* PubSub *)
+
+let publish_activitystreams jid xmpp id xml =
+  xml |> Format.printf "%a\n" Xmlc.Tree.pp;
+  let item =
+    Xmlc.Tree.make_element
+      ~attributes:[ (("", "id"), Rdf.Iri.to_string id) ]
+      ~children:[ xml ] (Pubsub.Ns.pubsub "item")
+  in
+  Pubsub.publish ~to':(Jid.bare jid)
+    ~node:"http://openengiadina.net/protocol/xmpp/rdf" xmpp.client (Some item)
 
 (* Presence subscription management *)
 
