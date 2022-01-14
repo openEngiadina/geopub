@@ -99,7 +99,6 @@ let display_name xmpp jid =
 (* PubSub *)
 
 let publish_activitystreams jid xmpp id xml =
-  xml |> Format.printf "%a\n" Xmlc.Tree.pp;
   let item =
     Xmlc.Tree.make_element
       ~attributes:[ (("", "id"), Rdf.Iri.to_string id) ]

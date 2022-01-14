@@ -22,6 +22,7 @@ type model = {
   action_bar : Route.action option;
   map : Mapg.t;
   posts : Xep_0277.Post.t list;
+  graph : Rdf.Graph.t;
   xmpp : Xmpp.model Loadable.t;
   roster : Xmpp.Roster.roster;
 }
@@ -52,9 +53,10 @@ type msg =
   | (* ActivityStreams *)
     `PostActivityStreamsNote of Activitystreams.Note.t
   | (* Database *)
-    `DatabaseAdd of (Xep_0277.Post.t, exn) Result.t
+    `AddPost of (Xep_0277.Post.t, exn) Result.t
+  | `AddRdf of (Rdf.Graph.t, exn) Result.t
   | (* Map      *)
-    `ViewOnMap of Xep_0277.Post.t
+    `ViewOnMap of Geoloc.t
   | (* A hack and code smell *)
     `NoOp ]
 
@@ -64,6 +66,7 @@ let init () : (model, msg) Return.t =
     action_bar = None;
     map = Mapg.init ();
     posts = [];
+    graph = Rdf.Graph.empty;
     xmpp = Loadable.Idle;
     roster = Xmpp.Jid.Map.empty;
   }
@@ -136,8 +139,11 @@ let update ~stop model msg =
            |> Option.value ~default:(return `NoOp))
   | `XmppStanza (Xmpp.Stanza.Message message) ->
       model |> Return.singleton
+      (* Attempt to parse as XEP-0277 post *)
+      |> Return.command (Xep_0277.parse message >|= fun post -> `AddPost post)
+      (* or as RDF *)
       |> Return.command
-           (Xep_0277.parse message >|= fun post -> `DatabaseAdd post)
+           (Activitystreams.parse message >|= fun graph -> `AddRdf graph)
   | `XmppPresenceDenySubscription jid ->
       model |> Return.singleton
       |> Return.command
@@ -166,20 +172,25 @@ let update ~stop model msg =
   | `PostActivityStreamsNote note ->
       model |> Return.singleton
       |> command_with_xmpp_conected (post_activitystreams_note note)
+      |> Return.command (return @@ `SetActionBar None)
   (* Database *)
-  | `DatabaseAdd (Ok post) ->
+  | `AddPost (Ok post) ->
       {
         model with
         map = Mapg.add_post post model.map;
         posts = post :: model.posts;
       }
       |> Return.singleton
-  | `ViewOnMap post -> (
-      match Xep_0277.Post.to_latlng post with
-      | Some latlng ->
-          { model with route = Route.Map; map = Mapg.set_view latlng model.map }
-          |> Return.singleton
-      | None -> model |> Return.singleton)
+  | `AddRdf (Ok rdf) ->
+      Format.printf "%a" Rdf.Graph.pp rdf;
+      { model with graph = Rdf.Graph.union model.graph rdf } |> Return.singleton
+  | `ViewOnMap geoloc ->
+      {
+        model with
+        route = Route.Map;
+        map = Mapg.set_view (Geoloc.to_latlng geoloc) model.map;
+      }
+      |> Return.singleton
   (* Catch all *)
   | _ -> Return.singleton model
 
@@ -303,7 +314,8 @@ let view send_msg model =
     match model.route with
     | Route.About -> return [ about_view ]
     | Route.Login -> return [ Login.view send_msg model.xmpp ]
-    | Route.Activity -> return @@ Activity.view ~send_msg model.posts
+    | Route.Activity ->
+        return @@ Activity.view ~send_msg model.posts model.graph
     | Route.Map -> return @@ [ Mapg.view ~send_msg model.map ]
     | Route.Roster -> (
         match model.xmpp with

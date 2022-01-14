@@ -62,7 +62,8 @@ let view_post ~send_msg (post : Post.t) =
                  [
                    Option.map
                      (fun (geoloc : Geoloc.t) ->
-                       Evr.on_el Ev.click (fun _ -> send_msg @@ `ViewOnMap post)
+                       Evr.on_el Ev.click (fun _ ->
+                           send_msg @@ `ViewOnMap geoloc)
                        @@ a
                             ~at:At.[ href @@ Jstr.v "#" ]
                             [
