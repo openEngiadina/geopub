@@ -110,7 +110,7 @@ let update ~stop model msg =
       |> Return.command @@ Xmpp.login jid password
   | `Logout -> init ()
   (* XMPP *)
-  | `XmppLoginResult (Ok xmpp) ->
+  | `XmppLoginResult (Ok (xmpp : Xmpp.model)) ->
       { model with xmpp = Loadable.Loaded xmpp; route = Route.Activity }
       |> Return.singleton
       (* Manually cause a XmppStateUpdate *)
@@ -308,7 +308,7 @@ let view send_msg model =
   let* action_bar =
     match model.action_bar with
     | Some (Route.NewPost latlng) ->
-        return @@ [ Activitystreams.view_compose ?latlng ~send_msg ]
+        return @@ [ Activitystreams.view_compose ?latlng ~send_msg () ]
     | None -> return_nil
   in
 
@@ -368,6 +368,7 @@ let main =
   Random.self_init ();
 
   (* Initialize the application *)
+  let* () = Log.app (fun m -> m "Starting GeoPub.") in
   let geopub = App.create ~init ~update ~subscriptions in
 
   let body = Document.body G.document in
@@ -386,5 +387,5 @@ let main =
 
 let () =
   Lwt.on_any main
-    (fun v -> Console.error [ "Application unexpectedly stopped"; v ])
+    (fun v -> Console.error [ "GeoPub stopped unexpectedly"; v ])
     (fun exn -> Console.error [ exn ])

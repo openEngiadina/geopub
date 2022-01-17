@@ -24,6 +24,8 @@ After this you can run `dune build @install` which will build GeoPub and place a
 
 You may want to start a small webserver for local development (e.g. `python3 -m http.server --directory _build/install/default/share/geopub/`). This works very nicely when running dune in watch mode (`dune build @install --watch`).
 
+Note that this uses dependencies from Guix. You might have to run `guix pull` to get the lastest dependencies from Guix. To use a version of Guix that has been tested use: `guix time-machine -C channels.scm -- shell -D -f guix.scm`.
+
 # Acknowledgments
 
 GeoPub is being developed for the [openEngiadina](https://openengiadina.net) project and has been supported by the [NLNet Foundation](https://nlnet.nl/) trough the [NGI0 Discovery Fund](https://nlnet.nl/discovery/).

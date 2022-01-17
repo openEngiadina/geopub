@@ -115,7 +115,7 @@ let parse (message : Xmpp.Stanza.Message.t) =
 
 (* Compose view *)
 
-let view_compose ?latlng ~send_msg =
+let view_compose ?latlng ~send_msg () =
   let note_form =
     Evr.on_el ~default:false Form.Ev.submit
       (fun ev ->
