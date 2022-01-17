@@ -218,7 +218,7 @@ let about_view =
       ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "text-content" ]
       [
         h1 [ txt' "GeoPub" ];
-        p [ txt' "Version 0.4.0-dev" ];
+        p [ txt' "Version 0.4.0" ];
         p [ txt' "GeoPub is an experimental XMPP client for geospatial data." ];
         p
           [

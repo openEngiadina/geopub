@@ -1,8 +1,8 @@
 # Changelog
 
-## UNRELEASED
+## [0.4.0] - 2022-01-17
 
-- Update to Brr 0.0.2
+- Transfer ActivityStreams content serialized as RDF/XML over an XMPP PEP node
 
 ## [0.3.0] - 2021-11-12
 
