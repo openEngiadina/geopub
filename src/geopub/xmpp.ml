@@ -38,8 +38,8 @@ let start_ec_responder client =
       "http://jabber.org/protocol/caps";
       "urn:xmpp:microblog:0";
       "urn:xmpp:microblog:0+notify";
-      "http://openengiadina.net/protocol/xmpp/rdf";
-      "http://openengiadina.net/protocol/xmpp/rdf+notify"
+      "net.openengiadina.xmpp.activitystreams";
+      "net.openengiadina.xmpp.activitystreams+notify"
       (* "http://jabber.org/protocol/geoloc"; *)
       (* "http://jabber.org/protocol/geoloc+notify"; *);
     ]
@@ -105,7 +105,7 @@ let publish_activitystreams jid xmpp id xml =
       ~children:[ xml ] (Pubsub.Ns.pubsub "item")
   in
   Pubsub.publish ~to':(Jid.bare jid)
-    ~node:"http://openengiadina.net/protocol/xmpp/rdf" xmpp.client (Some item)
+    ~node:"net.openengiadina.xmpp.activitystreams" xmpp.client (Some item)
 
 (* Presence subscription management *)
 
