@@ -316,34 +316,6 @@ Using this package, you can run afl-fuzz in ``persistent mode'', which avoids
 repeated forking and is much faster.")
     (license license:expat)))
 
-(define-public ocaml-cstruct
-  (package
-    (name "ocaml-cstruct")
-    (version "6.0.1")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "https://github.com/mirage/ocaml-cstruct")
-                     (commit (string-append "v" version))))
-              (file-name (git-file-name name version))
-              (sha256
-               (base32
-                "0gpyr3cf393j1ir7i2m2qhx75l21w6ad7imdd73xn0jy3pjg4wsj"))))
-    (build-system dune-build-system)
-    (arguments
-     `(#:package "cstruct"
-       #:test-target "."))
-    (propagated-inputs
-     `(("ocaml-bigarray-compat" ,ocaml-bigarray-compat)))
-    (native-inputs
-     `(("ocaml-alcotest" ,ocaml-alcotest)))
-    (home-page "https://github.com/mirage/ocaml-cstruct")
-    (synopsis "Access C structures via a camlp4 extension")
-    (description "Cstruct is a library and syntax extension to make it easier
-to access C-like structures directly from OCaml.  It supports both reading and
-writing to these structures, and they are accessed via the Bigarray module.")
-    (license license:isc)))
-
 (define-public ocaml-eqaf
   (package
     (name "ocaml-eqaf")
