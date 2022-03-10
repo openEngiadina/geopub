@@ -1,6 +1,6 @@
 # GeoPub
 
-GeoPub is an ActivityPub client developed within the [openEngiadina](https://openengiadian.net) project.
+GeoPub is an ActivityPub client developed within the [openEngiadina](https://openengiadina.net) project.
 
 # Status
 
