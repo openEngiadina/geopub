@@ -2,15 +2,19 @@
 
 GeoPub is an ActivityPub client developed within the [openEngiadina](https://openengiadina.net) project.
 
-# Status
+For more information see also:
 
-This is an experiment to re-write GeoPub in OCaml using js_of_ocaml.
+- [Initial announcement of GeoPub on the OCaml forum](https://discuss.ocaml.org/t/ann-geopub-a-xmpp-web-client/8819)
+- [openEngiadina: From ActivityPub to XMPP](https://inqlab.net/2021-11-12-openengiadina-from-activitypub-to-xmpp.html): Post describing why and how XMPP is used as transport.
+- [ActivityStreams over XMPP](https://inqlab.net/2022-01-17-activitystreams-over-xmpp.html): Post describing how the ActivityStreams vocabulary is used over XMPP.
 
 ## History
 
 GeoPub was started as a very simple JavaScript demonstrator to show how geographic information can be used over the ActivityPub protocol (see branch `initial-js-demonstrator`).
 
 A second version was developed in ClojureScript (see branch `cljs`). The ClojureScript version was abandoned due to licensing and reproducability issues (it is hard to use GPL/AGPL for Clojure(Script) projects and Clojure support in Guix/Nix is not so good).
+
+This (the third version) is implemented in OCaml using `js_of_ocaml`.
 
 # Hacking
 
