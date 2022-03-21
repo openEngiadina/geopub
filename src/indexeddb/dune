@@ -1,0 +1,3 @@
+(library
+ (name indexeddb)
+ (libraries brr lwt))

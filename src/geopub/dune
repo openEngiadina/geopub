@@ -3,7 +3,7 @@
  (libraries brr reactor reactor_brr logs logs.lwt logs.browser js_of_ocaml
    js_of_ocaml-lwt lwt_react leaflet leaflet_contextmenu loadable xmlc xmppl
    xmppl_websocket xmppl.roster xmppl.disco xmppl.entity_capabilities xmppl.mam
-   xmppl.pubsub ptime ptime.clock.jsoo rdf rdf_xml uuidm)
+   xmppl.pubsub ptime ptime.clock.jsoo rdf rdf_xml uuidm indexeddb)
  (modes js))
 
 (install

@@ -23,6 +23,7 @@ type model = {
   map : Mapg.t;
   posts : Xep_0277.Post.t list;
   graph : Rdf.Graph.t;
+  database : Database.t Loadable.t;
   xmpp : Xmpp.model Loadable.t;
   roster : Xmpp.Roster.roster;
 }
@@ -55,6 +56,8 @@ type msg =
   | (* Database *)
     `AddPost of (Xep_0277.Post.t, exn) Result.t
   | `AddRdf of (Rdf.Graph.t, exn) Result.t
+  | `DatabaseInit
+  | `DatabaseInitResult of Database.t result
   | (* Map      *)
     `ViewOnMap of Geoloc.t
   | (* A hack and code smell *)
@@ -66,13 +69,15 @@ let init () : (model, msg) Return.t =
     action_bar = None;
     map = Mapg.init ();
     posts = [];
+    database = Loadable.Idle;
     graph = Rdf.Graph.empty;
     xmpp = Loadable.Idle;
     roster = Xmpp.Jid.Map.empty;
   }
   |> Return.singleton
-(* dev login *)
-(* |> Return.command (return `LoginDev) *)
+  |> Return.command (return `DatabaseInit)
+  (* dev login *)
+  |> Return.command (return `LoginDev)
 
 let command_with_xmpp_conected f =
   Return.bind (fun model ->
@@ -82,7 +87,6 @@ let command_with_xmpp_conected f =
       | _ -> model |> Return.singleton)
 
 let post_activitystreams_note note jid xmpp =
-  ignore xmpp;
   let create_id, create = note |> Activitystreams.Note.as_create jid in
   let* as_xml = Activitystreams.rdf_to_xml create in
   Xmpp.publish_activitystreams jid xmpp create_id as_xml >|= fun _ -> `NoOp
@@ -172,6 +176,16 @@ let update ~stop model msg =
       |> command_with_xmpp_conected (post_activitystreams_note note)
       |> Return.command (return @@ `SetActionBar None)
   (* Database *)
+  | `DatabaseInit ->
+      { model with database = Loadable.Loading }
+      |> Return.singleton
+      |> Return.command (Database.init () >|= fun db -> `DatabaseInitResult db)
+  | `DatabaseInitResult (Ok db) ->
+      Console.log [ Jstr.v "Database initialized" ];
+      { model with database = Loadable.Loaded db } |> Return.singleton
+  | `DatabaseInitResult (Error e) ->
+      Console.error [ Jstr.v "IndexedDB Database initialization failed." ];
+      raise e
   | `AddPost (Ok post) ->
       {
         model with
@@ -388,4 +402,9 @@ let main =
 let () =
   Lwt.on_any main
     (fun v -> Console.error [ "GeoPub stopped unexpectedly"; v ])
-    (fun exn -> Console.error [ exn ])
+    (fun exn ->
+      Console.error
+        [
+          "Unexpeced exception: Stopping GeoPub";
+          Jstr.v @@ Printexc.to_string exn;
+        ])
