@@ -523,6 +523,26 @@ message report is decoupled from logging and is handled by a reporter.")
     (description #f)
     (license license:agpl3+)))
 
+(define-public ocaml-zarith-stubs-js
+  (package
+   (name "ocaml-zarith-stubs-js")
+   (version "0.15.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri "https://ocaml.janestreet.com/ocaml-core/v0.15/files/zarith_stubs_js-v0.15.0.tar.gz")
+     (sha256
+      (base32 "03sk4awj6wgxq740k0132y1f53q7gz8lw4pd9slf4xynhgw34pps"))))
+   (build-system dune-build-system)
+   (arguments `(#:tests? #f))
+   (properties `((upstream-name . "zarith_stubs_js")))
+   (home-page "https://github.com/janestreet/zarith_stubs_js")
+   (synopsis "Javascripts stubs for the Zarith library")
+   (description
+    " This library contains no ocaml code, but instead implements all of the Zarith C
+stubs in Javascript for use in Js_of_ocaml")
+   (license license:expat)))
+
 (define-public geopub
   (package
     (name "geopub")
@@ -540,8 +560,8 @@ message report is decoupled from logging and is handled by a reporter.")
        ("uri" ,ocaml-uri)
        ("ocaml-xmppl" ,ocaml-xmppl)
        ("ocaml-ptime" ,ocaml-ptime)
+       ("ocaml-zarith-stubs-js" ,ocaml-zarith-stubs-js)
        ("js_of_ocaml" ,js-of-ocaml)
-
        ("ocaml-merlin" ,ocaml-merlin)
        ("ocaml-dot-merlin-reader" ,ocaml-dot-merlin-reader)))
     (home-page "https://gitlab.com/openengiadina/geopub")

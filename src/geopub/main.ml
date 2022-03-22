@@ -200,6 +200,10 @@ let update ~stop model msg =
         map = Mapg.add_rdf rdf model.map;
       }
       |> Return.singleton
+      |> Return.command
+           (match model.database with
+           | Loadable.Loaded db -> Database.add_rdf db rdf >|= fun () -> `NoOp
+           | _ -> return `NoOp)
   | `ViewOnMap geoloc ->
       {
         model with

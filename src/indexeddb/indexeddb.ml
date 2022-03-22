@@ -89,11 +89,15 @@ end
 module ObjectStore = struct
   type t = Jv.t
 
-  let add object_store ?(key = Jv.null) value =
-    Jv.call object_store "add" [| value; key |] |> Request.to_lwt
+  let add object_store ?key value =
+    match key with
+    | Some key -> Jv.call object_store "add" [| value; key |] |> Request.to_lwt
+    | None -> Jv.call object_store "add" [| value |] |> Request.to_lwt
 
-  let put object_store ?(key = Jv.null) value =
-    Jv.call object_store "put" [| value; key |] |> Request.to_lwt
+  let put object_store ?key value =
+    match key with
+    | Some key -> Jv.call object_store "put" [| value; key |] |> Request.to_lwt
+    | None -> Jv.call object_store "put" [| value |] |> Request.to_lwt
 
   let get object_store key =
     Jv.call object_store "get" [| key |] |> Request.to_lwt
