@@ -109,6 +109,17 @@ module ObjectStore = struct
     |> Request.to_lwt
     >|= Jv.to_option (fun x -> x)
 
+  let get_all object_store ?count query =
+    match count with
+    | None ->
+        Jv.call object_store "getAll" [| query |]
+        |> Request.to_lwt
+        |> Lwt.map (Jv.to_list (fun x -> x))
+    | Some count ->
+        Jv.call object_store "getAll" [| query; Jv.of_int count |]
+        |> Request.to_lwt
+        |> Lwt.map (Jv.to_list (fun x -> x))
+
   let index object_store index_name =
     Jv.call object_store "index" [| Jv.of_jstr index_name |]
 end

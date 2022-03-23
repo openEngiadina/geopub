@@ -543,6 +543,32 @@ message report is decoupled from logging and is handled by a reporter.")
 stubs in Javascript for use in Js_of_ocaml")
    (license license:expat)))
 
+(define-public ocaml-datalogl
+  (package
+    (name "ocaml-datalogl")
+    (version "18d6be30a757feb17b5a8c180d14e8a1f82a4bb8")
+    (home-page "https://codeberg.org/openEngiadina/ocaml-datalogl")
+    (source
+     (origin (method git-fetch)
+             (uri (git-reference
+                   (url home-page)
+                   (commit version)))
+             (file-name (git-file-name name version))
+             (sha256
+              (base32 "14x7s2g5qmhznh1dbrywf2bp30f06k22p3ji5y1q2xcy6alxi96m"))))
+    (build-system dune-build-system)
+    (arguments '())
+    (propagated-inputs
+     (list ocaml-fmt
+	   ocaml-logs
+	   ocaml-lwt
+	   ocaml-angstrom))
+    (native-inputs
+     (list ocaml-alcotest ocaml-alcotest-lwt))
+    (synopsis "A Datalog library for OCaml")
+    (description #f)
+    (license license:agpl3+)))
+
 (define-public geopub
   (package
     (name "geopub")
@@ -551,19 +577,19 @@ stubs in Javascript for use in Js_of_ocaml")
     (build-system dune-build-system)
     (arguments '())
     (native-inputs
-     `(("alcotest" ,ocaml-alcotest)
-       ("qcheck" ,ocaml-qcheck)
-       ("ocaml-react" ,ocaml-react)
-       ("ocaml-lwt-react" ,ocaml-lwt-react)
-       ("ocaml-brr" ,ocaml-brr)
-       ("ocaml-rdf" ,ocaml-rdf)
-       ("uri" ,ocaml-uri)
-       ("ocaml-xmppl" ,ocaml-xmppl)
-       ("ocaml-ptime" ,ocaml-ptime)
-       ("ocaml-zarith-stubs-js" ,ocaml-zarith-stubs-js)
-       ("js_of_ocaml" ,js-of-ocaml)
-       ("ocaml-merlin" ,ocaml-merlin)
-       ("ocaml-dot-merlin-reader" ,ocaml-dot-merlin-reader)))
+     (list
+      ocaml-react
+      ocaml-lwt-react
+      ocaml-brr
+      ocaml-rdf
+      ocaml-uri
+      ocaml-xmppl
+      ocaml-datalogl
+      ocaml-ptime
+      ocaml-zarith-stubs-js
+      js-of-ocaml
+      ocaml-merlin
+      ocaml-dot-merlin-reader))
     (home-page "https://gitlab.com/openengiadina/geopub")
     (synopsis #f)
     (description #f)
