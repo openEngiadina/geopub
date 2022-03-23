@@ -53,7 +53,7 @@ module Index : sig
   val count : t -> Jv.t -> int Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/count *)
 
-  val get : t -> Jv.t -> Jv.t Lwt.t
+  val get : t -> Jv.t -> Jv.t option Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/get *)
 
   val get_all : t -> ?count:int -> Jv.t -> Jv.t list Lwt.t
@@ -72,7 +72,7 @@ module ObjectStore : sig
   val put : t -> ?key:Jv.t -> Jv.t -> Jv.t Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/put *)
 
-  val get : t -> Jv.t -> Jv.t Lwt.t
+  val get : t -> Jv.t -> Jv.t option Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/get *)
 
   val index : t -> Jstr.t -> Index.t

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: ISC
  *)
 
+open Lwt
+
 module Request = struct
   let result req = Jv.get req "result"
 
@@ -70,7 +72,10 @@ module Index = struct
   let count index key =
     Jv.call index "count" [| key |] |> Request.to_lwt |> Lwt.map Jv.to_int
 
-  let get index key = Jv.call index "get" [| key |] |> Request.to_lwt
+  let get index key =
+    Jv.call index "get" [| key |]
+    |> Request.to_lwt
+    >|= Jv.to_option (fun x -> x)
 
   let get_all index ?count query =
     match count with
@@ -100,7 +105,9 @@ module ObjectStore = struct
     | None -> Jv.call object_store "put" [| value |] |> Request.to_lwt
 
   let get object_store key =
-    Jv.call object_store "get" [| key |] |> Request.to_lwt
+    Jv.call object_store "get" [| key |]
+    |> Request.to_lwt
+    >|= Jv.to_option (fun x -> x)
 
   let index object_store index_name =
     Jv.call object_store "index" [| Jv.of_jstr index_name |]

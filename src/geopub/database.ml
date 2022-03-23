@@ -82,11 +82,22 @@ let init () =
 (* Encoding *)
 
 module Term = struct
-  (** An encoding of RDF terms to Javascript values inspired by the RDF/JSON serialization. *)
+  (** RDF terms are encoded using the binary (and experimental) RDF/CBOR encoding.
+
+    This seems to be necessary as IndexedDB can not use complex object
+    values as keys. I.e. we can not use the RDF/JSON encoding that encodes
+    terms to Javascript objects with `type` and `value` fields.
+
+    The CBOR encoding may be more compact and thus efficient. *)
 
   let to_jv term =
     let s = Rdf_cbor.encode_term term in
     let array = Tarray.(create Uint8 @@ String.length s) in
+
+    (* TODO find a better way to transform a OCaml string to a JavaScript Buffer.
+
+       It does not seem possible to go over the Jstr route as Jstr
+       expected UTF-8 encoded OCaml string. *)
     Tarray.iter (fun i _ -> Tarray.set array i (String.get_uint8 s i)) array;
     array |> Tarray.buffer |> Tarray.Buffer.to_jv
 end
@@ -106,7 +117,6 @@ let inspect db =
     Transaction.create db ~mode:Transaction.ReadOnly
       [ triples_object_store_name ]
   in
-  Brr.Console.log [ tx ];
   let triples = Transaction.object_store tx triples_object_store_name in
 
   let s = ObjectStore.index triples (Jstr.v "s") in
@@ -120,8 +130,25 @@ let inspect db =
          ])
   in
 
-  Brr.Console.log [ triples ];
+  Console.log [ triples ];
   return_unit
+
+let add_triple tx (triple : Rdf.Triple.t) =
+  let triples = Transaction.object_store tx triples_object_store_name in
+  let spo = ObjectStore.index triples (Jstr.v "spo") in
+  let* count =
+    Index.count spo
+      (Jv.of_list Term.to_jv
+         [
+           Rdf.Triple.Subject.to_term triple.subject;
+           Rdf.Triple.Predicate.to_term triple.predicate;
+           Rdf.Triple.Object.to_term triple.object';
+         ])
+  in
+  if count = 0 then
+    let* _ = ObjectStore.add triples (Triple.to_jv triple) in
+    return_unit
+  else return_unit
 
 let add_rdf db graph =
   let* () = inspect db in
@@ -129,14 +156,7 @@ let add_rdf db graph =
     Transaction.create db ~mode:Transaction.ReadWrite
       [ triples_object_store_name ]
   in
-  Brr.Console.log [ tx ];
-  let triples = Transaction.object_store tx triples_object_store_name in
   let* () =
-    Rdf.Graph.to_triples graph |> List.of_seq
-    |> Lwt_list.iter_p (fun triple ->
-           Console.log [ Triple.to_jv triple ];
-           let* id = ObjectStore.put triples (Triple.to_jv triple) in
-           Brr.Console.log [ id ];
-           return_unit)
+    Rdf.Graph.to_triples graph |> List.of_seq |> Lwt_list.iter_p (add_triple tx)
   in
   return @@ Transaction.commit tx
