@@ -91,15 +91,15 @@ module Term = struct
     The CBOR encoding may be more compact and thus efficient. *)
 
   let to_jv term =
-    let s = Rdf_cbor.encode_term term in
-    let array = Tarray.(create Uint8 @@ String.length s) in
-
-    (* TODO find a better way to transform a OCaml string to a JavaScript Buffer.
-
-       It does not seem possible to go over the Jstr route as Jstr
-       expected UTF-8 encoded OCaml string. *)
-    Tarray.iter (fun i _ -> Tarray.set array i (String.get_uint8 s i)) array;
-    array |> Tarray.buffer |> Tarray.Buffer.to_jv
+    Rdf_cbor.encode_term term
+    (* Quite a round-about way of creating a Javascript
+       Buffer. However this seems to be as good as it gets. OCaml strings
+       live on the heap whereas Javascript Buffers are in externally
+       allocated memory. No way to transform without copying. *)
+    |> String.to_seq
+    |> Seq.map Char.code |> Array.of_seq
+    |> Bigarray.Array1.of_array Bigarray.int8_unsigned Bigarray.c_layout
+    |> Tarray.of_bigarray1 |> Tarray.buffer |> Tarray.Buffer.to_jv
 end
 
 module Triple = struct
