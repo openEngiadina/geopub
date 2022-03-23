@@ -148,6 +148,12 @@ module IDBEncoding = struct
            (fun _ -> failwith "predicate can not be blank node")
            (fun _ -> failwith "predicate can not be literal"))
         (Object.of_term o))
+
+  let tuple_of_jv_exn jv =
+    let s = Jv.get jv "s" |> term_of_jv |> Result.get_ok in
+    let p = Jv.get jv "p" |> term_of_jv |> Result.get_ok in
+    let o = Jv.get jv "o" |> term_of_jv |> Result.get_ok in
+    [ s; p; o ]
 end
 
 module Datalog = Datalogl.Make (struct
@@ -165,8 +171,8 @@ let datalog_database tx predicate pattern =
     let pusher =
       l_p
       >|= List.iter (fun el ->
-              let triple = IDBEncoding.triple_of_jv_exn el in
-              push (Some triple))
+              let tuple = IDBEncoding.tuple_of_jv_exn el in
+              push (Some tuple))
       (* Close stream after all elements are pushed *)
       >|= fun () -> push None
     in
@@ -178,30 +184,30 @@ let datalog_database tx predicate pattern =
   let triples = Transaction.object_store tx triples_object_store_name in
   (* Get triples with index matching the query pattern *)
   match (predicate, pattern) with
-  | "rdf", [ None; None; None ] ->
+  | "rdf_db", [ None; None; None ] ->
       ObjectStore.get_all triples Jv.undefined |> stream_of_list
-  | "rdf", [ Some s; None; None ] ->
+  | "rdf_db", [ Some s; None; None ] ->
       let s_index = ObjectStore.index triples (Jstr.v "s") in
       Index.get_all s_index IDBEncoding.(jv_of_terms [ s ]) |> stream_of_list
-  | "rdf", [ None; Some p; None ] ->
+  | "rdf_db", [ None; Some p; None ] ->
       let p_index = ObjectStore.index triples (Jstr.v "p") in
       Index.get_all p_index IDBEncoding.(jv_of_terms [ p ]) |> stream_of_list
-  | "rdf", [ None; None; Some o ] ->
+  | "rdf_db", [ None; None; Some o ] ->
       let o_index = ObjectStore.index triples (Jstr.v "o") in
       Index.get_all o_index IDBEncoding.(jv_of_terms [ o ]) |> stream_of_list
-  | "rdf", [ Some s; Some p; None ] ->
+  | "rdf_db", [ Some s; Some p; None ] ->
       let sp_index = ObjectStore.index triples (Jstr.v "sp") in
       Index.get_all sp_index IDBEncoding.(jv_of_terms [ s; p ])
       |> stream_of_list
-  | "rdf", [ Some s; None; Some o ] ->
+  | "rdf_db", [ Some s; None; Some o ] ->
       let so_index = ObjectStore.index triples (Jstr.v "so") in
       Index.get_all so_index IDBEncoding.(jv_of_terms [ s; o ])
       |> stream_of_list
-  | "rdf", [ None; Some p; Some o ] ->
+  | "rdf_db", [ None; Some p; Some o ] ->
       let po_index = ObjectStore.index triples (Jstr.v "po") in
       Index.get_all po_index IDBEncoding.(jv_of_terms [ p; o ])
       |> stream_of_list
-  | "rdf", [ Some s; Some p; Some o ] ->
+  | "rdf_db", [ Some s; Some p; Some o ] ->
       let spo_index = ObjectStore.index triples (Jstr.v "spo") in
       Index.get_all spo_index IDBEncoding.(jv_of_terms [ s; p; o ])
       |> stream_of_list
@@ -213,22 +219,39 @@ let inspect db =
       [ triples_object_store_name ]
   in
 
-  let triples = Transaction.object_store tx triples_object_store_name in
-
-  let s = ObjectStore.index triples (Jstr.v "s") in
-
-  let* triples =
-    Index.get_all s
-      IDBEncoding.(
-        jv_of_terms
-          [
-            Rdf.Term.of_iri
-            @@ Rdf.Iri.of_string "urn:uuid:669d0fb9-63c8-4c4d-80bf-5380b3aff60d";
-          ])
-    >|= List.map IDBEncoding.triple_of_jv_exn
+  let query =
+    Datalog.(
+      Atom.make "rdf"
+        [
+          Term.make_variable "s"; Term.make_variable "p"; Term.make_variable "o";
+        ])
   in
 
-  Log.debug (fun m -> m "inspect: %a" (Fmt.list Rdf.Triple.pp) triples);
+  let program =
+    Datalog.(
+      Program.empty
+      |> Program.add
+           (Clause.make
+              (Atom.make "rdf"
+                 [
+                   Term.make_variable "s";
+                   Term.make_variable "p";
+                   Term.make_variable "o";
+                 ])
+              [
+                Literal.make_positive
+                @@ Atom.make "rdf_db"
+                     [
+                       Term.make_variable "s";
+                       Term.make_variable "p";
+                       Term.make_variable "o";
+                     ];
+              ]))
+  in
+
+  let* tuples = Datalog.query ~database:(datalog_database tx) ~program query in
+
+  Log.debug (fun m -> m "inspect: %a" Datalog.Tuple.Set.pp tuples);
   return_unit
 
 let add_triple tx (triple : Rdf.Triple.t) =
