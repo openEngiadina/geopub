@@ -12,6 +12,17 @@ let src = Logs.Src.create "GeoPub.Database"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+(* TODO Improve database schema
+
+   Currently triples are encoded with terms in-place. Terms that occur
+   multiple times use up unnecessary space. It would be much better to
+   have an ObjectStore that stores term encodings and triples only hold
+   the primary key to the terms. A bit like the dictionary in HDT.
+
+   Use a cache for improving decoding of terms (e.g. with
+   https://gitlab.com/nomadic-labs/ringo).
+*)
+
 let geopub_database_version = 1
 let geopub_database_name = "GeoPub"
 let triples_object_store_name = Jstr.v "triples"
