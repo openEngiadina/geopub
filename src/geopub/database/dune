@@ -1,0 +1,4 @@
+(library
+ (name geopub_database)
+ (public_name geopub.database)
+ (libraries rdf rdf_cbor indexeddb datalogl zarith_stubs_js))

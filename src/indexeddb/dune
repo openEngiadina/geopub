@@ -1,3 +1,4 @@
 (library
  (name indexeddb)
+ (public_name indexeddb)
  (libraries brr lwt))

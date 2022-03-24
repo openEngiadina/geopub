@@ -2,13 +2,14 @@
  (name main)
  (libraries brr reactor reactor_brr logs logs.lwt logs.browser js_of_ocaml
    js_of_ocaml-lwt lwt_react leaflet leaflet_contextmenu loadable xmlc xmppl
-   datalogl
-   xmppl_websocket xmppl.roster xmppl.disco xmppl.entity_capabilities xmppl.mam
-   xmppl.pubsub ptime ptime.clock.jsoo rdf rdf_xml zarith_stubs_js rdf_cbor uuidm indexeddb)
+   geopub.database xmppl_websocket xmppl.roster xmppl.disco
+   xmppl.entity_capabilities xmppl.mam xmppl.pubsub ptime ptime.clock.jsoo
+   rdf rdf_xml uuidm)
  (modes js))
 
 (install
  (section share)
+ (package geopub)
  (files
   ../../vendor/leaflet/leaflet.css
   (../../vendor/leaflet/images/layers-2x.png as images/layers-2x.png)

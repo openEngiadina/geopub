@@ -10,3 +10,4 @@
 (maintainers "pukkamustard <pukkamustard@posteo.net>")
 
 (package (name geopub))
+(package (name indexeddb))

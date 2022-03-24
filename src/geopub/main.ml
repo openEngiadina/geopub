@@ -11,6 +11,10 @@ open Lwt
 open Lwt.Syntax
 open Lwt_react
 
+(* GeoPub components *)
+
+open Geopub_database
+
 let src = Logs.Src.create "GeoPub"
 
 module Log = (val Logs_lwt.src_log src : Logs_lwt.LOG)
