@@ -140,27 +140,27 @@ module Database = struct
     let triples = Transaction.object_store tx triples_object_store_name in
     (* Get triples with index matching the query pattern *)
     match (predicate, pattern) with
-    | "rdf_db", [ None; None; None ] ->
+    | "triples", [ None; None; None ] ->
         ObjectStore.get_all triples Jv.undefined |> stream_of_list
-    | "rdf_db", [ Some s; None; None ] ->
+    | "triples", [ Some s; None; None ] ->
         let s_index = ObjectStore.index triples (Jstr.v "s") in
         Index.get_all s_index Encoding.(jv_of_terms [ s ]) |> stream_of_list
-    | "rdf_db", [ None; Some p; None ] ->
+    | "triples", [ None; Some p; None ] ->
         let p_index = ObjectStore.index triples (Jstr.v "p") in
         Index.get_all p_index Encoding.(jv_of_terms [ p ]) |> stream_of_list
-    | "rdf_db", [ None; None; Some o ] ->
+    | "triples", [ None; None; Some o ] ->
         let o_index = ObjectStore.index triples (Jstr.v "o") in
         Index.get_all o_index Encoding.(jv_of_terms [ o ]) |> stream_of_list
-    | "rdf_db", [ Some s; Some p; None ] ->
+    | "triples", [ Some s; Some p; None ] ->
         let sp_index = ObjectStore.index triples (Jstr.v "sp") in
         Index.get_all sp_index Encoding.(jv_of_terms [ s; p ]) |> stream_of_list
-    | "rdf_db", [ Some s; None; Some o ] ->
+    | "triples", [ Some s; None; Some o ] ->
         let so_index = ObjectStore.index triples (Jstr.v "so") in
         Index.get_all so_index Encoding.(jv_of_terms [ s; o ]) |> stream_of_list
-    | "rdf_db", [ None; Some p; Some o ] ->
+    | "triples", [ None; Some p; Some o ] ->
         let po_index = ObjectStore.index triples (Jstr.v "po") in
         Index.get_all po_index Encoding.(jv_of_terms [ p; o ]) |> stream_of_list
-    | "rdf_db", [ Some s; Some p; Some o ] ->
+    | "triples", [ Some s; Some p; Some o ] ->
         let spo_index = ObjectStore.index triples (Jstr.v "spo") in
         Index.get_all spo_index Encoding.(jv_of_terms [ s; p; o ])
         |> stream_of_list
@@ -171,7 +171,7 @@ module Datalog = Datalogl.Make (struct
   type t = Rdf.Term.t
 
   let compare = Rdf.Term.compare
-  let parser = Angstrom.fail "Can not parse RDF terms from Datalog queries yet."
+  let parser = Encoding.parser
   let pp = Rdf.Term.pp
 end)
 
@@ -197,25 +197,17 @@ let test_datalog db =
   in
 
   let program =
-    Datalog.(
-      Program.empty
-      |> Program.add
-           (Clause.make
-              (Atom.make "rdf"
-                 [
-                   Term.make_variable "s";
-                   Term.make_variable "p";
-                   Term.make_variable "o";
-                 ])
-              [
-                Literal.make_positive
-                @@ Atom.make "rdf_db"
-                     [
-                       Term.make_variable "s";
-                       Term.make_variable "p";
-                       Term.make_variable "o";
-                     ];
-              ]))
+    match
+      {datalog|
+     rdf(?s,?p,?o) :- triples(?s,?p,?o).
+     |datalog}
+      |> Angstrom.parse_string ~consume:Angstrom.Consume.All
+           Datalog.Program.parser
+    with
+    | Ok program -> program
+    | Error msg ->
+        Log.err (fun m -> m "Can not parse Datalog: %s" msg);
+        Datalog.Program.empty
   in
 
   let* tuples = Datalog.query ~database:(Database.edb tx) ~program query in
