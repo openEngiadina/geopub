@@ -4,35 +4,64 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-open Brr
+(* Javascript Encoding of RDF Terms for IndexedDB *)
 
-(* Javascript Encoding for IndexedDB *)
+(* We use a RDF/Turtle inspired encoding into strings. *)
 
-(* RDF terms are encoded using the binary (and experimental) RDF/CBOR encoding.
+(** Encoding *)
 
-   This seems to be necessary as IndexedDB can not use complex object
-   values as keys. I.e. we can not use the RDF/JSON encoding that encodes
-   terms to Javascript objects with `type` and `value` fields.
+let string_of_term term =
+  let encode_iri iri = "<" ^ Rdf.Iri.to_string iri ^ ">" in
+  let encode_blank_node bnode = "_:" ^ Rdf.Blank_node.identifier bnode in
+  let encode_literal literal =
+    match Rdf.Literal.language literal with
+    | Some lang -> "\"" ^ Rdf.Literal.canonical literal ^ "\"@" ^ lang
+    | None ->
+        "\""
+        ^ Rdf.Literal.canonical literal
+        ^ "\"^^" ^ encode_iri
+        @@ Rdf.Literal.datatype literal
+  in
+  Rdf.Term.map term encode_iri encode_blank_node encode_literal
 
-   The CBOR encoding may be more compact and thus efficient. *)
+let jv_of_term term = string_of_term term |> Jv.of_string
 
-let jv_of_term term =
-  Rdf_cbor.encode_term term
-  (* Quite a round-about way of creating a Javascript
-     Buffer. However this seems to be as good as it gets. OCaml strings
-     live on the heap whereas Javascript Buffers are in externally
-     allocated memory. No way to transform without copying. *)
-  |> String.to_seq
-  |> Seq.map Char.code |> Array.of_seq
-  |> Bigarray.Array1.of_array Bigarray.int8_unsigned Bigarray.c_layout
-  |> Tarray.of_bigarray1 |> Tarray.buffer |> Tarray.Buffer.to_jv
+(** Decoding *)
+
+let parser =
+  let open Angstrom in
+  let iri_parser =
+    char '<' *> (many_till any_char (char '>') >>| List.to_seq >>| String.of_seq)
+    >>| Rdf.Iri.of_string
+  in
+  let bnode_parser = fail "we don't parse bnodes" in
+  let literal_value_parser =
+    char '"' *> (many_till any_char (char '"') >>| List.to_seq >>| String.of_seq)
+  in
+  let whitespace_lst = [ '\x20'; '\x0a'; '\x0d'; '\x09' ] in
+  let char_is_not_equal_to lst d = List.for_all (fun x -> x != d) lst in
+
+  let literal_parser =
+    literal_value_parser >>= fun value ->
+    choice
+      [
+        ( char '@'
+        *> take_while
+             (char_is_not_equal_to ([ ']'; ')'; '(' ] @ whitespace_lst))
+        >>| fun language -> Rdf.Literal.make_string value ~language );
+        ( string "^^" *> iri_parser >>| fun datatype ->
+          Rdf.Literal.make value datatype );
+      ]
+  in
+  choice
+    [
+      iri_parser >>| Rdf.Term.of_iri;
+      bnode_parser >>| Rdf.Term.of_blank_node;
+      literal_parser >>| Rdf.Term.of_literal;
+    ]
 
 let term_of_jv jv =
-  let array = Tarray.Buffer.of_jv jv |> Tarray.of_buffer Tarray.Uint8 in
-  let s =
-    String.init (Tarray.length array) (fun i -> Char.chr @@ Tarray.get array i)
-  in
-  Angstrom.parse_string ~consume:Angstrom.Consume.All Rdf_cbor.Parser.term s
+  Angstrom.parse_string ~consume:Angstrom.Consume.All parser (Jv.to_string jv)
 
 let jv_of_terms terms = Jv.of_list jv_of_term terms
 

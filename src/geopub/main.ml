@@ -186,7 +186,9 @@ let update ~stop model msg =
       |> Return.command (Database.init () >|= fun db -> `DatabaseInitResult db)
   | `DatabaseInitResult (Ok db) ->
       Console.log [ Jstr.v "Database initialized" ];
-      { model with database = Loadable.Loaded db } |> Return.singleton
+      { model with database = Loadable.Loaded db }
+      |> Return.singleton
+      |> Return.command (test_datalog db >|= fun () -> `NoOp)
   | `DatabaseInitResult (Error e) ->
       Console.error [ Jstr.v "IndexedDB Database initialization failed." ];
       raise e

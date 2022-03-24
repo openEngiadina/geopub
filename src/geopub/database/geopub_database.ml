@@ -21,7 +21,7 @@ module Database = struct
   let triples_object_store_name = Jstr.v "triples"
 
   let init () =
-    (* let* () = Database.delete @@ Jstr.v geopub_database_name in *)
+    (* let* () = Indexeddb.Database.delete @@ Jstr.v geopub_database_name in *)
     Indexeddb.Database.open' ~version:geopub_database_version
       ~on_version_change:(fun db ->
         let open Indexeddb.Database.VersionChange in
@@ -176,6 +176,13 @@ module Datalog = Datalogl.Make (struct
 end)
 
 let test_datalog db =
+  (* let tx =
+   *   Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
+   *     [ Database.triples_object_store_name ]
+   * in
+   * Database.edb tx "rdf_db" [ None; None; None ]
+   * |> Lwt_stream.iter (fun constants ->
+   *        Log.debug (fun m -> m "EDB: %a" (Fmt.list Rdf.Term.pp) constants)) *)
   let tx =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
       [ Database.triples_object_store_name ]
