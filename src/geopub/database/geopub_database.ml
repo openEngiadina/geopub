@@ -182,24 +182,55 @@ let datalog_program =
   |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Program.parser
   |> Result.get_ok
 
-let query db query =
+let query db q =
   let tx =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
       [ Database.triples_object_store_name ]
   in
+  Datalog.query ~database:(Database.edb tx) ~program:datalog_program q
 
-  let* query =
-    query
-    |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Atom.parser
+let query_string db q =
+  let* q =
+    q |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Atom.parser
     |> function
     | Ok query -> return query
     | Error msg -> Lwt.fail_with msg
   in
+  query db q
 
-  Datalog.query ~database:(Database.edb tx) ~program:datalog_program query
+let get_description db subject =
+  let q =
+    Datalog.(
+      Atom.make "rdf"
+        [
+          Term.make_constant @@ Rdf.Triple.Subject.to_term subject;
+          Term.make_variable "p";
+          Term.make_variable "o";
+        ])
+  in
+  query db q >|= Datalog.Tuple.Set.to_seq
+  >|= Seq.filter_map (function
+        | [ s; p; o ] ->
+            Rdf.Triple.(
+              Option.some
+              @@ make
+                   (Rdf.Term.map s Subject.of_iri Subject.of_blank_node
+                      (fun _ ->
+                        failwith "unexpected literal in subject position"))
+                   (Rdf.Term.map p Predicate.of_iri
+                      (fun _ ->
+                        failwith "unexpected blank node in predicate position")
+                      (fun _ ->
+                        failwith "unexpected literal in predicate position"))
+                   (Object.of_term o))
+        | _ -> None)
+  >|= Seq.fold_left
+        (fun graph triple -> Rdf.Graph.add triple graph)
+        Rdf.Graph.empty
+  >|= Rdf.Graph.description subject
 
 let test_datalog db =
-  let* tuples = query db {query|rdf(?s,rdf:type,as:Note)|query} in
+  let* tuples = query_string db {query|rdf(?s,rdf:type,as:Note)|query} in
 
   Log.debug (fun m -> m "inspect: %a" Datalog.Tuple.Set.pp tuples);
   return_unit
