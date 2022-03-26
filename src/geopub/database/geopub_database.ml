@@ -175,42 +175,31 @@ module Datalog = Datalogl.Make (struct
   let pp = Rdf.Term.pp
 end)
 
-let test_datalog db =
-  (* let tx =
-   *   Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
-   *     [ Database.triples_object_store_name ]
-   * in
-   * Database.edb tx "rdf_db" [ None; None; None ]
-   * |> Lwt_stream.iter (fun constants ->
-   *        Log.debug (fun m -> m "EDB: %a" (Fmt.list Rdf.Term.pp) constants)) *)
+let datalog_program =
+  {datalog|
+   rdf(?s,?p,?o) :- triples(?s,?p,?o).
+   |datalog}
+  |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Program.parser
+  |> Result.get_ok
+
+let query db query =
   let tx =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
       [ Database.triples_object_store_name ]
   in
 
-  let query =
-    Datalog.(
-      Atom.make "rdf"
-        [
-          Term.make_variable "s"; Term.make_variable "p"; Term.make_variable "o";
-        ])
+  let* query =
+    query
+    |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Atom.parser
+    |> function
+    | Ok query -> return query
+    | Error msg -> Lwt.fail_with msg
   in
 
-  let program =
-    match
-      {datalog|
-     rdf(?s,?p,?o) :- triples(?s,?p,?o).
-     |datalog}
-      |> Angstrom.parse_string ~consume:Angstrom.Consume.All
-           Datalog.Program.parser
-    with
-    | Ok program -> program
-    | Error msg ->
-        Log.err (fun m -> m "Can not parse Datalog: %s" msg);
-        Datalog.Program.empty
-  in
+  Datalog.query ~database:(Database.edb tx) ~program:datalog_program query
 
-  let* tuples = Datalog.query ~database:(Database.edb tx) ~program query in
+let test_datalog db =
+  let* tuples = query db {query|rdf(?s,rdf:type,as:Note)|query} in
 
   Log.debug (fun m -> m "inspect: %a" Datalog.Tuple.Set.pp tuples);
   return_unit
