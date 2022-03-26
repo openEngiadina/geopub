@@ -22,9 +22,13 @@ module Database = struct
 
   let init () =
     (* let* () = Indexeddb.Database.delete @@ Jstr.v geopub_database_name in *)
+    Log.info (fun m -> m "Initializing GeoPub databse.");
+
     Indexeddb.Database.open' ~version:geopub_database_version
       ~on_version_change:(fun db ->
         let open Indexeddb.Database.VersionChange in
+        Log.debug (fun m -> m "Performing database version change.");
+
         (* Create an ObjectStore for triples *)
         let triples =
           create_object_store db
@@ -83,7 +87,6 @@ module Database = struct
 
         ())
       (Jstr.v geopub_database_name)
-    |> Lwt_result.catch
 
   let add_triple tx (triple : Rdf.Triple.t) =
     let triples =
