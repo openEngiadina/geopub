@@ -6,4 +6,4 @@
 
 open Geopub_database
 
-type t = { database : Database.t; route : Router.route }
+type t = { database : Database.t; route : Route.t }

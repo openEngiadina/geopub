@@ -21,7 +21,7 @@ open Geopub_database
 
 let view (model : Model.t) =
   match model.route with
-  | Router.About -> return [ Ui.geopub_menu model; Ui.about ]
+  | Route.About -> return [ Ui.geopub_menu model; Ui.about ]
   | _ -> Ui.placeholder model
 
 let main () =
@@ -40,10 +40,10 @@ let main () =
   (* Initialize the database *)
   let* database = Database.init () in
 
-  let route = Router.init () in
+  let route = Route.init () in
 
   let route_updater =
-    Router.update |> E.map (fun route (model : Model.t) -> { model with route })
+    Route.update |> E.map (fun route (model : Model.t) -> { model with route })
   in
 
   (* Initialize model *)
@@ -61,8 +61,5 @@ let main () =
   return_unit
 
 let () =
-  Lwt.on_any (main ())
-    (fun v -> Console.error [ "GeoPub stopped unexpectedly"; v ])
-    (fun exn ->
-      Console.error
-        [ "Unexpeced exception: "; Jstr.v @@ Printexc.to_string exn ])
+  Lwt.on_any (main ()) ignore (fun exn ->
+      Log.err (fun m -> m "unexpected exception: %s" @@ Printexc.to_string exn))
