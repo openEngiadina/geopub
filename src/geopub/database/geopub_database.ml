@@ -22,7 +22,7 @@ module Database = struct
 
   let init () =
     (* let* () = Indexeddb.Database.delete @@ Jstr.v geopub_database_name in *)
-    Log.info (fun m -> m "Initializing GeoPub databse.");
+    Log.info (fun m -> m "Initializing IndexedDB databse.");
 
     Indexeddb.Database.open' ~version:geopub_database_version
       ~on_version_change:(fun db ->
