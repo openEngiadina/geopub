@@ -17,9 +17,7 @@ module LatLng : sig
   type t
 
   val create : float -> float -> t
-
   val lat : t -> float
-
   val lng : t -> float
 end
 
@@ -35,13 +33,9 @@ module Map : sig
   type t
 
   val create : ?options:Jv.t -> El.t -> t
-
   val invalidate_size : t -> unit
-
   val set_view : LatLng.t -> zoom:int -> t -> t
-
   val fit_world : t -> unit
-
   val get_container : t -> El.t
 
   (** {1 Events} **)
@@ -57,7 +51,6 @@ module TileLayer : sig
   type t
 
   val create_osm : unit -> t
-
   val add_to : t -> Map.t -> unit
 end
 
@@ -65,12 +58,10 @@ module Marker : sig
   type t
 
   val create : LatLng.t -> t
-
   val add_to : t -> Map.t -> unit
 
   (** {2 Popup methods} *)
 
   val bind_popup : El.t -> t -> t
-
   val open_popup : t -> unit
 end

@@ -17,7 +17,6 @@ module LatLng = struct
     Jv.call leaflet "latLng" [| Jv.of_float lat; Jv.of_float lng |]
 
   let lat latlng = Jv.get latlng "lat" |> Jv.to_float
-
   let lng latlng = Jv.get latlng "lng" |> Jv.to_float
 end
 
@@ -39,7 +38,6 @@ module Map = struct
     ignore @@ Jv.call map "invalidateSize" [| Jv.true' |]
 
   let fit_world map = ignore @@ Jv.call map "fitWorld" [||]
-
   let get_container map = Jv.call map "getContainer" [||] |> El.of_jv
 
   let set_view latlng ~zoom map =
@@ -47,7 +45,6 @@ module Map = struct
     map
 
   let as_target map = Brr.Ev.target_of_jv map
-
   let click = Brr.Ev.Type.create (Jstr.v "click")
 end
 
@@ -75,7 +72,6 @@ module Marker = struct
   type t = Jv.t
 
   let create latlng = Jv.call leaflet "marker" [| latlng |]
-
   let add_to marker map = ignore @@ Jv.call marker "addTo" [| map |]
 
   let bind_popup el marker =

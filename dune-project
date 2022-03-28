@@ -11,3 +11,4 @@
 
 (package (name geopub))
 (package (name indexeddb))
+(package (name leaflet))

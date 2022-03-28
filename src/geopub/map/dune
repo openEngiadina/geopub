@@ -1,0 +1,4 @@
+(library
+ (name geopub_map)
+ (public_name geopub.map)
+ (libraries brr logs geopub.database leaflet leaflet_contextmenu))

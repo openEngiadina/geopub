@@ -22,7 +22,32 @@ open Geopub_database
 let view (model : Model.t) =
   match model.route with
   | Route.About -> return [ Ui.geopub_menu model; Ui.about ]
+  | Route.Map ->
+      let* map = Geopub_map.view model.map in
+      return [ Ui.geopub_menu model; map ]
   | _ -> Ui.placeholder model
+
+(* A small hack to invalidate the size of the Leaflet map when it is
+   dynamically loaded. If not it would not be displayed correctly until a
+   manual window resize. *)
+let observe_for_map el map =
+  let observer records _obs =
+    let on_node node =
+      match Jv.(to_option to_string @@ get node "id") with
+      | Some "map" -> Geopub_map.invalidate_size map
+      | _ -> ()
+    in
+
+    records
+    |> Jv.to_list (fun x -> x)
+    |> List.map (fun record ->
+           Jv.to_list (fun x -> x) @@ Jv.get record "addedNodes")
+    |> List.flatten |> List.iter on_node
+  in
+  let mutation_observer = Jv.get Jv.global "MutationObserver" in
+  let observer = Jv.new' mutation_observer [| Jv.repr observer |] in
+  let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
+  ignore @@ Jv.call observer "observe" [| El.to_jv el; opts |]
 
 let main () =
   (* Setup logging *)
@@ -37,20 +62,29 @@ let main () =
   (* Initialize random generator *)
   Random.self_init ();
 
-  (* Initialize the database *)
-  let* database = Database.init () in
-
+  (* Initialize Route *)
   let route = Route.init () in
 
   let route_updater =
     Route.update |> E.map (fun route (model : Model.t) -> { model with route })
   in
 
+  (* Initialize the database *)
+  let* database = Database.init () in
+
+  (* Initialize Map *)
+  let* map = Geopub_map.init () in
+
+  Geopub_map.invalidate_size map;
+
   (* Initialize model *)
-  let model_s = S.accum route_updater { database; route } in
+  let model_s = S.accum route_updater { database; route; map } in
 
   (* Set UI *)
   let body = Document.body G.document in
+
+  (* Invalidate map size when it is added to the DOM *)
+  observe_for_map body map;
 
   let* () =
     model_s

@@ -1,5 +1,6 @@
 (library
  (name leaflet_contextmenu)
+ (public_name leaflet.contextmenu)
  (libraries brr js_of_ocaml leaflet)
  (js_of_ocaml
   (javascript_files
