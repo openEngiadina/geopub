@@ -50,6 +50,17 @@ let placeholder (model : Model.t) =
            [ txt' "TODO" ];
        ]
 
+let loading =
+  El.
+    [
+      div
+        ~at:At.[ class' @@ Jstr.v "loading" ]
+        [
+          img ~at:At.[ src (Jstr.v "sgraffito.svg") ] ();
+          p [ txt' "Loading GeoPub ..." ];
+        ];
+    ]
+
 let about =
   El.(
     div

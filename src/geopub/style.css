@@ -11,6 +11,16 @@ body {
 
 /* Common components */
 
+.loading {
+    margin: auto;
+    text-align: center;
+    color: grey;
+}
+
+.loading img {
+    max-height: 50px;
+}
+
 .spacer {
     flex-grow: 1
 }

@@ -59,6 +59,10 @@ let main () =
   (* Initialize the application *)
   let () = Log.app (fun m -> m "Initializing GeoPub.") in
 
+  (* Show a loading screen *)
+  let body = Document.body G.document in
+  El.set_children body Ui.loading;
+
   (* Initialize random generator *)
   Random.self_init ();
 
@@ -81,7 +85,6 @@ let main () =
   let model_s = S.accum route_updater { database; route; map } in
 
   (* Set UI *)
-  let body = Document.body G.document in
 
   (* Invalidate map size when it is added to the DOM *)
   observe_for_map body map;
