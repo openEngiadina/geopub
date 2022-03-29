@@ -30,15 +30,22 @@ let geopub_menu (_model : Model.t) =
       header
         [
           a
-            ~at:At.[ href @@ Jstr.v "#" ]
+            ~at:At.[ href @@ Jstr.v "#about" ]
             [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
         ])
   in
-  (* let entry name route =
-   *   on_el Ev.click (fun _ -> ignore @@ Router.set_route route)
-   *   @@ El.(li [ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' name ] ])
-   * in *)
-  El.(nav ~at:At.[ id @@ Jstr.v "menu" ] [ menu_header ])
+  let entry name route =
+    El.(li [ a ~at:At.[ href @@ Route.to_jstr route ] [ txt' name ] ])
+  in
+  El.(
+    nav
+      ~at:At.[ id @@ Jstr.v "menu" ]
+      [
+        menu_header;
+        nav [ ul [ entry "Map" Route.Map ] ];
+        div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
+        nav [ ul [ entry "Settings" Route.About ] ];
+      ])
 
 let placeholder (model : Model.t) =
   return

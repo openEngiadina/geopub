@@ -27,6 +27,7 @@ type t = About | Login | Map | Inspect of Rdf.Iri.t
  *   | AddContact *)
 
 let parser uri =
+  Log.debug (fun m -> m "Route.parser %a" Rdf.Iri.pp uri);
   let path =
     String.split_on_char '/' @@ Option.value ~default:"" @@ Rdf.Iri.fragment uri
   in
@@ -34,7 +35,12 @@ let parser uri =
   | [ "about" ] -> About
   | [ "login" ] -> Login
   | [ "map" ] -> Map
-  | [ "inspect"; iri_s ] -> Inspect (Rdf.Iri.of_string iri_s)
+  | [ "inspect"; encoded_iri_s ] -> (
+      match Uri.decode @@ Jstr.v encoded_iri_s with
+      | Ok iri_jstr -> Inspect (Rdf.Iri.of_string @@ Jstr.to_string iri_jstr)
+      | Error error ->
+          Console.error [ error ];
+          Inspect (Rdf.Iri.of_string "urn:something:went:wrong"))
   | _ -> About
 
 let get_location () =
@@ -55,9 +61,19 @@ let to_uri route =
   | Login -> Uri.with_uri location ~fragment:(Jstr.v "login")
   | Map -> Uri.with_uri location ~fragment:(Jstr.v "map")
   | Inspect iri ->
+      let encoded_iri =
+        match Uri.encode @@ Jstr.v @@ Rdf.Iri.to_string iri with
+        | Ok e -> e
+        | Error error ->
+            Console.error [ error ];
+            Jstr.v "urn:something:went:wrong"
+      in
+
       Uri.with_uri location
-        ~fragment:(Jstr.v @@ "inspect/" ^ Rdf.Iri.to_string iri))
+        ~fragment:(Jstr.concat [ Jstr.v "inspect/"; encoded_iri ]))
   |> Result.value ~default:location
+
+let to_jstr route = to_uri route |> Uri.to_jstr
 
 let set_route route =
   Window.History.push_state ~uri:(to_uri route) history;

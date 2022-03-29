@@ -25,6 +25,7 @@ let view (model : Model.t) =
   | Route.Map ->
       let* map = Geopub_map.view model.map in
       return [ Ui.geopub_menu model; map ]
+  | Route.Inspect iri -> Inspect.view model iri
   | _ -> Ui.placeholder model
 
 (* A small hack to invalidate the size of the Leaflet map when it is
@@ -98,5 +99,9 @@ let main () =
   return_unit
 
 let () =
+  (Lwt.async_exception_hook :=
+     fun exn ->
+       Log.err (fun m ->
+           m "unexpected async exception: %s" @@ Printexc.to_string exn));
   Lwt.on_any (main ()) ignore (fun exn ->
       Log.err (fun m -> m "unexpected exception: %s" @@ Printexc.to_string exn))
