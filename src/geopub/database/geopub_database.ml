@@ -176,34 +176,41 @@ module Database = struct
     (* Get triples with index matching the query pattern *)
     match (predicate, pattern) with
     | "triples", [ None; None; None ] ->
-        (* ObjectStore.get_all triples Jv.undefined |> stream_of_list *)
+        Log.debug (fun m -> m "EDB: getting all triples");
         ObjectStore.open_cursor triples Jv.undefined
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; None; None ] ->
+        Log.debug (fun m -> m "EDB: using s index");
         let s_index = ObjectStore.index triples (Jstr.v "s") in
         Index.open_cursor s_index Encoding.(jv_of_terms [ s ])
         |> Cursor.to_stream |> parse
     | "triples", [ None; Some p; None ] ->
+        Log.debug (fun m -> m "EDB: using p index");
         let p_index = ObjectStore.index triples (Jstr.v "p") in
         Index.open_cursor p_index Encoding.(jv_of_terms [ p ])
         |> Cursor.to_stream |> parse
     | "triples", [ None; None; Some o ] ->
+        Log.debug (fun m -> m "EDB: using o index");
         let o_index = ObjectStore.index triples (Jstr.v "o") in
         Index.open_cursor o_index Encoding.(jv_of_terms [ o ])
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; Some p; None ] ->
+        Log.debug (fun m -> m "EDB: using sp index");
         let sp_index = ObjectStore.index triples (Jstr.v "sp") in
         Index.open_cursor sp_index Encoding.(jv_of_terms [ s; p ])
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; None; Some o ] ->
+        Log.debug (fun m -> m "EDB: using so index");
         let so_index = ObjectStore.index triples (Jstr.v "so") in
         Index.open_cursor so_index Encoding.(jv_of_terms [ s; o ])
         |> Cursor.to_stream |> parse
     | "triples", [ None; Some p; Some o ] ->
+        Log.debug (fun m -> m "EDB: using po index");
         let po_index = ObjectStore.index triples (Jstr.v "po") in
         Index.open_cursor po_index Encoding.(jv_of_terms [ p; o ])
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; Some p; Some o ] ->
+        Log.debug (fun m -> m "EDB: using spo index");
         let spo_index = ObjectStore.index triples (Jstr.v "spo") in
         Index.open_cursor spo_index Encoding.(jv_of_terms [ s; p; o ])
         |> Cursor.to_stream |> parse
