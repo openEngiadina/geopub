@@ -589,7 +589,8 @@ stubs in Javascript for use in Js_of_ocaml")
       ocaml-zarith-stubs-js
       js-of-ocaml
       ocaml-merlin
-      ocaml-dot-merlin-reader))
+      ocaml-dot-merlin-reader
+      raptor2))
     (home-page "https://gitlab.com/openengiadina/geopub")
     (synopsis #f)
     (description #f)

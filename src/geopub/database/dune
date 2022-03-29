@@ -1,4 +1,4 @@
 (library
  (name geopub_database)
  (public_name geopub.database)
- (libraries rdf rdf_turtle indexeddb datalogl))
+ (libraries rdf rdf_xml xmlm indexeddb datalogl))

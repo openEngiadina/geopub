@@ -1,0 +1,11 @@
+(rule
+ (targets activitystreams2.xml)
+ (deps Makefile activitystreams2.ttl)
+ (action (run make %{targets})))
+
+(install
+ (section share)
+ (package geopub)
+ (files
+  (activitystreams2.xml as vocabs/activitystreams2.xml)
+  (musicontology.xml as vocabs/musicontology.xml)))
