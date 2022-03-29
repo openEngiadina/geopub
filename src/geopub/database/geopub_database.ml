@@ -12,6 +12,14 @@ let src = Logs.Src.create "GeoPub.Database"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+module Datalog = Datalogl.Make (struct
+  type t = Rdf.Term.t
+
+  let compare = Rdf.Term.compare
+  let parser = Encoding.parser
+  let pp = Rdf.Term.pp
+end)
+
 module Database = struct
   type t = Indexeddb.Database.t
 
@@ -151,20 +159,15 @@ module Database = struct
     return db
 
   let edb tx predicate pattern =
-    let stream_of_list l_p =
-      (* TODO instead of transforming list to Lwt_stream we should use IDBCursor. *)
-      let stream, push, set_reference = Lwt_stream.create_with_reference () in
-      let pusher =
-        l_p
-        >|= List.iter (fun el ->
-                let tuple = Encoding.tuple_of_jv_exn el in
-                push (Some tuple))
-        (* Close stream after all elements are pushed *)
-        >|= fun () -> push None
-      in
-      (* Don't forget the pusher *)
-      set_reference pusher;
-      stream
+    let parse =
+      Lwt_stream.filter_map (fun jv ->
+          match Encoding.tuple_of_jv jv with
+          | Ok tuple -> Some tuple
+          | Error msg ->
+              Log.warn (fun m ->
+                  m "Encountered tuple that could not be parsed (%s)" msg);
+              Brr.Console.warn [ jv ];
+              None)
     in
 
     let open Indexeddb in
@@ -173,39 +176,39 @@ module Database = struct
     (* Get triples with index matching the query pattern *)
     match (predicate, pattern) with
     | "triples", [ None; None; None ] ->
-        ObjectStore.get_all triples Jv.undefined |> stream_of_list
+        (* ObjectStore.get_all triples Jv.undefined |> stream_of_list *)
+        ObjectStore.open_cursor triples Jv.undefined
+        |> Cursor.to_stream |> parse
     | "triples", [ Some s; None; None ] ->
         let s_index = ObjectStore.index triples (Jstr.v "s") in
-        Index.get_all s_index Encoding.(jv_of_terms [ s ]) |> stream_of_list
+        Index.open_cursor s_index Encoding.(jv_of_terms [ s ])
+        |> Cursor.to_stream |> parse
     | "triples", [ None; Some p; None ] ->
         let p_index = ObjectStore.index triples (Jstr.v "p") in
-        Index.get_all p_index Encoding.(jv_of_terms [ p ]) |> stream_of_list
+        Index.open_cursor p_index Encoding.(jv_of_terms [ p ])
+        |> Cursor.to_stream |> parse
     | "triples", [ None; None; Some o ] ->
         let o_index = ObjectStore.index triples (Jstr.v "o") in
-        Index.get_all o_index Encoding.(jv_of_terms [ o ]) |> stream_of_list
+        Index.open_cursor o_index Encoding.(jv_of_terms [ o ])
+        |> Cursor.to_stream |> parse
     | "triples", [ Some s; Some p; None ] ->
         let sp_index = ObjectStore.index triples (Jstr.v "sp") in
-        Index.get_all sp_index Encoding.(jv_of_terms [ s; p ]) |> stream_of_list
+        Index.open_cursor sp_index Encoding.(jv_of_terms [ s; p ])
+        |> Cursor.to_stream |> parse
     | "triples", [ Some s; None; Some o ] ->
         let so_index = ObjectStore.index triples (Jstr.v "so") in
-        Index.get_all so_index Encoding.(jv_of_terms [ s; o ]) |> stream_of_list
+        Index.open_cursor so_index Encoding.(jv_of_terms [ s; o ])
+        |> Cursor.to_stream |> parse
     | "triples", [ None; Some p; Some o ] ->
         let po_index = ObjectStore.index triples (Jstr.v "po") in
-        Index.get_all po_index Encoding.(jv_of_terms [ p; o ]) |> stream_of_list
+        Index.open_cursor po_index Encoding.(jv_of_terms [ p; o ])
+        |> Cursor.to_stream |> parse
     | "triples", [ Some s; Some p; Some o ] ->
         let spo_index = ObjectStore.index triples (Jstr.v "spo") in
-        Index.get_all spo_index Encoding.(jv_of_terms [ s; p; o ])
-        |> stream_of_list
+        Index.open_cursor spo_index Encoding.(jv_of_terms [ s; p; o ])
+        |> Cursor.to_stream |> parse
     | _, _ -> Lwt_stream.of_list []
 end
-
-module Datalog = Datalogl.Make (struct
-  type t = Rdf.Term.t
-
-  let compare = Rdf.Term.compare
-  let parser = Encoding.parser
-  let pp = Rdf.Term.pp
-end)
 
 let datalog_program =
   {datalog|
@@ -262,7 +265,10 @@ let get_description db subject =
   >|= Rdf.Graph.description subject
 
 let test_datalog db =
-  let* tuples = query_string db {query|rdf(?s,rdf:type,as:Note)|query} in
+  let* tuples =
+    query_string db
+      {query|rdf(?s,rdf:type,<http://www.w3.org/2002/07/owl#Ontology>)|query}
+  in
 
   Log.debug (fun m -> m "inspect: %a" Datalog.Tuple.Set.pp tuples);
   return_unit

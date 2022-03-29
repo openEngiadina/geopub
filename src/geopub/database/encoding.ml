@@ -34,12 +34,16 @@ let parser =
     char '<' *> (many_till any_char (char '>') >>| List.to_seq >>| String.of_seq)
     >>| Rdf.Iri.of_string
   in
-  let bnode_parser = fail "we don't parse bnodes" in
+  let whitespace_lst = [ '\x20'; '\x0a'; '\x0d'; '\x09' ] in
+  let char_is_not_equal_to lst d = List.for_all (fun x -> x != d) lst in
+  let bnode_parser =
+    string "_:"
+    *> take_while (char_is_not_equal_to ([ ','; ')' ] @ whitespace_lst))
+    >>| Rdf.Blank_node.of_string
+  in
   let literal_value_parser =
     char '"' *> (many_till any_char (char '"') >>| List.to_seq >>| String.of_seq)
   in
-  let whitespace_lst = [ '\x20'; '\x0a'; '\x0d'; '\x09' ] in
-  let char_is_not_equal_to lst d = List.for_all (fun x -> x != d) lst in
 
   let literal_parser =
     literal_value_parser >>= fun value ->
@@ -98,8 +102,10 @@ let triple_of_jv_exn jv =
          (fun _ -> failwith "predicate can not be literal"))
       (Object.of_term o))
 
-let tuple_of_jv_exn jv =
-  let s = Jv.get jv "s" |> term_of_jv |> Result.get_ok in
-  let p = Jv.get jv "p" |> term_of_jv |> Result.get_ok in
-  let o = Jv.get jv "o" |> term_of_jv |> Result.get_ok in
-  [ s; p; o ]
+let tuple_of_jv jv =
+  let result_bind f r = Result.bind r f in
+  (fun s p o -> [ s; p; o ])
+  |> Result.ok
+  |> result_bind (fun f -> Jv.get jv "s" |> term_of_jv |> Result.map f)
+  |> result_bind (fun f -> Jv.get jv "p" |> term_of_jv |> Result.map f)
+  |> result_bind (fun f -> Jv.get jv "o" |> term_of_jv |> Result.map f)

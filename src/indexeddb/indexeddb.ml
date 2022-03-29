@@ -64,6 +64,22 @@ module Database = struct
   let close db = ignore @@ Jv.call db "close" [||]
 end
 
+module Cursor = struct
+  type t = Jv.t
+
+  let to_stream cursor =
+    let stream, push, set_reference = Lwt_stream.create_with_reference () in
+    Jv.set cursor "onsuccess"
+    @@ Jv.repr (fun ev ->
+           match Jv.find_path ev [ "target"; "result" ] with
+           | Some cursor ->
+               push @@ Option.some @@ Jv.get cursor "value";
+               ignore @@ Jv.call cursor "continue" [||]
+           | None -> push None);
+    set_reference cursor;
+    stream
+end
+
 module Index = struct
   type t = Jv.t
 
@@ -89,6 +105,7 @@ module Index = struct
         |> Lwt.map (Jv.to_list (fun x -> x))
 
   let get_key index query = Jv.call index "getKey" [| query |] |> Request.to_lwt
+  let open_cursor index query = Jv.call index "openCursor" [| query |]
 end
 
 module ObjectStore = struct
@@ -119,6 +136,9 @@ module ObjectStore = struct
         Jv.call object_store "getAll" [| query; Jv.of_int count |]
         |> Request.to_lwt
         |> Lwt.map (Jv.to_list (fun x -> x))
+
+  let open_cursor object_store query =
+    Jv.call object_store "openCursor" [| query |]
 
   let count index key =
     Jv.call index "count" [| key |] |> Request.to_lwt |> Lwt.map Jv.to_int

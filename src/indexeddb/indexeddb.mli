@@ -41,6 +41,12 @@ module Database : sig
   val close : t -> unit
 end
 
+module Cursor : sig
+  type t
+
+  val to_stream : t -> Jv.t Lwt_stream.t
+end
+
 module Index : sig
   type t
 
@@ -61,6 +67,9 @@ module Index : sig
 
   val get_key : t -> Jv.t -> Jv.t Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/getKey *)
+
+  val open_cursor : t -> Jv.t -> Cursor.t
+  (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/openCursor *)
 end
 
 module ObjectStore : sig
@@ -77,6 +86,9 @@ module ObjectStore : sig
 
   val get_all : t -> ?count:int -> Jv.t -> Jv.t list Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/getAll *)
+
+  val open_cursor : t -> Jv.t -> Cursor.t
+  (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/openCursor *)
 
   val count : t -> Jv.t -> int Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/count *)
