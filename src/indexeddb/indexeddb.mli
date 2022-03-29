@@ -78,6 +78,9 @@ module ObjectStore : sig
   val get_all : t -> ?count:int -> Jv.t -> Jv.t list Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/getAll *)
 
+  val count : t -> Jv.t -> int Lwt.t
+  (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/count *)
+
   val index : t -> Jstr.t -> Index.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/index *)
 end

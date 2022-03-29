@@ -120,6 +120,9 @@ module ObjectStore = struct
         |> Request.to_lwt
         |> Lwt.map (Jv.to_list (fun x -> x))
 
+  let count index key =
+    Jv.call index "count" [| key |] |> Request.to_lwt |> Lwt.map Jv.to_int
+
   let index object_store index_name =
     Jv.call object_store "index" [| Jv.of_jstr index_name |]
 end

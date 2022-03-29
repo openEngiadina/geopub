@@ -20,6 +20,16 @@ module Database = struct
   let geopub_database_name = "GeoPub"
   let triples_object_store_name = Jstr.v "triples"
 
+  let triple_count db =
+    let tx =
+      Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadWrite
+        [ triples_object_store_name ]
+    in
+    let triples =
+      Indexeddb.Transaction.object_store tx triples_object_store_name
+    in
+    Indexeddb.ObjectStore.count triples Jv.undefined
+
   let add_triple tx (triple : Rdf.Triple.t) =
     let triples =
       Indexeddb.Transaction.object_store tx triples_object_store_name
@@ -123,13 +133,18 @@ module Database = struct
         (Jstr.v geopub_database_name)
     in
 
-    (* Load some vocabularies *)
+    let* triple_count = triple_count db in
+    Log.debug (fun m -> m "Triples in database: %d" triple_count);
+
+    (* Load some vocabularies if db is empty*)
     let* () =
-      Vocabs.vocabs
-      |> Lwt_list.iter_p (fun vocab ->
-             Log.debug (fun m -> m "Loading vocabulary %s" vocab);
-             let* graph = Vocabs.fetch_vocab vocab in
-             add_rdf db graph)
+      if triple_count = 0 then
+        Vocabs.vocabs
+        |> Lwt_list.iter_p (fun vocab ->
+               Log.debug (fun m -> m "Loading vocabulary %s" vocab);
+               let* graph = Vocabs.fetch_vocab vocab in
+               add_rdf db graph)
+      else return_unit
     in
 
     (* Log.debug (fun m -> m "Graph: %a" Rdf.Graph.pp as2); *)
