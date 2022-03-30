@@ -27,7 +27,6 @@ let view ~update (model : Model.t) =
       return [ Ui.geopub_menu model; map ]
   | Route.Inspect iri -> Inspect.view model iri
   | Route.Settings -> Settings.view ~update model
-  | _ -> Ui.placeholder model
 
 (* A small hack to invalidate the size of the Leaflet map when it is
    dynamically loaded. If not it would not be displayed correctly until a
