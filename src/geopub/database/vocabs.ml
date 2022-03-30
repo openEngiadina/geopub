@@ -22,7 +22,7 @@ let promise_of_fut_or_error fut =
   | Ok v -> return v
   | Error e -> fail @@ Jv.Error e
 
-let vocabs = [ "activitystreams2.xml"; "musicontology.xml" ]
+let vocabs = [ "activitystreams2.xml"; "musicontology.xml"; "geo.xml" ]
 
 let parse_xml s =
   Xmlm.make_input ~strip:true (`String (0, s))
