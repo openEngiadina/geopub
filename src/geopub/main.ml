@@ -19,13 +19,14 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 open Geopub_database
 
-let view (model : Model.t) =
+let view ~update (model : Model.t) =
   match model.route with
   | Route.About -> return [ Ui.geopub_menu model; Ui.about ]
   | Route.Map ->
       let* map = Geopub_map.view model.map in
       return [ Ui.geopub_menu model; map ]
   | Route.Inspect iri -> Inspect.view model iri
+  | Route.Settings -> Settings.view ~update model
   | _ -> Ui.placeholder model
 
 (* A small hack to invalidate the size of the Leaflet map when it is
@@ -71,7 +72,8 @@ let main () =
   let route = Route.init () in
 
   let route_updater =
-    Route.update |> E.map (fun route (model : Model.t) -> { model with route })
+    Route.update
+    |> E.map (fun route (model : Model.t) -> return { model with route })
   in
 
   (* Initialize the database *)
@@ -80,10 +82,22 @@ let main () =
   (* Initialize Map *)
   let* map = Geopub_map.init () in
 
-  Geopub_map.invalidate_size map;
+  (* (\* Initialize XMPP *\)
+   * let* xmpp =
+   *   Geopub_xmpp.login_dev () >>= function
+   *   | Ok xmpp -> return xmpp
+   *   | Error exn -> fail exn
+   * in *)
+
+  (* Model updates *)
+  let model_update_e, update = E.create () in
 
   (* Initialize model *)
-  let model_s = S.accum route_updater { database; route; map } in
+  let model_s =
+    S.accum_s ~eq:( == )
+      (E.select [ route_updater; model_update_e ])
+      { database; route; map; xmpp = Loadable.Idle }
+  in
 
   (* Set UI *)
 
@@ -92,10 +106,13 @@ let main () =
 
   let* () =
     model_s
-    |> S.map_s (fun model -> view model >|= El.set_children body)
+    |> S.map_s ~eq:( == ) (fun model ->
+           (* Log.debug (fun m -> m "calling view function"); *)
+           view ~update model >|= El.set_children body)
     >|= S.keep
   in
 
+  let () = Log.app (fun m -> m "GeoPub ready.") in
   return_unit
 
 let () =

@@ -72,9 +72,6 @@ module Database = struct
     return @@ Indexeddb.Transaction.commit tx
 
   let init () =
-    (* let* () = Indexeddb.Database.delete @@ Jstr.v geopub_database_name in *)
-    Log.info (fun m -> m "Initializing IndexedDB databse.");
-
     let* db =
       Indexeddb.Database.open' ~version:geopub_database_version
         ~on_version_change:(fun db ->
@@ -155,8 +152,15 @@ module Database = struct
       else return_unit
     in
 
+    Log.info (fun m -> m "IndexedDB databse initialized.");
     (* Log.debug (fun m -> m "Graph: %a" Rdf.Graph.pp as2); *)
     return db
+
+  let reset db =
+    Log.info (fun m -> m "Deleting IndexedDB databse.");
+    Indexeddb.(
+      return @@ Database.close db >>= fun () ->
+      Database.delete (Jstr.v geopub_database_name) >>= init)
 
   let edb tx predicate pattern =
     let parse =

@@ -6,4 +6,9 @@
 
 open Geopub_database
 
-type t = { database : Database.t; route : Route.t; map : Geopub_map.t }
+type t = {
+  database : Database.t;
+  route : Route.t;
+  map : Geopub_map.t;
+  xmpp : (Geopub_xmpp.t, exn) Loadable.t;
+}

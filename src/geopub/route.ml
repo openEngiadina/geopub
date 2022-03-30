@@ -15,7 +15,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 let history = Window.history G.window
 
-type t = About | Login | Map | Inspect of Rdf.Iri.t
+type t = About | Login | Map | Inspect of Rdf.Iri.t | Settings
 
 (* type t =
  *   | About
@@ -41,6 +41,7 @@ let parser uri =
       | Error error ->
           Console.error [ error ];
           Inspect (Rdf.Iri.of_string "urn:something:went:wrong"))
+  | [ "settings" ] -> Settings
   | _ -> About
 
 let get_location () =
@@ -70,7 +71,8 @@ let to_uri route =
       in
 
       Uri.with_uri location
-        ~fragment:(Jstr.concat [ Jstr.v "inspect/"; encoded_iri ]))
+        ~fragment:(Jstr.concat [ Jstr.v "inspect/"; encoded_iri ])
+  | Settings -> Uri.with_uri location ~fragment:(Jstr.v "settings"))
   |> Result.value ~default:location
 
 let to_jstr route = to_uri route |> Uri.to_jstr

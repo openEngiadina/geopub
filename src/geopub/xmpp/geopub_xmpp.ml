@@ -21,7 +21,7 @@ module Pubsub = Xmppl_pubsub.Make (Client)
 
 (* XMPP client state *)
 
-type model = {
+type t = {
   client : Client.t;
   state : Client.state;
   ec_responder : unit E.t;
@@ -54,7 +54,6 @@ let connect client =
     let* roster = Roster.roster client in
 
     return { client; state = Client.Disconnected; ec_responder; roster })
-  >|= fun r -> `XmppLoginResult r
 
 let login jid password =
   Client.create Xmppl_websocket.default_options
