@@ -244,7 +244,8 @@ let query_string db q =
   in
   query db q
 
-let get_description db subject =
+(* Return a RDF graph for [subject] that is used in the inspect view *)
+let inspect_graph db subject =
   let q =
     Datalog.(
       Atom.make "rdf"
@@ -273,7 +274,6 @@ let get_description db subject =
   >|= Seq.fold_left
         (fun graph triple -> Rdf.Graph.add triple graph)
         Rdf.Graph.empty
-  >|= Rdf.Graph.description subject
 
 let test_datalog db =
   let* tuples =

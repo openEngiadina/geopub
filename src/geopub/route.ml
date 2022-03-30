@@ -29,7 +29,7 @@ type t = About | Login | Map | Inspect of Rdf.Iri.t | Settings
 let parser uri =
   Log.debug (fun m -> m "Route.parser %a" Rdf.Iri.pp uri);
   let path =
-    String.split_on_char '/' @@ Option.value ~default:"" @@ Rdf.Iri.fragment uri
+    String.split_on_char '=' @@ Option.value ~default:"" @@ Rdf.Iri.fragment uri
   in
   match path with
   | [ "about" ] -> About
@@ -71,7 +71,7 @@ let to_uri route =
       in
 
       Uri.with_uri location
-        ~fragment:(Jstr.concat [ Jstr.v "inspect/"; encoded_iri ])
+        ~fragment:(Jstr.concat [ Jstr.v "inspect="; encoded_iri ])
   | Settings -> Uri.with_uri location ~fragment:(Jstr.v "settings"))
   |> Result.value ~default:location
 

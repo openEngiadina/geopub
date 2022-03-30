@@ -42,7 +42,17 @@ let geopub_menu (_model : Model.t) =
       ~at:At.[ id @@ Jstr.v "menu" ]
       [
         menu_header;
-        nav [ ul [ entry "Activity" Route.About; entry "Map" Route.Map ] ];
+        nav
+          [
+            ul
+              [
+                entry "Activity" Route.About;
+                entry "Map" Route.Map;
+                entry "ActivityStreams"
+                @@ Route.Inspect
+                     (Rdf.Iri.of_string "https://www.w3.org/ns/activitystreams#");
+              ];
+          ];
         div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
         nav [ ul [ entry "Settings" Route.Settings ] ];
       ])

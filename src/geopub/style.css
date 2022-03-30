@@ -97,6 +97,13 @@ nav li a {
     margin: 10px;
 }
 
+/* Inspect UI */
+
+.meta {
+    color: grey;
+    font-size: 14px;
+}
+
 /* Action Bar */
 
 #action-bar {
