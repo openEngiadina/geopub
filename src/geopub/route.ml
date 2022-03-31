@@ -15,7 +15,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 let history = Window.history G.window
 
-type t = About | Map | Inspect of Rdf.Iri.t | Settings
+type t = About | Activity | Map | Inspect of Rdf.Iri.t | Settings
 
 (* type t =
  *   | About
@@ -32,6 +32,7 @@ let parser uri =
   in
   match path with
   | [ "about" ] -> About
+  | [ "activity" ] -> Activity
   | [ "map" ] -> Map
   | [ "inspect"; encoded_iri_s ] -> (
       match Uri.decode @@ Jstr.v encoded_iri_s with
@@ -57,6 +58,7 @@ let to_uri route =
   let location = Window.location G.window in
   (match route with
   | About -> Uri.with_uri location ~fragment:(Jstr.v "about")
+  | Activity -> Uri.with_uri location ~fragment:(Jstr.v "activity")
   | Map -> Uri.with_uri location ~fragment:(Jstr.v "map")
   | Inspect iri ->
       let encoded_iri =

@@ -46,7 +46,7 @@ let geopub_menu (_model : Model.t) =
           [
             ul
               [
-                entry "Activity" Route.About;
+                entry "Activity" Route.Activity;
                 entry "Map" Route.Map;
                 entry "ActivityStreams"
                 @@ Route.Inspect
@@ -54,7 +54,8 @@ let geopub_menu (_model : Model.t) =
               ];
           ];
         div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
-        nav [ ul [ entry "Settings" Route.Settings ] ];
+        nav
+          [ ul [ entry "About" Route.About; entry "Settings" Route.Settings ] ];
       ])
 
 let placeholder (model : Model.t) =
