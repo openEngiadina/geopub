@@ -57,9 +57,9 @@ let observe_for_map el map =
 let main () =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
-  Logs.set_level @@ Some Logs.Debug;
 
-  (* Logs.set_level @@ Some Logs.Info; *)
+  (* Logs.set_level @@ Some Logs.Debug; *)
+  Logs.set_level @@ Some Logs.Info;
 
   (* Initialize the application *)
   let () = Log.app (fun m -> m "Initializing GeoPub.") in

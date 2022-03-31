@@ -67,6 +67,51 @@ let add_rdf db graph =
   in
   return @@ Indexeddb.Transaction.commit tx
 
+(* The ρdf fragment of RDF
+ * See: Muñoz, S., Pérez, J., & Gutierrez, C. (2009). Simple and
+   Efficient Minimal RDFS. Web Semantics: Science, Services and Agents
+   on the World Wide Web, 7(3),
+   220–234. doi:10.1016/j.websem.2009.07.003 *)
+let rhodf =
+  [
+    (* rhodf is an extension of rdf. This corresponds to the simple rules in the paper. *)
+    "rhodf(?s,?p,?o) :- triples(?s,?p,?o).";
+    (* Subproperty (a) *)
+    "rhodf(?a, rdfs:subPropertyOf, ?c) :- rhodf(?a, rdfs:subPropertyOf, ?b), \
+     rhodf(?b, rdfs:subPropertyOf, ?c).";
+    (* Subproperty (b) *)
+    "rhodf(?x, ?b, ?y) :- rhodf(?a, rdfs:subPropertyOf, ?b), rhodf(?x, ?a, ?y).";
+    (* Subclass (a) *)
+    "rhodf(?a, rdfs:subClassOf, ?c) :- rhodf(?a, rdfs:subClassOf, ?b), \
+     rhodf(?b, rdfs:subClassOf, ?c).";
+    (* Subclass (b) *)
+    "rhodf(?x, rdf:type, ?b) :- rhodf(?a, rdfs:subClassOf, ?b), rhodf(?x, \
+     rdf:type, ?a).";
+    (* Typing (a) *)
+    "rhodf(?x, rdf:type, ?b) :- rhodf(?a, rdfs:domain, ?b), rhodf(?x, ?a, ?y).";
+    (* Typing (b) *)
+    "rhodf(?y, rdf:type, ?b) :- rhodf(?a, rdfs:range, ?b), rhodf(?x, ?a, ?y).";
+    (* Implicit typing (a) *)
+    "rhodf(?x, rdf:type, ?b) :- rhodf(?a, rdfs:domain, ?b), rhodf(?c, \
+     rdfs:subClassOf, ?a), rhodf(?x, ?c, ?y).";
+    (* Implicit typing (b) *)
+    "rhodf(?y, rdf:type, ?b) :- rhodf(?a, rdfs:range, ?b), rhodf(?c, \
+     rdfs:subClassOf, ?a), rhodf(?x, ?c, ?y)."
+    (* Omitting the reflexiv subClassOf, subPropertyOf rules out of lazyness.*);
+  ]
+  |> String.concat "\n"
+
+let datalog_program =
+  {datalog|
+   rdf(?s,?p,?o) :- triples(?s,?p,?o).
+   activity(?s) :- triples(?s,rdf:type,as:Create).
+   |datalog}
+  ^ rhodf
+  |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Program.parser
+  |> Result.get_ok
+
+let datalog_state = ref (Datalog.init datalog_program)
+
 let init () =
   let* db =
     Indexeddb.Database.open' ~version:geopub_database_version
@@ -154,6 +199,7 @@ let init () =
 
 let reset db =
   Log.info (fun m -> m "Deleting IndexedDB databse.");
+  datalog_state := Datalog.init datalog_program;
   Indexeddb.(
     return @@ Database.close db >>= fun () ->
     Database.delete (Jstr.v geopub_database_name) >>= init)
@@ -215,20 +261,16 @@ let edb tx predicate pattern =
       |> Cursor.to_stream |> parse
   | _, _ -> Lwt_stream.of_list []
 
-let datalog_program =
-  {datalog|
-   rdf(?s,?p,?o) :- triples(?s,?p,?o).
-   activity(?s) :- triples(?s,rdf:type,as:Create).
-   |datalog}
-  |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Program.parser
-  |> Result.get_ok
-
 let query db q =
   let tx =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
       [ triples_object_store_name ]
   in
-  Datalog.query ~database:(edb tx) ~program:datalog_program q
+  let* state, tuples =
+    Datalog.query_with_state ~database:(edb tx) ~state:!datalog_state q
+  in
+  datalog_state := state;
+  return tuples
 
 let query_string db q =
   let* q =
@@ -289,10 +331,7 @@ let get_rdfs_label db iri =
 let get_activities db = query_string db {query|activity(?s)|query}
 
 let test_datalog db =
-  let* tuples =
-    query_string db
-      {query|rdf(?s,rdf:type,<http://www.w3.org/2002/07/owl#Ontology>)|query}
-  in
+  let* tuples = query_string db {query|rhodf(?s,rdf:type,as:Activity)|query} in
 
   Log.debug (fun m -> m "inspect: %a" Datalog.Tuple.Set.pp tuples);
   return_unit
