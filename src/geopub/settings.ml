@@ -13,7 +13,10 @@ open Lwt.Syntax
 let src = Logs.Src.create "GeoPub.Settings"
 
 module Log = (val Logs.src_log src : Logs.LOG)
-open Geopub_database
+
+(* GeoPub components *)
+module Database = Geopub_database
+module Xmpp = Geopub_xmpp
 
 let database_settings ~update (model : Model.t) =
   let* triple_count = Database.triple_count model.database in
@@ -125,12 +128,10 @@ let xmpp_settings ~update (model : Model.t) =
                      Jv.set form "textContent" @@ Jv.of_string "Connecting...";
 
                      update (fun (model : Model.t) ->
-                         let* xmpp = Geopub_xmpp.login jid password in
-                         match xmpp with
-                         | Ok xmpp ->
-                             return { model with xmpp = Loadable.Loaded xmpp }
-                         | Error exn ->
-                             return { model with xmpp = Loadable.Error exn }))
+                         let* xmpp =
+                           Xmpp.login jid password >|= Loadable.of_result
+                         in
+                         return { model with xmpp }))
                    login_form;
                  p
                    [
@@ -140,28 +141,26 @@ let xmpp_settings ~update (model : Model.t) =
                          Jv.set form "textContent"
                          @@ Jv.of_string "Connecting...";
                          update (fun (model : Model.t) ->
-                             let* xmpp = Geopub_xmpp.login_anonymous_demo () in
-                             match xmpp with
-                             | Ok xmpp ->
-                                 return
-                                   { model with xmpp = Loadable.Loaded xmpp }
-                             | Error exn ->
-                                 return { model with xmpp = Loadable.Error exn }))
+                             let* xmpp =
+                               Xmpp.login_anonymous_demo ()
+                               >|= Loadable.of_result
+                             in
+                             return { model with xmpp }))
                      @@ button
                           [ txt' "Login anonymously with demo.opengiadina.net" ];
                    ];
                ])
     | Loadable.Loading -> return El.(txt' "Connecting...")
     | Loadable.Loaded xmpp ->
-        let* jid = Geopub_xmpp.Client.jid xmpp.client in
+        let* jid = Xmpp.Client.jid xmpp.client in
         return
         @@ El.(
              div
                [
-                 p [ txt' @@ "Connected as " ^ Xmppl.Jid.to_string jid ];
+                 p [ txt' @@ "Connected as " ^ Xmpp.Jid.to_string jid ];
                  Ui.on_el Ev.click (fun _ev ->
                      update (fun _model ->
-                         let* () = Geopub_xmpp.Client.disconnect xmpp.client in
+                         let* () = Xmpp.Client.disconnect xmpp.client in
                          return { model with xmpp = Loadable.Idle }))
                  @@ button [ txt' "Disconnect" ];
                ])

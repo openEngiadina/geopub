@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-open Geopub_database
+module Database = Geopub_database
+module Xmpp = Geopub_xmpp
 
 type t = {
   database : Database.t;
   route : Route.t;
   map : Geopub_map.t;
-  xmpp : (Geopub_xmpp.t, exn) Loadable.t;
+  xmpp : (Xmpp.t, exn) Loadable.t;
 }

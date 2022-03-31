@@ -1,7 +1,8 @@
 (executable
  (name main)
  (libraries brr logs logs.browser js_of_ocaml js_of_ocaml-lwt lwt_react loadable
-   geopub.database geopub.map geopub.xmpp)
+   geopub.database geopub.map geopub.xmpp
+   digestif.ocaml)
  (modes js))
 
 (install

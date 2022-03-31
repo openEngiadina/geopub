@@ -17,7 +17,8 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 (* GeoPub components *)
 
-open Geopub_database
+module Database = Geopub_database
+module Xmpp = Geopub_xmpp
 
 let view ~update (model : Model.t) =
   match model.route with
@@ -84,12 +85,23 @@ let main () =
   (* Initialize Map *)
   let* map = Geopub_map.init () in
 
-  (* (\* Initialize XMPP *\)
-   * let* xmpp =
-   *   Geopub_xmpp.login_dev () >>= function
-   *   | Ok xmpp -> return xmpp
-   *   | Error exn -> fail exn
-   * in *)
+  (* Initialize XMPP *)
+  (* let xmpp = Lodable.Idle in *)
+  let* xmpp = Xmpp.login_dev () >|= Loadable.of_result in
+
+  let () =
+    E.map_s
+      (fun stanza ->
+        let* rdf_opt = Xmpp.rdf_of_stanza stanza in
+        match rdf_opt with
+        | Some rdf ->
+            Log.debug (fun m ->
+                m "GeoPub received RDF over XMPP: %a" Rdf.Graph.pp rdf);
+            Database.add_rdf database rdf
+        | None -> return_unit)
+      Xmpp.stanzas
+    |> E.keep
+  in
 
   (* Model updates *)
   let model_update_e, update = E.create () in
@@ -98,7 +110,7 @@ let main () =
   let model_s =
     S.accum_s ~eq:( == )
       (E.select [ route_updater; model_update_e ])
-      { database; route; map; xmpp = Loadable.Idle }
+      { database; route; map; xmpp }
   in
 
   (* Set UI *)

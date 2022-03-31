@@ -8,7 +8,9 @@
 
 open Brr
 open Brr_io
-open Reactor_brr
+
+(* GeoPub components  *)
+module Xmpp = Geopub_xmpp
 
 (* Namespace *)
 

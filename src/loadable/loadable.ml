@@ -17,3 +17,5 @@ let to_option = function
   | Loading -> None
   | Loaded v -> Some v
   | Error _ -> None
+
+let of_result = function Ok v -> Loaded v | Result.Error e -> Error e

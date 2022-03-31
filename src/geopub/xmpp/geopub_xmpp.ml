@@ -19,16 +19,21 @@ module Entity_capabilities = Xmppl_entity_capabilities.Make (Client)
 module Roster = Xmppl_roster.Make (Client)
 module Pubsub = Xmppl_pubsub.Make (Client)
 
+(* Stanza events *)
+
+(* We need to create this global stanza event and pipe stanzas from dynamic clients. *)
+
+let stanzas, push_stanza = E.create ()
+
 (* XMPP client state *)
 
 type t = {
   client : Client.t;
-  state : Client.state;
-  ec_responder : unit E.t;
-  roster : Roster.roster S.t;
+  (* We need to keep reference to this to prevent GC from stopping the XMPP process *)
+  handler : unit E.t;
 }
 
-(* Initialization *)
+(* Connection *)
 
 let start_ec_responder client =
   (* Initiate Entity Cababilities (XEP-0115) responder *)
@@ -36,8 +41,8 @@ let start_ec_responder client =
     ~node:"https://codeberg.org/openEngiadina/geopub"
     [
       "http://jabber.org/protocol/caps";
-      "urn:xmpp:microblog:0";
-      "urn:xmpp:microblog:0+notify";
+      (* "urn:xmpp:microblog:0"; *)
+      (* "urn:xmpp:microblog:0+notify"; *)
       "net.openengiadina.xmpp.activitystreams";
       "net.openengiadina.xmpp.activitystreams+notify"
       (* "http://jabber.org/protocol/geoloc"; *)
@@ -51,9 +56,10 @@ let connect client =
   Lwt_result.(
     catch @@ Client.connect client >>= fun _ ->
     let* ec_responder = start_ec_responder client in
-    let* roster = Roster.roster client in
+    let stanza_forwarder = Client.stanzas client |> E.map push_stanza in
+    let handler = E.select [ ec_responder; stanza_forwarder ] in
 
-    return { client; state = Client.Disconnected; ec_responder; roster })
+    return { client; handler })
 
 let login jid password =
   Client.create Xmppl_websocket.default_options
@@ -73,27 +79,26 @@ let login_anonymous_demo () =
     ~credentials:(`Anonymous "demo.openengiadina.net")
   >>= connect
 
-(* Subscription *)
+(* Parse Stanza as RDF *)
 
-let subscriptions model =
-  E.select
-    [
-      S.changes @@ Client.state model.client
-      |> E.map (fun state -> `XmppStateUpdate state);
-      Client.stanzas model.client |> E.map (fun stanza -> `XmppStanza stanza);
-      S.changes @@ model.roster
-      |> E.map (fun roster -> `XmppRosterUpdate roster);
-    ]
+let rdf_of_stanza (stanza : Stanza.t) =
+  let rdf_parser =
+    Xmlc.Parser.(
+      element (Pubsub.Namespace.event "event") (fun _ ->
+          element (Pubsub.Namespace.event "items") (fun _ ->
+              element (Pubsub.Namespace.event "item") (fun _ ->
+                  Xmlc.Tree.parser >>| Xmlc.Tree.to_seq
+                  >>| Rdf_xml.parse_to_graph))))
+  in
+  match stanza with
+  | Stanza.Message message ->
+      Xmlc.Tree.parse_trees rdf_parser (List.to_seq message.payload)
+      |> Lwt_result.catch >|= Result.to_option
+  | _ -> return_none
 
 (* Roster management *)
 
 let roster_add xmpp jid = Roster.add_update xmpp.client jid >|= fun _ -> `NoOp
-
-let display_name xmpp jid =
-  Option.bind
-    (Jid.Map.find_opt (Jid.bare jid) (S.value xmpp.roster))
-    (fun (item : Roster.Item.t) -> item.name)
-  |> Option.value ~default:(Jid.to_string @@ Jid.bare jid)
 
 (* PubSub *)
 
@@ -101,7 +106,8 @@ let publish_activitystreams jid xmpp id xml =
   let item =
     Xmlc.Tree.make_element
       ~attributes:[ (("", "id"), Rdf.Iri.to_string id) ]
-      ~children:[ xml ] (Pubsub.Ns.pubsub "item")
+      ~children:[ xml ]
+      (Pubsub.Namespace.pubsub "item")
   in
   Pubsub.publish ~to':(Jid.bare jid)
     ~node:"net.openengiadina.xmpp.activitystreams" xmpp.client (Some item)
