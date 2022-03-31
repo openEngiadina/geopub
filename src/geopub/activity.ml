@@ -200,7 +200,7 @@ let view ~update model =
           | _ -> None)
     >|= List.of_seq
     >>= Lwt_list.map_s (fun iri ->
-            let* graph = Database.get_activity_graph model.database iri in
+            let* graph = Database.get_description model.database iri in
             return (iri, graph))
   in
   return
@@ -213,8 +213,7 @@ let view ~update model =
           ul
             ~at:At.[ class' @@ Jstr.v "activity" ]
             (List.map
-               (fun (iri, graph) ->
-                 Log.debug (fun m -> m "activityGraph %a" Rdf.Graph.pp graph);
+               (fun (iri, _description) ->
                  li
                    [
                      a
