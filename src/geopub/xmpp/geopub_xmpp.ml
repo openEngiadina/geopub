@@ -96,13 +96,18 @@ let rdf_of_stanza (stanza : Stanza.t) =
       |> Lwt_result.catch >|= Result.to_option
   | _ -> return_none
 
+let user_iri xmpp =
+  let* jid = Client.jid xmpp.client in
+  ("xmpp:" ^ Jid.(to_string @@ bare jid)) |> Rdf.Iri.of_string |> return
+
 (* Roster management *)
 
 let roster_add xmpp jid = Roster.add_update xmpp.client jid >|= fun _ -> `NoOp
 
 (* PubSub *)
 
-let publish_activitystreams jid xmpp id xml =
+let publish_activitystreams xmpp id xml =
+  let* jid = Client.jid xmpp.client in
   let item =
     Xmlc.Tree.make_element
       ~attributes:[ (("", "id"), Rdf.Iri.to_string id) ]

@@ -392,6 +392,28 @@ We provides implementation of:
 ")
     (license license:expat)))
 
+(define-public ocaml-base32
+  (package
+    (name "ocaml-base32")
+    (version "0.0.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://inqlab.net/git/ocaml-base32.git")
+                     (commit "c22ab5e65d0e619017960c8771a3b85f0b8030d5")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "0v355icsv69w74aw8wa1z7zlkphlrxhj5qf5psnya063axibk8h8"))))
+    (build-system dune-build-system)
+    (arguments '())
+    (native-inputs
+     `(("qcheck" ,ocaml-qcheck)))
+    (home-page "https://gitlab.com/public.dream/DROMEDAR/ocaml-base32")
+    (synopsis "This implements Base32 encoded as specified by RFC 4648 for OCaml")
+    (description "This implements Base32 encoded as specified by RFC 4648 for OCaml")
+    (license license:isc)))
+
 (define-public ocaml-lwt-ssl
   (package
     (name "ocaml-lwt-ssl")
@@ -586,6 +608,7 @@ stubs in Javascript for use in Js_of_ocaml")
       ocaml-xmppl
       ocaml-datalogl
       ocaml-ptime
+      ocaml-base32
       ocaml-zarith-stubs-js
       js-of-ocaml
       ocaml-merlin

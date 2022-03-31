@@ -24,7 +24,7 @@ let view ~update (model : Model.t) =
   match model.route with
   | Route.About -> return [ Ui.geopub_menu model; Ui.about ]
   | Route.Activity ->
-      let* activity = Activity.view model in
+      let* activity = Activity.view ~update model in
       return [ Ui.geopub_menu model; activity ]
   | Route.Map ->
       let* map = Geopub_map.view model.map in
