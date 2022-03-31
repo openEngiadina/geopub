@@ -1,7 +1,8 @@
 (rule
  (targets activitystreams2.xml)
  (deps Makefile activitystreams2.ttl)
- (action (run make %{targets})))
+ (action
+  (run make %{targets})))
 
 (install
  (section share)
