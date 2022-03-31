@@ -27,6 +27,7 @@ end)
 
 module Geopub_namespace = Namespace
 module Xmpp = Geopub_xmpp
+module Database = Geopub_database
 
 (* Construct a note as RDF *)
 
@@ -190,21 +191,35 @@ let view_compose_note ~update ?latlng (model : Model.t) =
 
 let view ~update model =
   let* compose_note = view_compose_note ~update model in
+  let* activities =
+    Database.get_activities model.database
+    >|= Database.Datalog.Tuple.Set.to_seq
+    >|= Seq.filter_map (function
+          | [ term ] ->
+              Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
+          | _ -> None)
+    >|= List.of_seq
+    >>= Lwt_list.map_s (fun iri ->
+            let* graph = Database.get_activity_graph model.database iri in
+            return (iri, graph))
+  in
   return
     El.(
       div
         ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
         [
           h1 [ txt' "Activity" ];
-          compose_note
-          (* ul
-           *   ~at:At.[ class' @@ Jstr.v "activity" ]
-           *   (List.map (view_post ~send_msg) posts
-           *   @ List.of_seq
-           *   @@ Seq.map
-           *        (Activitystreams.view_activity ~send_msg graph)
-           *        activities);
-           * Evr.on_el Ev.click (fun _ ->
-           *     send_msg @@ `SetActionBar (Some (Route.NewPost None)))
-           * @@ a ~at:At.[ href @@ Jstr.v "#" ] [ txt' "New Post" ]; *);
+          compose_note;
+          ul
+            ~at:At.[ class' @@ Jstr.v "activity" ]
+            (List.map
+               (fun (iri, graph) ->
+                 Log.debug (fun m -> m "activityGraph %a" Rdf.Graph.pp graph);
+                 li
+                   [
+                     a
+                       ~at:At.[ href @@ Route.to_jstr (Route.Inspect iri) ]
+                       [ txt' @@ Rdf.Iri.to_string iri ];
+                   ])
+               activities);
         ])

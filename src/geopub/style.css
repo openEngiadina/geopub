@@ -104,6 +104,10 @@ nav li a {
     font-size: 14px;
 }
 
+.objects {
+    list-style-type: none;
+}
+
 /* Action Bar */
 
 #action-bar {

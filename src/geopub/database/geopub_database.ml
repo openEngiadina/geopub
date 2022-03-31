@@ -218,6 +218,7 @@ let edb tx predicate pattern =
 let datalog_program =
   {datalog|
    rdf(?s,?p,?o) :- triples(?s,?p,?o).
+   activity(?s) :- triples(?s,rdf:type,as:Create).
    |datalog}
   |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Program.parser
   |> Result.get_ok
@@ -238,13 +239,13 @@ let query_string db q =
   in
   query db q
 
-(* Return a RDF graph for [subject] that is used in the inspect view *)
-let inspect_graph db subject =
+(* Return a RDF description for [iri] that is used in the inspect view *)
+let get_description db iri =
   let q =
     Datalog.(
       Atom.make "rdf"
         [
-          Term.make_constant @@ Rdf.Triple.Subject.to_term subject;
+          Term.make_constant @@ Rdf.Term.of_iri iri;
           Term.make_variable "p";
           Term.make_variable "o";
         ])
@@ -252,6 +253,62 @@ let inspect_graph db subject =
   query db q >|= Datalog.Tuple.Set.to_seq
   >|= Seq.filter_map (function
         | [ s; p; o ] ->
+            Rdf.Triple.(
+              Option.some
+              @@ make
+                   (Rdf.Term.map s Subject.of_iri Subject.of_blank_node
+                      (fun _ ->
+                        failwith "unexpected literal in subject position"))
+                   (Rdf.Term.map p Predicate.of_iri
+                      (fun _ ->
+                        failwith "unexpected blank node in predicate position")
+                      (fun _ ->
+                        failwith "unexpected literal in predicate position"))
+                   (Object.of_term o))
+        | _ -> None)
+  >|= Seq.fold_left
+        (fun graph triple -> Rdf.Graph.add triple graph)
+        Rdf.Graph.empty
+  >|= Rdf.Graph.description (Rdf.Triple.Subject.of_iri iri)
+
+let get_property db subject predicate =
+  let tx =
+    Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
+      [ triples_object_store_name ]
+  in
+  edb tx "triples"
+    [
+      Some (Rdf.Triple.Subject.to_term subject);
+      Some (Rdf.Triple.Predicate.to_term predicate);
+      None;
+    ]
+  |> Lwt_stream.filter_map (function [ _; _; o ] -> Some o | _ -> None)
+  |> Lwt_stream.to_list
+
+let get_rdfs_label db iri =
+  let* labels =
+    get_property db
+      (Rdf.Triple.Subject.of_iri iri)
+      (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
+  in
+  labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
+
+let get_activities db = query_string db {query|activity(?s)|query}
+
+let get_activity_graph db iri =
+  let q =
+    Datalog.(
+      Atom.make "activityGraph"
+        [
+          Term.make_constant @@ Rdf.Term.of_iri iri;
+          Term.make_variable "s";
+          Term.make_variable "p";
+          Term.make_variable "o";
+        ])
+  in
+  query db q >|= Datalog.Tuple.Set.to_seq
+  >|= Seq.filter_map (function
+        | [ _; s; p; o ] ->
             Rdf.Triple.(
               Option.some
               @@ make

@@ -71,7 +71,7 @@ let parser =
       make_prefix_parser "rdf" Rdf.Namespace.rdf;
       make_prefix_parser "rdfs" Rdf.Namespace.rdfs;
       make_prefix_parser "as"
-        (Rdf.Namespace.make_namespace "http://www.w3.org/ns/activitystreams#");
+        (Rdf.Namespace.make_namespace "https://www.w3.org/ns/activitystreams#");
       make_prefix_parser "geo"
         (Rdf.Namespace.make_namespace "http://www.w3.org/2003/01/geo/wgs84_pos#");
     ]

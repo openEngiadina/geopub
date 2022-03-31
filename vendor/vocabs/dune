@@ -1,6 +1,6 @@
 (rule
- (targets activitystreams2.xml)
- (deps Makefile activitystreams2.ttl)
+ (targets activitystreams2.xml rdfs.xml owl.xml)
+ (deps Makefile activitystreams2.ttl rdfs.ttl owl.ttl)
  (action
   (run make %{targets})))
 
@@ -10,4 +10,6 @@
  (files
   (activitystreams2.xml as vocabs/activitystreams2.xml)
   (musicontology.xml as vocabs/musicontology.xml)
-  (geo.xml as vocabs/geo.xml)))
+  (geo.xml as vocabs/geo.xml)
+  (rdfs.xml as vocabs/rdfs.xml)
+  (owl.xml as vocabs/owl.xml)))
