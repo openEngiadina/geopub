@@ -33,13 +33,12 @@ let database_settings ~update (model : Model.t) =
                   (* Disable button and set text *)
                   let button = Ev.(target_to_jv @@ target ev) in
                   Jv.set button "disabled" Jv.true';
-                  Jv.set button "textContent"
-                  @@ Jv.of_string
-                       "Resetting and reloading default vocabularies...";
+                  Jv.set button "textContent" @@ Jv.of_string "Deleting...";
                   update (fun (model : Model.t) ->
-                      let* database = Database.reset model.database in
-                      return { model with database }))
-              @@ button [ txt' "Reset Database" ];
+                      let* () = Database.delete model.database in
+                      Brr.Window.reload G.window;
+                      return model))
+              @@ button [ txt' "Reset Database (will cause reload)" ];
             ];
         ])
 

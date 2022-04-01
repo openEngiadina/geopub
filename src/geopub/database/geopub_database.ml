@@ -277,12 +277,12 @@ let init () =
   (* Log.debug (fun m -> m "Graph: %a" Rdf.Graph.pp as2); *)
   return db
 
-let reset db =
+let delete db =
   Log.info (fun m -> m "Deleting IndexedDB databse.");
   Datalog.geopub_state := Datalog.init Datalog.geopub_datalog_program;
   Indexeddb.(
     return @@ Database.close db >>= fun () ->
-    Database.delete (Jstr.v geopub_database_name) >>= init)
+    Database.delete (Jstr.v geopub_database_name))
 
 let query db q =
   let tx =
