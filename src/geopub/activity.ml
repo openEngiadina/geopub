@@ -175,6 +175,8 @@ let view_compose_note ~update ?latlng (model : Model.t) =
       return
       @@ Ui.on_el ~default:false Form.Ev.submit
            (fun ev ->
+             let form = Ev.(target_to_jv @@ target ev) in
+
              let form_data =
                Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
                @@ Ev.target ev
@@ -195,6 +197,7 @@ let view_compose_note ~update ?latlng (model : Model.t) =
                  let* id, activity = make_create ~object':note xmpp in
                  let* xml = rdf_to_xml activity in
                  let* _response = Xmpp.publish_activitystreams xmpp id xml in
+                 ignore @@ Jv.call form "reset" [||];
                  return model))
            compose_form
   | _ ->
