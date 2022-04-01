@@ -23,8 +23,8 @@ module Xmpp = Geopub_xmpp
 let view ~update (model : Model.t) =
   match model.route with
   | Route.About -> return [ Ui.geopub_menu model; Ui.about ]
-  | Route.Activity ->
-      let* activity = Activity.view ~update model in
+  | Route.Activity latlng ->
+      let* activity = Activity.view ?latlng ~update model in
       return [ Ui.geopub_menu model; activity ]
   | Route.Map ->
       let* map = Geopub_map.view model.database model.map in
@@ -58,7 +58,7 @@ let main () =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
 
-  Logs.set_level @@ Some Logs.Debug;
+  (* Logs.set_level @@ Some Logs.Debug; *)
 
   (* Logs.set_level @@ Some Logs.Info; *)
 
@@ -80,11 +80,19 @@ let main () =
     |> E.map (fun route (model : Model.t) -> return { model with route })
   in
 
+  (* Model updates *)
+  let model_update_e, update = E.create () in
+
   (* Initialize the database *)
   let* database = Database.init () in
 
   (* Initialize Map *)
-  let* map = Geopub_map.init () in
+  let* map =
+    Geopub_map.init
+      ~set_route:(fun route ->
+        update (fun (model : Model.t) -> return { model with route }))
+      ()
+  in
 
   (* Initialize XMPP *)
   (* let xmpp = Loadable.Idle in *)
@@ -103,9 +111,6 @@ let main () =
       Xmpp.stanzas
     |> E.keep
   in
-
-  (* Model updates *)
-  let model_update_e, update = E.create () in
 
   (* Initialize model *)
   let model_s =

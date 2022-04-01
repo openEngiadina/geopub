@@ -41,10 +41,6 @@ let rdf_to_xml rdf =
   Xmlc.Parser.parse_stream Xmlc.Tree.parser stream
 
 let make_note ?latlng content =
-  ignore latlng;
-  let latlng =
-    Leaflet.LatLng.create 46.794896096 10.3003317118 |> Option.some
-  in
   FragmentGraph.(
     empty
     |> add_statement
@@ -300,8 +296,8 @@ let view_activity db activity =
             ])
   | None -> return_none
 
-let view ~update model =
-  let* compose_note = view_compose_note ~update model in
+let view ?latlng ~update model =
+  let* compose_note = view_compose_note ?latlng ~update model in
   let activities_ul = El.ul ~at:At.[ class' @@ Jstr.v "activity" ] [] in
 
   let update_s =

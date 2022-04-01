@@ -15,16 +15,12 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 let history = Window.history G.window
 
-type t = About | Activity | Map | Inspect of Rdf.Iri.t | Settings
-
-(* type t =
- *   | About
- *   | Login
- *   | Map
- *   | Activity
- *   | Roster
- *   | RosterItem of Xmpp.Jid.t
- *   | AddContact *)
+type t =
+  | About
+  | Activity of Leaflet.LatLng.t option
+  | Map
+  | Inspect of Rdf.Iri.t
+  | Settings
 
 let parser uri =
   let path =
@@ -32,7 +28,7 @@ let parser uri =
   in
   match path with
   | [ "about" ] -> About
-  | [ "activity" ] -> Activity
+  | [ "activity" ] -> Activity None
   | [ "map" ] -> Map
   | [ "inspect"; encoded_iri_s ] -> (
       match Uri.decode @@ Jstr.v encoded_iri_s with
@@ -58,7 +54,13 @@ let to_uri route =
   let location = Window.location G.window in
   (match route with
   | About -> Uri.with_uri location ~fragment:(Jstr.v "about")
-  | Activity -> Uri.with_uri location ~fragment:(Jstr.v "activity")
+  | Activity None -> Uri.with_uri location ~fragment:(Jstr.v "activity")
+  | Activity (Some latlng) ->
+      let latlng_s =
+        (string_of_float @@ Leaflet.LatLng.lat latlng)
+        ^ "/" ^ string_of_float @@ Leaflet.LatLng.lng latlng
+      in
+      Uri.with_uri location ~fragment:(Jstr.v @@ "activity" ^ "=" ^ latlng_s)
   | Map -> Uri.with_uri location ~fragment:(Jstr.v "map")
   | Inspect iri ->
       let encoded_iri =

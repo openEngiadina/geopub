@@ -7,7 +7,6 @@
 open Brr
 open Lwt
 open Lwt.Syntax
-open Lwt_react
 
 (* Setup logging *)
 let src = Logs.Src.create "Geopub_map"
@@ -48,31 +47,7 @@ let get_latlng description =
   | Some lat, Some long -> Some (Leaflet.LatLng.create lat long)
   | _ -> None
 
-let geo_objects =
-  S.accum_s
-    (E.map
-       (fun db _ ->
-         Database.get_with_geo db
-         >|= List.filter_map (fun description ->
-                 match get_latlng description with
-                 | Some latlng -> Some (latlng, description)
-                 | None -> None))
-       Database.Triples.on_update)
-    []
-
-(* mutable map of added descriptions *)
-
-let added_geo_objects = ref SubjectSet.empty
-
-let add_geo_object db map (latlng, description) =
-  if SubjectSet.mem (Rdf.Description.subject description) !added_geo_objects
-  then return_unit
-  else
-    let* el = Ui_rdf.view_subject db @@ Rdf.Description.subject description in
-    let marker = Leaflet.Marker.create latlng |> Leaflet.Marker.bind_popup el in
-    return @@ Leaflet.Marker.add_to marker map
-
-let init () =
+let init ~set_route () =
   let map_container = El.div ~at:At.[ id @@ Jstr.v "map" ] [] in
 
   (* create a context menu *)
@@ -83,6 +58,7 @@ let init () =
           ( "Create post here",
             fun e ->
               let latlng = Leaflet.Ev.MouseEvent.latlng e in
+              set_route @@ Route.Activity (Some latlng);
               Log.debug (fun m ->
                   m "Create post at %a/%a" Fmt.float
                     (Leaflet.LatLng.lat latlng)
@@ -146,7 +122,25 @@ let invalidate_size model = Leaflet.Map.invalidate_size model
  * 
  * let subscriptions model = model.events |> Lwt_react.E.of_stream *)
 
-let view db map =
-  let* () = Lwt_list.iter_s (add_geo_object db map) (S.value geo_objects) in
+(* mutable map of added descriptions *)
 
+let added_geo_objects = ref SubjectSet.empty
+
+let add_geo_object db map (latlng, description) =
+  if SubjectSet.mem (Rdf.Description.subject description) !added_geo_objects
+  then return_unit
+  else
+    let* el = Ui_rdf.view_subject db @@ Rdf.Description.subject description in
+    let marker = Leaflet.Marker.create latlng |> Leaflet.Marker.bind_popup el in
+    return @@ Leaflet.Marker.add_to marker map
+
+let view db map =
+  let* () =
+    Database.get_with_geo db
+    >|= List.filter_map (fun description ->
+            match get_latlng description with
+            | Some latlng -> Some (latlng, description)
+            | None -> None)
+    >>= Lwt_list.iter_s (add_geo_object db map)
+  in
   return @@ Leaflet.Map.get_container map
