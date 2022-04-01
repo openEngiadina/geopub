@@ -90,6 +90,7 @@ let main () =
   let* map =
     Geopub_map.init
       ~set_route:(fun route ->
+        ignore @@ Route.set_route route;
         update (fun (model : Model.t) -> return { model with route }))
       ()
   in
