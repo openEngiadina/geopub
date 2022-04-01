@@ -6,19 +6,71 @@
 
 open Brr
 open Lwt
+open Lwt.Syntax
+open Lwt_react
 
 (* Setup logging *)
 let src = Logs.Src.create "Geopub_map"
 
 module Log = (val Logs.src_log src : Logs.LOG)
+module Database = Geopub_database
 
 type t = Leaflet.Map.t
 
-(* We need a Init message to pass the `send_msg` function to the
-   Leaflet map. The Reactor init function does not pass this, only the
-   update. So the map needs to be initialized with a message. Another
-   thing that seems wrong with Reactor... *)
-(* type msg = Init | SetView of Leaflet.LatLng.t *)
+module SubjectSet = Set.Make (struct
+  type t = Rdf.Triple.Subject.t
+
+  let compare = Rdf.Triple.Subject.compare
+end)
+
+(* Option.bind, when? *)
+let option_bind f opt = match opt with Some v -> f v | None -> None
+
+let get_latlng description =
+  let lat =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.geo "lat")
+      description
+    |> option_bind Rdf.Triple.Object.to_literal
+    |> Option.map Rdf.Literal.canonical
+    |> option_bind float_of_string_opt
+  in
+  let long =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.geo "long")
+      description
+    |> option_bind Rdf.Triple.Object.to_literal
+    |> Option.map Rdf.Literal.canonical
+    |> option_bind float_of_string_opt
+  in
+
+  match (lat, long) with
+  | Some lat, Some long -> Some (Leaflet.LatLng.create lat long)
+  | _ -> None
+
+let geo_objects =
+  S.accum_s
+    (E.map
+       (fun db _ ->
+         Database.get_with_geo db
+         >|= List.filter_map (fun description ->
+                 match get_latlng description with
+                 | Some latlng -> Some (latlng, description)
+                 | None -> None))
+       Database.Triples.on_update)
+    []
+
+(* mutable map of added descriptions *)
+
+let added_geo_objects = ref SubjectSet.empty
+
+let add_geo_object db map (latlng, description) =
+  if SubjectSet.mem (Rdf.Description.subject description) !added_geo_objects
+  then return_unit
+  else
+    let* el = Ui_rdf.view_subject db @@ Rdf.Description.subject description in
+    let marker = Leaflet.Marker.create latlng |> Leaflet.Marker.bind_popup el in
+    return @@ Leaflet.Marker.add_to marker map
 
 let init () =
   let map_container = El.div ~at:At.[ id @@ Jstr.v "map" ] [] in
@@ -50,7 +102,7 @@ let init () =
   Ev.listen Leaflet.Map.click (fun e ->
       let latlng = e |> Ev.as_type |> Leaflet.Ev.MouseEvent.latlng in
       Log.debug (fun m ->
-          m "Create post at %a/%a" Fmt.float
+          m "Click at %a/%a" Fmt.float
             (Leaflet.LatLng.lat latlng)
             Fmt.float
             (Leaflet.LatLng.lng latlng)))
@@ -94,4 +146,7 @@ let invalidate_size model = Leaflet.Map.invalidate_size model
  * 
  * let subscriptions model = model.events |> Lwt_react.E.of_stream *)
 
-let view model = return @@ Leaflet.Map.get_container model
+let view db map =
+  let* () = Lwt_list.iter_s (add_geo_object db map) (S.value geo_objects) in
+
+  return @@ Leaflet.Map.get_container map

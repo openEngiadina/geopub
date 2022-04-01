@@ -6,6 +6,7 @@
 
 open Brr
 open Lwt
+module Database = Geopub_database
 
 let on_el ?(capture = false) ?propagate ?default type' f el =
   let instruct ?(propagate = true) ?(default = true) e =

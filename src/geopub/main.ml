@@ -27,7 +27,7 @@ let view ~update (model : Model.t) =
       let* activity = Activity.view ~update model in
       return [ Ui.geopub_menu model; activity ]
   | Route.Map ->
-      let* map = Geopub_map.view model.map in
+      let* map = Geopub_map.view model.database model.map in
       return [ Ui.geopub_menu model; map ]
   | Route.Inspect iri -> Inspect.view model iri
   | Route.Settings -> Settings.view ~update model
@@ -87,7 +87,7 @@ let main () =
   let* map = Geopub_map.init () in
 
   (* Initialize XMPP *)
-  (* let xmpp = Lodable.Idle in *)
+  (* let xmpp = Loadable.Idle in *)
   let* xmpp = Xmpp.login_dev () >|= Loadable.of_result in
 
   let () =
@@ -127,6 +127,7 @@ let main () =
     >|= S.keep
   in
 
+  (* let* () = Database.test_datalog database in *)
   let () = Log.app (fun m -> m "GeoPub ready.") in
   return_unit
 

@@ -122,6 +122,7 @@ module Datalog = struct
    activity(?s) :- triples(?s,rdf:type,as:Create).
    activity(?s) :- triples(?s,rdf:type,as:Listen).
    activity(?s) :- triples(?s,rdf:type,as:Like).
+   withgeo(?s) :- triples(?s, geo:lat, ?lat), triples(?s, geo:long, ?lng).
    |datalog}
     ^ rhodf
     |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
@@ -360,8 +361,18 @@ let get_activities db =
   >|= List.of_seq
   >>= Lwt_list.map_s (fun iri -> get_description db iri)
 
-let test_datalog db =
-  let* tuples = query_string db {query|rhodf(?s,rdf:type,as:Activity)|query} in
+let get_with_geo db =
+  query_string db {query|withgeo(?s)|query}
+  >|= Datalog.Tuple.Set.to_seq
+  >|= Seq.filter_map (function
+        | [ term ] ->
+            Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
+        | _ -> None)
+  >|= List.of_seq
+  >>= Lwt_list.map_s (fun iri -> get_description db iri)
 
-  Log.debug (fun m -> m "inspect: %a" Datalog.Tuple.Set.pp tuples);
+let test_datalog db =
+  let* tuples = query_string db {query|withgeo(?s)|query} in
+
+  Log.debug (fun m -> m "test_datalog: %a" Datalog.Tuple.Set.pp tuples);
   return_unit

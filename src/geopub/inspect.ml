@@ -54,51 +54,17 @@ let view_header description =
           ];
       ])
 
-let view_iri iri =
-  El.(
-    a
-      ~at:At.[ href @@ Route.to_jstr @@ Route.Inspect iri ]
-      [ txt' @@ Rdf.Iri.to_string iri ])
-
-let view_blank_node bnode = El.(txt' @@ "_:" ^ Rdf.Blank_node.identifier bnode)
-let view_literal literal = El.(txt' @@ Rdf.Literal.canonical literal)
-
-let view_pretty_iri database iri =
-  let* label_opt = Database.get_rdfs_label database iri in
-  match label_opt with
-  | Some literal ->
-      return
-      @@ El.(
-           a
-             ~at:At.[ href @@ Route.to_jstr @@ Route.Inspect iri ]
-             [ view_literal literal ])
-  | None ->
-      if iri = Rdf.Namespace.rdf "type" then return @@ El.txt' "type"
-      else return @@ view_iri iri
-
-let view_predicate database p =
-  view_pretty_iri database @@ Rdf.Triple.Predicate.to_iri p
-
-let view_object database o =
-  Rdf.Triple.Object.map o (view_pretty_iri database)
-    (fun bnode -> return @@ view_blank_node bnode)
-    (fun literal -> return @@ view_literal literal)
-
-let view_subject database s =
-  Rdf.Triple.Subject.map s (view_pretty_iri database) (fun bnode ->
-      return @@ view_blank_node bnode)
-
 let view_description_statements database description =
   Rdf.Description.to_nested_seq description
   |> List.of_seq
   |> Lwt_list.map_s
        El.(
          fun (predicate, objects_seq) ->
-           let* predicate_el = view_predicate database predicate in
+           let* predicate_el = Ui_rdf.view_predicate database predicate in
            let* objects_lis =
              objects_seq |> List.of_seq
              |> Lwt_list.map_s (fun o ->
-                    let* object_el = view_object database o in
+                    let* object_el = Ui_rdf.view_object database o in
                     return @@ li [ object_el ])
            in
            return

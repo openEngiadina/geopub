@@ -41,6 +41,10 @@ let rdf_to_xml rdf =
   Xmlc.Parser.parse_stream Xmlc.Tree.parser stream
 
 let make_note ?latlng content =
+  ignore latlng;
+  let latlng =
+    Leaflet.LatLng.create 46.794896096 10.3003317118 |> Option.some
+  in
   FragmentGraph.(
     empty
     |> add_statement
@@ -219,7 +223,7 @@ let functional_property_description database property description =
   | Some iri -> Database.get_description database iri >|= Option.some
   | None -> return_none
 
-let view_object (model : Model.t) object' =
+let view_object db object' =
   let type' =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
@@ -236,20 +240,20 @@ let view_object (model : Model.t) object' =
              ~default:
                (Rdf.Triple.Object.of_literal @@ Rdf.Literal.make_string "")
       in
-      Inspect.view_object model.database content
-  | _ -> Inspect.view_subject model.database (Rdf.Description.subject object')
+      Ui_rdf.view_object db content
+  | _ -> Ui_rdf.view_subject db (Rdf.Description.subject object')
 
-let view_activity_object (model : Model.t) activity =
+let view_activity_object db activity =
   let* object' =
-    functional_property_description model.database
+    functional_property_description db
       (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "object")
       activity
   in
   match object' with
-  | Some object' -> view_object model object'
+  | Some object' -> view_object db object'
   | None -> return @@ El.txt' ""
 
-let view_activity (model : Model.t) activity =
+let view_activity db activity =
   let iri = Rdf.Description.subject activity |> Rdf.Triple.Subject.to_iri in
   match iri with
   | Some iri ->
@@ -257,17 +261,17 @@ let view_activity (model : Model.t) activity =
         Rdf.Description.functional_property
           (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "actor")
           activity
-        |> Option.map (Inspect.view_object model.database)
+        |> Option.map (Ui_rdf.view_object db)
         |> Option.value ~default:(return @@ El.txt' "")
       in
       let* published =
         Rdf.Description.functional_property
           (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "published")
           activity
-        |> Option.map (Inspect.view_object model.database)
+        |> Option.map (Ui_rdf.view_object db)
         |> Option.value ~default:(return @@ El.txt' "")
       in
-      let* object_el = view_activity_object model activity in
+      let* object_el = view_activity_object db activity in
       return_some
         El.(
           li
@@ -303,7 +307,7 @@ let view ~update model =
   let update_s =
     S.map_s
       (fun activities ->
-        Lwt_list.filter_map_s (view_activity model) activities
+        Lwt_list.filter_map_s (view_activity model.database) activities
         >|= El.set_children activities_ul)
       activities
   in
