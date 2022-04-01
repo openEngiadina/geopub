@@ -10,6 +10,7 @@ open Brr
 open Brr_io
 open Lwt
 open Lwt.Syntax
+open Lwt_react
 
 (* Setup logging *)
 
@@ -90,6 +91,15 @@ let make_create ~object' xmpp =
         empty
         |> add_seq (FragmentGraph.to_triples object')
         |> add_seq (FragmentGraph.to_triples create_activity)) )
+
+(* Signal carrying IRIs of actvitites *)
+
+let activities =
+  S.accum_s
+    (E.map
+       (fun db _old_activities -> Database.get_activities db)
+       Database.Triples.on_update)
+    []
 
 (* UI *)
 
@@ -278,25 +288,21 @@ let view_activity (model : Model.t) activity =
 
 let view ~update model =
   let* compose_note = view_compose_note ~update model in
-  let* activities =
-    Database.get_activities model.database
-    >|= Database.Datalog.Tuple.Set.to_seq
-    >|= Seq.filter_map (function
-          | [ term ] ->
-              Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
-          | _ -> None)
-    >|= List.of_seq
-    >>= Lwt_list.map_s (fun iri -> Database.get_description model.database iri)
+  let activities_ul = El.ul ~at:At.[ class' @@ Jstr.v "activity" ] [] in
+
+  let update_s =
+    S.map_s
+      (fun activities ->
+        Lwt_list.filter_map_s (view_activity model) activities
+        >|= El.set_children activities_ul)
+      activities
   in
-  let* activities_lis =
-    Lwt_list.filter_map_s (view_activity model) activities
-  in
+
+  (* keep reference to keep GC from collecting *)
+  Jv.set (El.to_jv activities_ul) "update_el" (Jv.repr update_s);
+
   return
-    El.(
-      div
-        ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
-        [
-          h1 [ txt' "Activity" ];
-          compose_note;
-          ul ~at:At.[ class' @@ Jstr.v "activity" ] activities_lis;
-        ])
+  @@ El.(
+       div
+         ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
+         [ h1 [ txt' "Activity" ]; compose_note; activities_ul ])

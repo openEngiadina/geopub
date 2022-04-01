@@ -6,6 +6,7 @@
 
 open Lwt
 open Lwt.Syntax
+open Lwt_react
 
 (* Setup logging *)
 let src = Logs.Src.create "GeoPub.Database"
@@ -22,6 +23,8 @@ let triples_object_store_name = Jstr.v "triples"
 (* The Triple Store *)
 
 module Triples = struct
+  let on_update, updated = E.create ()
+
   let count db =
     let tx =
       Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadWrite
@@ -62,6 +65,8 @@ module Triples = struct
     let* () =
       Rdf.Graph.to_triples graph |> List.of_seq |> Lwt_list.iter_p (add tx)
     in
+
+    updated db;
 
     return @@ Indexeddb.Transaction.commit tx
 end
@@ -250,6 +255,9 @@ let init () =
       (Jstr.v geopub_database_name)
   in
 
+  (* Force update of triple store *)
+  Triples.updated db;
+
   let* triple_count = Triples.count db in
   Log.debug (fun m -> m "Triples in database: %d" triple_count);
 
@@ -342,7 +350,15 @@ let get_rdfs_label db iri =
   in
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
-let get_activities db = query_string db {query|activity(?s)|query}
+let get_activities db =
+  query_string db {query|activity(?s)|query}
+  >|= Datalog.Tuple.Set.to_seq
+  >|= Seq.filter_map (function
+        | [ term ] ->
+            Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
+        | _ -> None)
+  >|= List.of_seq
+  >>= Lwt_list.map_s (fun iri -> get_description db iri)
 
 let test_datalog db =
   let* tuples = query_string db {query|rhodf(?s,rdf:type,as:Activity)|query} in
