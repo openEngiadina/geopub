@@ -94,10 +94,20 @@ let make_create ~object' xmpp =
 
 (* Signal carrying IRIs of actvitites *)
 
+let sort_activities =
+  let published activity =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "published")
+      activity
+  in
+  List.sort (fun a b ->
+      Option.compare Rdf.Triple.Object.compare (published b) (published a))
+
 let activities =
   S.accum_s
     (E.map
-       (fun db _old_activities -> Database.get_activities db)
+       (fun db _old_activities ->
+         Database.get_activities db >|= sort_activities)
        Database.Triples.on_update)
     []
 
