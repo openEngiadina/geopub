@@ -189,6 +189,93 @@ let view_compose_note ~update ?latlng (model : Model.t) =
               txt' " to create new posts.";
             ])
 
+let option_bind f opt = match opt with Some v -> f v | None -> None
+
+let functional_property_description database property description =
+  match
+    Rdf.Description.functional_property property description
+    |> option_bind Rdf.Triple.Object.to_iri
+  with
+  | Some iri -> Database.get_description database iri >|= Option.some
+  | None -> return_none
+
+let view_object (model : Model.t) object' =
+  let type' =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
+      object'
+    |> option_bind Rdf.Triple.Object.to_iri
+  in
+  match type' with
+  | Some type' when type' = Namespace.activitystreams "Note" ->
+      let content =
+        Rdf.Description.functional_property
+          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "content")
+          object'
+        |> Option.value
+             ~default:
+               (Rdf.Triple.Object.of_literal @@ Rdf.Literal.make_string "")
+      in
+      Inspect.view_object model.database content
+  | _ -> Inspect.view_subject model.database (Rdf.Description.subject object')
+
+let view_activity_object (model : Model.t) activity =
+  let* object' =
+    functional_property_description model.database
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "object")
+      activity
+  in
+  match object' with
+  | Some object' -> view_object model object'
+  | None -> return @@ El.txt' ""
+
+let view_activity (model : Model.t) activity =
+  let iri = Rdf.Description.subject activity |> Rdf.Triple.Subject.to_iri in
+  match iri with
+  | Some iri ->
+      let* from =
+        Rdf.Description.functional_property
+          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "actor")
+          activity
+        |> Option.map (Inspect.view_object model.database)
+        |> Option.value ~default:(return @@ El.txt' "")
+      in
+      let* published =
+        Rdf.Description.functional_property
+          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "published")
+          activity
+        |> Option.map (Inspect.view_object model.database)
+        |> Option.value ~default:(return @@ El.txt' "")
+      in
+      let* object_el = view_activity_object model activity in
+      return_some
+        El.(
+          li
+            [
+              article
+                ~at:At.[ class' @@ Jstr.v "activity" ]
+                [
+                  header
+                    [
+                      div ~at:At.[ class' @@ Jstr.v "post-from" ] [ from ];
+                      div ~at:At.[ class' @@ Jstr.v "post-date" ] [ published ];
+                    ];
+                  object_el;
+                  footer
+                    [
+                      div
+                        ~at:At.[ class' @@ Jstr.v "post-inspect" ]
+                        [
+                          a
+                            ~at:
+                              At.[ href @@ Route.to_jstr @@ Route.Inspect iri ]
+                            [ txt' "inspect activity" ];
+                        ];
+                    ];
+                ];
+            ])
+  | None -> return_none
+
 let view ~update model =
   let* compose_note = view_compose_note ~update model in
   let* activities =
@@ -199,9 +286,10 @@ let view ~update model =
               Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
           | _ -> None)
     >|= List.of_seq
-    >>= Lwt_list.map_s (fun iri ->
-            let* graph = Database.get_description model.database iri in
-            return (iri, graph))
+    >>= Lwt_list.map_s (fun iri -> Database.get_description model.database iri)
+  in
+  let* activities_lis =
+    Lwt_list.filter_map_s (view_activity model) activities
   in
   return
     El.(
@@ -210,15 +298,5 @@ let view ~update model =
         [
           h1 [ txt' "Activity" ];
           compose_note;
-          ul
-            ~at:At.[ class' @@ Jstr.v "activity" ]
-            (List.map
-               (fun (iri, _description) ->
-                 li
-                   [
-                     a
-                       ~at:At.[ href @@ Route.to_jstr (Route.Inspect iri) ]
-                       [ txt' @@ Rdf.Iri.to_string iri ];
-                   ])
-               activities);
+          ul ~at:At.[ class' @@ Jstr.v "activity" ] activities_lis;
         ])

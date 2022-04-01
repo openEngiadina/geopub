@@ -105,6 +105,8 @@ let datalog_program =
   {datalog|
    rdf(?s,?p,?o) :- triples(?s,?p,?o).
    activity(?s) :- triples(?s,rdf:type,as:Create).
+   activity(?s) :- triples(?s,rdf:type,as:Listen).
+   activity(?s) :- triples(?s,rdf:type,as:Like).
    |datalog}
   ^ rhodf
   |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Program.parser

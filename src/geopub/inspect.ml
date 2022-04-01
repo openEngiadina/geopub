@@ -84,6 +84,10 @@ let view_object database o =
     (fun bnode -> return @@ view_blank_node bnode)
     (fun literal -> return @@ view_literal literal)
 
+let view_subject database s =
+  Rdf.Triple.Subject.map s (view_pretty_iri database) (fun bnode ->
+      return @@ view_blank_node bnode)
+
 let view_description_statements database description =
   Rdf.Description.to_nested_seq description
   |> List.of_seq
@@ -99,6 +103,7 @@ let view_description_statements database description =
            in
            return
            @@ dl
+                ~at:At.[ class' @@ Jstr.v "description" ]
                 [
                   dt [ predicate_el ];
                   dd [ ul ~at:At.[ class' @@ Jstr.v "objects" ] objects_lis ];

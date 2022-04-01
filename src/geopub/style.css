@@ -184,47 +184,53 @@ ul.activity {
 
 /* Individual post */
 
-.activity article {
+.activity {
     margin-top: 20px;
     display: flex;
     flex-direction: column;
+    gap: 30px;
 }
 
-.activity article header {
+.activity header {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
 }
 
-.activity article .post-from {
+.activity .post-from {
     min-width: 33%;
 }
 
-.activity article .post-title {
+.activity .post-title {
     min-width: 33%;
 }
 
-.activity article .post-date {
+.activity .post-date {
     min-width: 33%;
 }
 
 
-.activity article .post-date {
+.activity .post-date {
     text-align: right;
     color: grey;
 }
 
-.activity article .post-content {
+.activity .post-content {
     flex-grow: 1;
 }
 
 
-.activity article footer {
+.activity footer {
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
 }
 
-.article article .post-geoloc {
+.activity .post-geoloc {
     flex-grow: 1;
+}
+
+.activity .post-inspect {
+    color: grey;
+    font-size: 12px;
 }
