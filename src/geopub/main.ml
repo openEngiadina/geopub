@@ -95,9 +95,9 @@ let main () =
   in
 
   (* Initialize XMPP *)
-  (* let xmpp = Loadable.Idle in *)
-  let* xmpp = Xmpp.login_dev () >|= Loadable.of_result in
+  let xmpp = Loadable.Idle in
 
+  (* let* xmpp = Xmpp.login_dev () >|= Loadable.of_result in *)
   let () =
     E.map_s
       (fun stanza ->
