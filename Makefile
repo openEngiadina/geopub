@@ -2,7 +2,7 @@
 
 .PHONY: prod
 prod:
-	dune build @install
+	dune build @install --release
 
 .PHONY: deploy
 deploy: prod
