@@ -98,7 +98,7 @@ let main () =
         | Some rdf ->
             Log.debug (fun m ->
                 m "GeoPub received RDF over XMPP: %a" Rdf.Graph.pp rdf);
-            Database.add_rdf database rdf
+            Database.Triples.add_graph database rdf
         | None -> return_unit)
       Xmpp.stanzas
     |> E.keep
