@@ -12,6 +12,7 @@ module Database : sig
     type object_store
 
     val create_object_store : t -> ?options:Jv.t -> Jstr.t -> object_store
+    val delete_object_store : t -> Jstr.t -> unit
 
     val create_index :
       object_store ->

@@ -31,6 +31,9 @@ module Database = struct
     let create_object_store db ?(options = Jv.null) name =
       Jv.call db "createObjectStore" [| Jv.of_jstr name; options |]
 
+    let delete_object_store db name =
+      ignore @@ Jv.call db "deleteObjectStore" [| Jv.of_jstr name |]
+
     let create_index object_store ~key_path ?(object_parameters = Jv.null) name
         =
       ignore
