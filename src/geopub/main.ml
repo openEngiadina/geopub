@@ -58,7 +58,7 @@ let main () =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
 
-  (* Logs.set_level @@ Some Logs.Debug; *)
+  Logs.set_level @@ Some Logs.Debug;
 
   (* Logs.set_level @@ Some Logs.Info; *)
 
@@ -107,7 +107,7 @@ let main () =
         | Some rdf ->
             Log.debug (fun m ->
                 m "GeoPub received RDF over XMPP: %a" Rdf.Graph.pp rdf);
-            Database.Triples.add_graph database rdf
+            Database.add_graph database rdf
         | None -> return_unit)
       Xmpp.stanzas
     |> E.keep
@@ -142,5 +142,11 @@ let () =
      fun exn ->
        Log.err (fun m ->
            m "unexpected async exception: %s" @@ Printexc.to_string exn));
-  Lwt.on_any (main ()) ignore (fun exn ->
-      Log.err (fun m -> m "unexpected exception: %s" @@ Printexc.to_string exn))
+  Lwt.on_any (main ()) ignore (function
+    | Jv.Error error ->
+        Log.err (fun m ->
+            m "unexpected JavaScript exception: %s"
+            @@ Jstr.to_string @@ Jv.Error.message error)
+    | exn ->
+        Log.err (fun m ->
+            m "unexpected exception: %s" @@ Printexc.to_string exn))

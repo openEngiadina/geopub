@@ -19,7 +19,7 @@ module Database = Geopub_database
 module Xmpp = Geopub_xmpp
 
 let database_settings ~update (model : Model.t) =
-  let* triple_count = Database.Triples.count model.database in
+  let* triple_count = Database.Store.triple_count model.database in
   (* let triple_count = model.counter in *)
   return
     El.(

@@ -18,146 +18,374 @@ type t = Indexeddb.Database.t
 (* Constants *)
 let geopub_database_version = 1
 let geopub_database_name = "GeoPub"
-let triples_object_store_name = Jstr.v "triples"
 
-(* Dictionary *)
+module Store = struct
+  (** The IndexedDB backed storage *)
 
-module Dictionary = struct
-  let on_version_change db =
-    let open Indexeddb in
-    let dictionary =
-      Database.create_object_store db
-        ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
-        triples_object_store_name
-    in
+  (** The Store is implemented using following IndexedDB ObjectStores:
 
-    let _value_index =
-      ObjectStore.create_index dictionary ~key_path:[]
-        ~object_parameters:Jv.(obj [| ("unique", true') |])
-      @@ Jstr.v "value"
-    in
+- Dictionary: Stores a mapping of RDF Terms to integer keys (auto incremented)
+- Triples: Stores triples using keys of terms as stored in Dictionary.
 
-    ()
-end
+   *)
 
-(* The Triple Store *)
-
-module Triples = struct
   let on_update, updated = E.create ()
 
-  let count db =
-    let tx =
-      Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadWrite
-        [ triples_object_store_name ]
-    in
-    let triples =
-      Indexeddb.Transaction.object_store tx triples_object_store_name
-    in
-    Indexeddb.ObjectStore.count triples Jv.undefined
+  let ro_tx db =
+    Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
+      [ Jstr.v "dictionary"; Jstr.v "triples" ]
 
-  let add tx (triple : Rdf.Triple.t) =
-    let triples =
-      Indexeddb.Transaction.object_store tx triples_object_store_name
-    in
-    let spo = Indexeddb.ObjectStore.index triples (Jstr.v "spo") in
-    let* count =
-      Indexeddb.Index.count spo
-        (Encoding.jv_of_terms
-           [
-             Rdf.Triple.Subject.to_term triple.subject;
-             Rdf.Triple.Predicate.to_term triple.predicate;
-             Rdf.Triple.Object.to_term triple.object';
-           ])
-    in
-    if count = 0 then
-      (* TODO usage of jv_of_triple is inefficient as we have already encoded triples into Buffers above. This should be reused. *)
-      let* _ =
-        Indexeddb.ObjectStore.add triples (Encoding.jv_of_triple triple)
+  let rw_tx db =
+    Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadWrite
+      [ Jstr.v "dictionary"; Jstr.v "triples" ]
+
+  module Dictionary = struct
+    let object_store_name = Jstr.v "dictionary"
+
+    open Indexeddb
+
+    let on_version_change db =
+      let dictionary =
+        Database.create_object_store db
+          ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
+          object_store_name
       in
-      return_unit
-    else return_unit
 
-  let add_graph db graph =
-    let tx =
-      Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadWrite
-        [ triples_object_store_name ]
-    in
-    let* () =
-      Rdf.Graph.to_triples graph |> List.of_seq |> Lwt_list.iter_p (add tx)
+      let _term_index =
+        ObjectStore.create_index dictionary ~key_path:[ "term" ]
+          ~object_parameters:Jv.(obj [| ("unique", true') |])
+        @@ Jstr.v "term"
+      in
+
+      ()
+
+    let object_store tx = Transaction.object_store tx object_store_name
+    let term_index object_store = ObjectStore.index object_store (Jstr.v "term")
+
+    (* Encoding of Terms *)
+
+    let string_of_term term =
+      let encode_iri iri = "<" ^ Rdf.Iri.to_string iri ^ ">" in
+      let encode_blank_node bnode = "_:" ^ Rdf.Blank_node.identifier bnode in
+      let encode_literal literal =
+        match Rdf.Literal.language literal with
+        | Some lang -> "\"" ^ Rdf.Literal.canonical literal ^ "\"@" ^ lang
+        | None ->
+            "\""
+            ^ Rdf.Literal.canonical literal
+            ^ "\"^^" ^ encode_iri
+            @@ Rdf.Literal.datatype literal
+      in
+      Rdf.Term.map term encode_iri encode_blank_node encode_literal
+
+    let jv_of_term term = Jv.of_string @@ string_of_term term
+    let jv_obj_of_term term = Jv.obj [| ("term", jv_of_term term) |]
+
+    let parser =
+      let open Angstrom in
+      let iri_parser =
+        char '<'
+        *> (many_till any_char (char '>') >>| List.to_seq >>| String.of_seq)
+        >>| Rdf.Iri.of_string
+      in
+      let whitespace_lst = [ '\x20'; '\x0a'; '\x0d'; '\x09' ] in
+      let char_is_not_equal_to lst d = List.for_all (fun x -> x != d) lst in
+      let bnode_parser =
+        string "_:"
+        *> take_while (char_is_not_equal_to ([ ','; ')' ] @ whitespace_lst))
+        >>| Rdf.Blank_node.of_string
+      in
+      let literal_value_parser =
+        char '"'
+        *> (many_till any_char (char '"') >>| List.to_seq >>| String.of_seq)
+      in
+
+      let literal_parser =
+        literal_value_parser >>= fun value ->
+        choice
+          [
+            ( char '@'
+            *> take_while (char_is_not_equal_to ([ ','; ')' ] @ whitespace_lst))
+            >>| fun language -> Rdf.Literal.make_string value ~language );
+            ( string "^^" *> iri_parser >>| fun datatype ->
+              Rdf.Literal.make value datatype );
+          ]
+      in
+
+      let make_prefix_parser prefix namespace =
+        string prefix *> char ':'
+        *> take_while (char_is_not_equal_to ([ ','; ')' ] @ whitespace_lst))
+        >>| namespace >>| Rdf.Term.of_iri
+      in
+
+      choice
+        [
+          iri_parser >>| Rdf.Term.of_iri;
+          bnode_parser >>| Rdf.Term.of_blank_node;
+          literal_parser >>| Rdf.Term.of_literal;
+          make_prefix_parser "rdf" Rdf.Namespace.rdf;
+          make_prefix_parser "rdfs" Rdf.Namespace.rdfs;
+          make_prefix_parser "as"
+            (Rdf.Namespace.make_namespace
+               "https://www.w3.org/ns/activitystreams#");
+          make_prefix_parser "geo"
+            (Rdf.Namespace.make_namespace
+               "http://www.w3.org/2003/01/geo/wgs84_pos#");
+        ]
+
+    let term_of_jv jv =
+      Angstrom.parse_string ~consume:Angstrom.Consume.All parser
+        (Jv.to_string jv)
+      |> Result.to_option
+
+    let term_of_jv_obj jv = Jv.get jv "term" |> term_of_jv
+
+    (* ObjectStore access *)
+
+    let get db ?(tx = ro_tx db) id =
+      let dictionary = object_store tx in
+      let* term_jv_opt = ObjectStore.get dictionary (Jv.of_int id) in
+      match term_jv_opt with
+      | Some term_jv -> term_of_jv (Jv.get term_jv "term") |> return
+      | None -> return_none
+
+    let lookup db ?(tx = ro_tx db) term =
+      let dictionary = object_store tx in
+      let term_index = term_index dictionary in
+      Index.get_key term_index (Jv.of_list jv_of_term [ term ])
+      >|= Jv.to_option Jv.to_int
+
+    let put db term =
+      let tx = rw_tx db in
+      let dictionary = object_store tx in
+      let* key_opt = lookup db ~tx term in
+      match key_opt with
+      | None ->
+          let* key =
+            ObjectStore.put dictionary (jv_obj_of_term term) >|= Jv.to_int
+          in
+          return key
+      | Some key -> return key
+  end
+
+  (* The Triple Store *)
+
+  module Triples = struct
+    let object_store_name = Jstr.v "triples"
+
+    open Indexeddb
+
+    let object_store tx =
+      Indexeddb.Transaction.object_store tx object_store_name
+
+    let on_version_change db =
+      (* Create an ObjectStore for triples *)
+      let triples =
+        Database.create_object_store db
+          ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
+          object_store_name
+      in
+
+      (* Create the spo index *)
+      let _spo_index =
+        ObjectStore.create_index triples ~key_path:[ "s"; "p"; "o" ]
+          ~object_parameters:Jv.(obj [| ("unique", true') |])
+        @@ Jstr.v "spo"
+      in
+
+      (* Create the s index *)
+      let _s_index =
+        ObjectStore.create_index triples ~key_path:[ "s" ]
+          ~object_parameters:Jv.(obj [| ("unique", false') |])
+        @@ Jstr.v "s"
+      in
+
+      (* Create the p index *)
+      let _p_index =
+        ObjectStore.create_index triples ~key_path:[ "p" ]
+          ~object_parameters:Jv.(obj [| ("unique", false') |])
+        @@ Jstr.v "p"
+      in
+
+      (* Create the o index *)
+      let _p_index =
+        ObjectStore.create_index triples ~key_path:[ "o" ]
+          ~object_parameters:Jv.(obj [| ("unique", false') |])
+        @@ Jstr.v "o"
+      in
+
+      (* Create the sp index *)
+      let _sp_index =
+        ObjectStore.create_index triples ~key_path:[ "s"; "p" ]
+          ~object_parameters:Jv.(obj [| ("unique", false') |])
+        @@ Jstr.v "sp"
+      in
+
+      (* Create the so index *)
+      let _so_index =
+        ObjectStore.create_index triples ~key_path:[ "s"; "o" ]
+          ~object_parameters:Jv.(obj [| ("unique", false') |])
+        @@ Jstr.v "so"
+      in
+
+      (* Create the po index *)
+      let _po_index =
+        ObjectStore.create_index triples ~key_path:[ "p"; "o" ]
+          ~object_parameters:Jv.(obj [| ("unique", false') |])
+        @@ Jstr.v "po"
+      in
+
+      ()
+
+    (* Encoding *)
+
+    let jv_of_triple s p o =
+      Jv.obj [| ("s", Jv.of_int s); ("p", Jv.of_int p); ("o", Jv.of_int o) |]
+
+    let triple_of_jv jv =
+      let s = Jv.(to_int @@ get jv "s") in
+      let p = Jv.(to_int @@ get jv "p") in
+      let o = Jv.(to_int @@ get jv "o") in
+      [ s; p; o ]
+
+    (* ObjectStore access *)
+
+    let deref db ?(tx = ro_tx db) triple_ids =
+      let* terms = Lwt_list.map_s (Dictionary.get db ~tx) triple_ids in
+      match terms with
+      | [ Some s; Some p; Some o ] ->
+          return_some
+          @@ Rdf.Triple.(
+               make
+                 (Rdf.Term.map s Subject.of_iri Subject.of_blank_node (fun _ ->
+                      failwith "unexpcted literal"))
+                 (Rdf.Term.map p Predicate.of_iri
+                    (fun _ -> failwith "unexpected blank_node")
+                    (fun _ -> failwith "unexpected literal"))
+                 (Object.of_term o))
+      | _ -> return_none
+
+    let put db (triple : Rdf.Triple.t) =
+      (* let triples = Triples.object_store tx in *)
+      let* s_id =
+        triple.subject |> Rdf.Triple.Subject.to_term |> Dictionary.put db
+      in
+      let* p_id =
+        triple.predicate |> Rdf.Triple.Predicate.to_term |> Dictionary.put db
+      in
+      let* o_id =
+        triple.object' |> Rdf.Triple.Object.to_term |> Dictionary.put db
+      in
+      let tx = rw_tx db in
+      let triples = object_store tx in
+
+      let spo_index = ObjectStore.index triples (Jstr.v "spo") in
+
+      let* key_opt =
+        Index.get_key spo_index (Jv.of_list Jv.of_int [ s_id; p_id; o_id ])
+        >|= Jv.to_option Jv.to_int
+      in
+
+      match key_opt with
+      | None ->
+          ObjectStore.put triples (jv_of_triple s_id p_id o_id) >|= Jv.to_int
+      | Some key -> return key
+  end
+
+  let init () =
+    let* db =
+      Indexeddb.Database.open' ~version:geopub_database_version
+        ~on_version_change:(fun db ->
+          Log.debug (fun m -> m "Performing database version change.");
+
+          (* Delete all existing data *)
+          List.iter
+            (fun object_store_name ->
+              Indexeddb.Database.delete_object_store db object_store_name)
+            (Indexeddb.Database.object_store_names db);
+
+          (* Initialize Object stores and indices *)
+          Dictionary.on_version_change db;
+          Triples.on_version_change db)
+        (Jstr.v geopub_database_name)
     in
 
+    (* Force update of triple store *)
     updated db;
 
-    return @@ Indexeddb.Transaction.commit tx
+    return db
 
-  let on_version_change db =
+  let triple_count db =
+    let tx = ro_tx db in
+    Indexeddb.ObjectStore.count (Triples.object_store tx) Jv.undefined
+
+  let add_graph db (graph : Rdf.Graph.t) =
+    let* () =
+      Rdf.Graph.to_triples graph |> List.of_seq
+      |> Lwt_list.iter_p (fun triple -> Triples.put db triple >|= ignore)
+    in
+    return @@ updated db
+
+  let edb tx predicate pattern =
+    let parse = Lwt_stream.map Triples.triple_of_jv in
+
+    let jv_of_index idx = Jv.of_list Jv.of_int idx in
+
     let open Indexeddb in
-    (* Create an ObjectStore for triples *)
-    let triples =
-      Database.create_object_store db
-        ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
-        triples_object_store_name
-    in
+    (* Open the triples object store *)
+    let triples = Transaction.object_store tx Triples.object_store_name in
 
-    (* Create the spo index *)
-    let _spo_index =
-      ObjectStore.create_index triples ~key_path:[ "s"; "p"; "o" ]
-        ~object_parameters:Jv.(obj [| ("unique", true') |])
-      @@ Jstr.v "spo"
-    in
-
-    (* Create the s index *)
-    let _s_index =
-      ObjectStore.create_index triples ~key_path:[ "s" ]
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "s"
-    in
-
-    (* Create the p index *)
-    let _p_index =
-      ObjectStore.create_index triples ~key_path:[ "p" ]
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "p"
-    in
-
-    (* Create the o index *)
-    let _p_index =
-      ObjectStore.create_index triples ~key_path:[ "o" ]
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "o"
-    in
-
-    (* Create the sp index *)
-    let _sp_index =
-      ObjectStore.create_index triples ~key_path:[ "s"; "p" ]
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "sp"
-    in
-
-    (* Create the so index *)
-    let _so_index =
-      ObjectStore.create_index triples ~key_path:[ "s"; "o" ]
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "so"
-    in
-
-    (* Create the po index *)
-    let _po_index =
-      ObjectStore.create_index triples ~key_path:[ "p"; "o" ]
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "po"
-    in
-
-    ()
+    (* Get triples with index matching the query pattern *)
+    match (predicate, pattern) with
+    | "triples", [ None; None; None ] ->
+        Log.debug (fun m -> m "EDB: getting all triples");
+        ObjectStore.open_cursor triples Jv.undefined
+        |> Cursor.to_stream |> parse
+    | "triples", [ Some s; None; None ] ->
+        Log.debug (fun m -> m "EDB: using s index");
+        let s_index = ObjectStore.index triples (Jstr.v "s") in
+        Index.open_cursor s_index (jv_of_index [ s ])
+        |> Cursor.to_stream |> parse
+    | "triples", [ None; Some p; None ] ->
+        Log.debug (fun m -> m "EDB: using p index");
+        let p_index = ObjectStore.index triples (Jstr.v "p") in
+        Index.open_cursor p_index (jv_of_index [ p ])
+        |> Cursor.to_stream |> parse
+    | "triples", [ None; None; Some o ] ->
+        Log.debug (fun m -> m "EDB: using o index");
+        let o_index = ObjectStore.index triples (Jstr.v "o") in
+        Index.open_cursor o_index (jv_of_index [ o ])
+        |> Cursor.to_stream |> parse
+    | "triples", [ Some s; Some p; None ] ->
+        Log.debug (fun m -> m "EDB: using sp index");
+        let sp_index = ObjectStore.index triples (Jstr.v "sp") in
+        Index.open_cursor sp_index (jv_of_index [ s; p ])
+        |> Cursor.to_stream |> parse
+    | "triples", [ Some s; None; Some o ] ->
+        Log.debug (fun m -> m "EDB: using so index");
+        let so_index = ObjectStore.index triples (Jstr.v "so") in
+        Index.open_cursor so_index (jv_of_index [ s; o ])
+        |> Cursor.to_stream |> parse
+    | "triples", [ None; Some p; Some o ] ->
+        Log.debug (fun m -> m "EDB: using po index");
+        let po_index = ObjectStore.index triples (Jstr.v "po") in
+        Index.open_cursor po_index (jv_of_index [ p; o ])
+        |> Cursor.to_stream |> parse
+    | "triples", [ Some s; Some p; Some o ] ->
+        Log.debug (fun m -> m "EDB: using spo index");
+        let spo_index = ObjectStore.index triples (Jstr.v "spo") in
+        Index.open_cursor spo_index (jv_of_index [ s; p; o ])
+        |> Cursor.to_stream |> parse
+    | _, _ -> Lwt_stream.of_list []
 end
 
 module Datalog = struct
   include Datalogl.Make (struct
-    type t = Rdf.Term.t
+    type t = int
 
-    let compare = Rdf.Term.compare
-    let parser = Encoding.parser
-    let pp = Rdf.Term.pp
+    let compare = Int.compare
+    let parser = Angstrom.fail "no parser"
+    let pp = Fmt.int
   end)
 
   (* The ρdf fragment of RDF
@@ -197,131 +425,30 @@ module Datalog = struct
     |> String.concat "\n"
 
   let geopub_datalog_program =
-    {datalog|
-   rdf(?s,?p,?o) :- triples(?s,?p,?o).
-   activity(?s) :- triples(?s,rdf:type,as:Create).
-   activity(?s) :- triples(?s,rdf:type,as:Listen).
-   activity(?s) :- triples(?s,rdf:type,as:Like).
-   withgeo(?s) :- triples(?s, geo:lat, ?lat), triples(?s, geo:long, ?lng).
-   |datalog}
-    ^ rhodf
+    (*  {datalog|
+     * rdf(?s,?p,?o) :- triples(?s,?p,?o).
+     * activity(?s) :- triples(?s,rdf:type,as:Create).
+     * activity(?s) :- triples(?s,rdf:type,as:Listen).
+     * activity(?s) :- triples(?s,rdf:type,as:Like).
+     * withgeo(?s) :- triples(?s, geo:lat, ?lat), triples(?s, geo:long, ?lng).
+     * |datalog} *)
+    (* ^ rhodf *)
+    ""
     |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
     |> Result.get_ok
 
   let geopub_state = ref (init geopub_datalog_program)
-
-  let edb tx predicate pattern =
-    let parse =
-      Lwt_stream.filter_map (fun jv ->
-          match Encoding.tuple_of_jv jv with
-          | Ok tuple -> Some tuple
-          | Error msg ->
-              Log.warn (fun m ->
-                  m "Encountered tuple that could not be parsed (%s)" msg);
-              Brr.Console.warn [ jv ];
-              None)
-    in
-
-    let open Indexeddb in
-    (* Open the triples object store *)
-    let triples = Transaction.object_store tx triples_object_store_name in
-    (* Get triples with index matching the query pattern *)
-    match (predicate, pattern) with
-    | "triples", [ None; None; None ] ->
-        Log.debug (fun m -> m "EDB: getting all triples");
-        ObjectStore.open_cursor triples Jv.undefined
-        |> Cursor.to_stream |> parse
-    | "triples", [ Some s; None; None ] ->
-        Log.debug (fun m -> m "EDB: using s index");
-        let s_index = ObjectStore.index triples (Jstr.v "s") in
-        Index.open_cursor s_index Encoding.(jv_of_terms [ s ])
-        |> Cursor.to_stream |> parse
-    | "triples", [ None; Some p; None ] ->
-        Log.debug (fun m -> m "EDB: using p index");
-        let p_index = ObjectStore.index triples (Jstr.v "p") in
-        Index.open_cursor p_index Encoding.(jv_of_terms [ p ])
-        |> Cursor.to_stream |> parse
-    | "triples", [ None; None; Some o ] ->
-        Log.debug (fun m -> m "EDB: using o index");
-        let o_index = ObjectStore.index triples (Jstr.v "o") in
-        Index.open_cursor o_index Encoding.(jv_of_terms [ o ])
-        |> Cursor.to_stream |> parse
-    | "triples", [ Some s; Some p; None ] ->
-        Log.debug (fun m -> m "EDB: using sp index");
-        let sp_index = ObjectStore.index triples (Jstr.v "sp") in
-        Index.open_cursor sp_index Encoding.(jv_of_terms [ s; p ])
-        |> Cursor.to_stream |> parse
-    | "triples", [ Some s; None; Some o ] ->
-        Log.debug (fun m -> m "EDB: using so index");
-        let so_index = ObjectStore.index triples (Jstr.v "so") in
-        Index.open_cursor so_index Encoding.(jv_of_terms [ s; o ])
-        |> Cursor.to_stream |> parse
-    | "triples", [ None; Some p; Some o ] ->
-        Log.debug (fun m -> m "EDB: using po index");
-        let po_index = ObjectStore.index triples (Jstr.v "po") in
-        Index.open_cursor po_index Encoding.(jv_of_terms [ p; o ])
-        |> Cursor.to_stream |> parse
-    | "triples", [ Some s; Some p; Some o ] ->
-        Log.debug (fun m -> m "EDB: using spo index");
-        let spo_index = ObjectStore.index triples (Jstr.v "spo") in
-        Index.open_cursor spo_index Encoding.(jv_of_terms [ s; p; o ])
-        |> Cursor.to_stream |> parse
-    | _, _ -> Lwt_stream.of_list []
 end
 
-let init () =
-  let* db =
-    Indexeddb.Database.open' ~version:geopub_database_version
-      ~on_version_change:(fun db ->
-        Log.debug (fun m -> m "Performing database version change.");
-
-        (* Delete all existing data *)
-        List.iter
-          (fun object_store_name ->
-            Indexeddb.Database.delete_object_store db object_store_name)
-          (Indexeddb.Database.object_store_names db);
-
-        (* Initialize Object stores and indices *)
-        Dictionary.on_version_change db;
-        Triples.on_version_change db)
-      (Jstr.v geopub_database_name)
-  in
-
-  (* Force update of triple store *)
-  Triples.updated db;
-
-  let* triple_count = Triples.count db in
-  Log.debug (fun m -> m "Triples in database: %d" triple_count);
-
-  (* Load some vocabularies if db is empty*)
-  let* () =
-    if triple_count = 0 then
-      Vocabs.vocabs
-      |> Lwt_list.iter_p (fun vocab ->
-             Log.debug (fun m -> m "Loading vocabulary %s" vocab);
-             let* graph = Vocabs.fetch_vocab vocab in
-             Triples.add_graph db graph)
-    else return_unit
-  in
-
-  Log.info (fun m -> m "IndexedDB databse initialized.");
-  (* Log.debug (fun m -> m "Graph: %a" Rdf.Graph.pp as2); *)
-  return db
-
-let delete db =
-  Log.info (fun m -> m "Deleting IndexedDB databse.");
-  Datalog.geopub_state := Datalog.init Datalog.geopub_datalog_program;
-  Indexeddb.(
-    return @@ Database.close db >>= fun () ->
-    Database.delete (Jstr.v geopub_database_name))
+let add_graph = Store.add_graph
 
 let query db q =
   let tx =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
-      [ triples_object_store_name ]
+      [ Store.Triples.object_store_name ]
   in
   let* state, tuples =
-    Datalog.(query_with_state ~database:(edb tx) ~state:!geopub_state q)
+    Datalog.(query_with_state ~database:(Store.edb tx) ~state:!geopub_state q)
   in
   Datalog.geopub_state := state;
   return tuples
@@ -337,42 +464,34 @@ let query_string db q =
 
 (* Return a RDF description for [iri] that is used in the inspect view *)
 let get_description db iri =
-  let tx =
-    Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
-      [ triples_object_store_name ]
-  in
-  Datalog.edb tx "triples" [ Some (Rdf.Term.of_iri iri); None; None ]
-  |> Lwt_stream.filter_map (function
-       | [ s; p; o ] ->
-           Rdf.Triple.(
-             Option.some
-             @@ make
-                  (Rdf.Term.map s Subject.of_iri Subject.of_blank_node (fun _ ->
-                       failwith "unexpected literal in subject position"))
-                  (Rdf.Term.map p Predicate.of_iri
-                     (fun _ ->
-                       failwith "unexpected blank node in predicate position")
-                     (fun _ ->
-                       failwith "unexpected literal in predicate position"))
-                  (Object.of_term o))
-       | _ -> None)
-  |> fun stream ->
-  Lwt_stream.fold Rdf.Graph.add stream Rdf.Graph.empty
-  >|= Rdf.Graph.description (Rdf.Triple.Subject.of_iri iri)
+  let tx = Store.ro_tx db in
+  let* s_id_opt = Store.Dictionary.lookup db ~tx (Rdf.Term.of_iri iri) in
+
+  match s_id_opt with
+  | Some s_id ->
+      Store.edb tx "triples" [ Some s_id; None; None ]
+      |> Lwt_stream.filter_map_s (Store.Triples.deref db ~tx)
+      |> fun stream ->
+      Lwt_stream.fold Rdf.Graph.add stream Rdf.Graph.empty
+      >|= Rdf.Graph.description (Rdf.Triple.Subject.of_iri iri)
+  | None -> return @@ Rdf.Description.empty (Rdf.Triple.Subject.of_iri iri)
 
 let get_property db subject predicate =
-  let tx =
-    Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
-      [ triples_object_store_name ]
+  let tx = Store.ro_tx db in
+  let* s_id_opt =
+    Store.Dictionary.lookup db ~tx (Rdf.Triple.Subject.to_term subject)
   in
-  Datalog.edb tx "triples"
-    [
-      Some (Rdf.Triple.Subject.to_term subject);
-      Some (Rdf.Triple.Predicate.to_term predicate);
-      None;
-    ]
-  |> Lwt_stream.filter_map (function [ _; _; o ] -> Some o | _ -> None)
-  |> Lwt_stream.to_list
+  let* p_id_opt =
+    Store.Dictionary.lookup db ~tx (Rdf.Triple.Predicate.to_term predicate)
+  in
+  match [ s_id_opt; p_id_opt ] with
+  | [ Some s_id; Some p_id ] ->
+      Store.edb tx "triples" [ Some s_id; Some p_id; None ]
+      |> Lwt_stream.filter_map_s (function
+           | [ _; _; o ] -> Store.Dictionary.get db ~tx o
+           | _ -> return_none)
+      |> Lwt_stream.to_list
+  | _ -> return_nil
 
 let get_rdfs_label db iri =
   let* labels =
@@ -383,24 +502,54 @@ let get_rdfs_label db iri =
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
 let get_activities db =
-  query_string db {query|activity(?s)|query}
-  >|= Datalog.Tuple.Set.to_seq
-  >|= Seq.filter_map (function
-        | [ term ] ->
-            Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
-        | _ -> None)
-  >|= List.of_seq
-  >>= Lwt_list.map_s (fun iri -> get_description db iri)
+  ignore db;
+  return_nil
+(* query_string db {query|activity(?s)|query}
+ * >|= Datalog.Tuple.Set.to_seq
+ * >|= Seq.filter_map (function
+ *       | [ term ] ->
+ *           Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
+ *       | _ -> None)
+ * >|= List.of_seq
+ * >>= Lwt_list.map_s (fun iri -> get_description db iri) *)
 
 let get_with_geo db =
-  query_string db {query|withgeo(?s)|query}
-  >|= Datalog.Tuple.Set.to_seq
-  >|= Seq.filter_map (function
-        | [ term ] ->
-            Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
-        | _ -> None)
-  >|= List.of_seq
-  >>= Lwt_list.map_s (fun iri -> get_description db iri)
+  ignore db;
+  return_nil
+(* query_string db {query|withgeo(?s)|query}
+ * >|= Datalog.Tuple.Set.to_seq
+ * >|= Seq.filter_map (function
+ *       | [ term ] ->
+ *           Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
+ *       | _ -> None)
+ * >|= List.of_seq
+ * >>= Lwt_list.map_s (fun iri -> get_description db iri) *)
+
+let init () =
+  let* db = Store.init () in
+  let* triple_count = Store.triple_count db in
+  Log.debug (fun m -> m "Triples in database: %d" triple_count);
+
+  (* Load some vocabularies if db is empty *)
+  let* () =
+    if triple_count = 0 then
+      Vocabs.vocabs
+      |> Lwt_list.iter_p (fun vocab ->
+             Log.debug (fun m -> m "Loading vocabulary %s" vocab);
+             let* graph = Vocabs.fetch_vocab vocab in
+             Store.add_graph db graph)
+    else return_unit
+  in
+  Log.info (fun m -> m "IndexedDB databse initialized.");
+  (* Log.debug (fun m -> m "Graph: %a" Rdf.Graph.pp as2); *)
+  return db
+
+let delete db =
+  Log.info (fun m -> m "Deleting IndexedDB databse.");
+  Datalog.geopub_state := Datalog.init Datalog.geopub_datalog_program;
+  Indexeddb.(
+    return @@ Database.close db >>= fun () ->
+    Database.delete (Jstr.v geopub_database_name))
 
 let test_datalog db =
   let* tuples = query_string db {query|withgeo(?s)|query} in

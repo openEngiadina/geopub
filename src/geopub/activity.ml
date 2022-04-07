@@ -108,7 +108,7 @@ let activities =
     (E.map
        (fun db _old_activities ->
          Database.get_activities db >|= sort_activities)
-       Database.Triples.on_update)
+       Database.Store.on_update)
     []
 
 (* UI *)
