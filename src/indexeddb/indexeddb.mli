@@ -4,44 +4,6 @@
  * SPDX-License-Identifier: ISC
  *)
 
-module Database : sig
-  type t
-
-  module VersionChange : sig
-    type t
-    type object_store
-
-    val create_object_store : t -> ?options:Jv.t -> Jstr.t -> object_store
-    val delete_object_store : t -> Jstr.t -> unit
-
-    val create_index :
-      object_store ->
-      key_path:string list ->
-      ?object_parameters:Jv.t ->
-      Jstr.t ->
-      unit
-  end
-
-  val open' :
-    ?version:int ->
-    ?on_version_change:(VersionChange.t -> unit) ->
-    Jstr.t ->
-    t Lwt.t
-
-  val delete : Jstr.t -> unit Lwt.t
-
-  (** {1 Properties} *)
-  val object_store_names : t -> Jstr.t list
-  (** [object_store_names db] returns a list of names of the object
-  stores currently in the connected database.
-
-  @see https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/objectStoreNames *)
-
-  (** {1 Methods} *)
-
-  val close : t -> unit
-end
-
 module Cursor : sig
   type t
 
@@ -96,6 +58,36 @@ module ObjectStore : sig
 
   val index : t -> Jstr.t -> Index.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/index *)
+
+  (** {1 On Version Change} *)
+
+  val create_index :
+    t -> key_path:string list -> ?object_parameters:Jv.t -> Jstr.t -> Index.t
+  (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/createIndex *)
+end
+
+module Database : sig
+  type t
+
+  val open' :
+    ?version:int -> ?on_version_change:(t -> unit) -> Jstr.t -> t Lwt.t
+
+  (** {1 On Version Change} *)
+
+  val create_object_store : t -> ?options:Jv.t -> Jstr.t -> ObjectStore.t
+  val delete_object_store : t -> Jstr.t -> unit
+
+  (** {1 Properties} *)
+  val object_store_names : t -> Jstr.t list
+  (** [object_store_names db] returns a list of names of the object
+  stores currently in the connected database.
+
+  @see https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/objectStoreNames *)
+
+  val delete : Jstr.t -> unit Lwt.t
+  (** {1 Methods} *)
+
+  val close : t -> unit
 end
 
 module Transaction : sig

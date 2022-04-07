@@ -20,6 +20,26 @@ let geopub_database_version = 1
 let geopub_database_name = "GeoPub"
 let triples_object_store_name = Jstr.v "triples"
 
+(* Dictionary *)
+
+module Dictionary = struct
+  let on_version_change db =
+    let open Indexeddb in
+    let dictionary =
+      Database.create_object_store db
+        ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
+        triples_object_store_name
+    in
+
+    let _value_index =
+      ObjectStore.create_index dictionary ~key_path:[]
+        ~object_parameters:Jv.(obj [| ("unique", true') |])
+      @@ Jstr.v "value"
+    in
+
+    ()
+end
+
 (* The Triple Store *)
 
 module Triples = struct
@@ -69,6 +89,66 @@ module Triples = struct
     updated db;
 
     return @@ Indexeddb.Transaction.commit tx
+
+  let on_version_change db =
+    let open Indexeddb in
+    (* Create an ObjectStore for triples *)
+    let triples =
+      Database.create_object_store db
+        ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
+        triples_object_store_name
+    in
+
+    (* Create the spo index *)
+    let _spo_index =
+      ObjectStore.create_index triples ~key_path:[ "s"; "p"; "o" ]
+        ~object_parameters:Jv.(obj [| ("unique", true') |])
+      @@ Jstr.v "spo"
+    in
+
+    (* Create the s index *)
+    let _s_index =
+      ObjectStore.create_index triples ~key_path:[ "s" ]
+        ~object_parameters:Jv.(obj [| ("unique", false') |])
+      @@ Jstr.v "s"
+    in
+
+    (* Create the p index *)
+    let _p_index =
+      ObjectStore.create_index triples ~key_path:[ "p" ]
+        ~object_parameters:Jv.(obj [| ("unique", false') |])
+      @@ Jstr.v "p"
+    in
+
+    (* Create the o index *)
+    let _p_index =
+      ObjectStore.create_index triples ~key_path:[ "o" ]
+        ~object_parameters:Jv.(obj [| ("unique", false') |])
+      @@ Jstr.v "o"
+    in
+
+    (* Create the sp index *)
+    let _sp_index =
+      ObjectStore.create_index triples ~key_path:[ "s"; "p" ]
+        ~object_parameters:Jv.(obj [| ("unique", false') |])
+      @@ Jstr.v "sp"
+    in
+
+    (* Create the so index *)
+    let _so_index =
+      ObjectStore.create_index triples ~key_path:[ "s"; "o" ]
+        ~object_parameters:Jv.(obj [| ("unique", false') |])
+      @@ Jstr.v "so"
+    in
+
+    (* Create the po index *)
+    let _po_index =
+      ObjectStore.create_index triples ~key_path:[ "p"; "o" ]
+        ~object_parameters:Jv.(obj [| ("unique", false') |])
+      @@ Jstr.v "po"
+    in
+
+    ()
 end
 
 module Datalog = struct
@@ -193,66 +273,17 @@ let init () =
   let* db =
     Indexeddb.Database.open' ~version:geopub_database_version
       ~on_version_change:(fun db ->
-        let open Indexeddb.Database.VersionChange in
         Log.debug (fun m -> m "Performing database version change.");
 
-        (* Create an ObjectStore for triples *)
-        let triples =
-          create_object_store db
-            ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
-            triples_object_store_name
-        in
+        (* Delete all existing data *)
+        List.iter
+          (fun object_store_name ->
+            Indexeddb.Database.delete_object_store db object_store_name)
+          (Indexeddb.Database.object_store_names db);
 
-        (* Create the spo index *)
-        let _spo_index =
-          create_index triples ~key_path:[ "s"; "p"; "o" ]
-            ~object_parameters:Jv.(obj [| ("unique", true') |])
-          @@ Jstr.v "spo"
-        in
-
-        (* Create the s index *)
-        let _s_index =
-          create_index triples ~key_path:[ "s" ]
-            ~object_parameters:Jv.(obj [| ("unique", false') |])
-          @@ Jstr.v "s"
-        in
-
-        (* Create the p index *)
-        let _p_index =
-          create_index triples ~key_path:[ "p" ]
-            ~object_parameters:Jv.(obj [| ("unique", false') |])
-          @@ Jstr.v "p"
-        in
-
-        (* Create the o index *)
-        let _p_index =
-          create_index triples ~key_path:[ "o" ]
-            ~object_parameters:Jv.(obj [| ("unique", false') |])
-          @@ Jstr.v "o"
-        in
-
-        (* Create the sp index *)
-        let _sp_index =
-          create_index triples ~key_path:[ "s"; "p" ]
-            ~object_parameters:Jv.(obj [| ("unique", false') |])
-          @@ Jstr.v "sp"
-        in
-
-        (* Create the so index *)
-        let _so_index =
-          create_index triples ~key_path:[ "s"; "o" ]
-            ~object_parameters:Jv.(obj [| ("unique", false') |])
-          @@ Jstr.v "so"
-        in
-
-        (* Create the po index *)
-        let _po_index =
-          create_index triples ~key_path:[ "p"; "o" ]
-            ~object_parameters:Jv.(obj [| ("unique", false') |])
-          @@ Jstr.v "po"
-        in
-
-        ())
+        (* Initialize Object stores and indices *)
+        Dictionary.on_version_change db;
+        Triples.on_version_change db)
       (Jstr.v geopub_database_name)
   in
 

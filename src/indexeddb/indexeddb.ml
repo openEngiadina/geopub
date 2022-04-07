@@ -21,52 +21,6 @@ module Request = struct
     promise
 end
 
-module Database = struct
-  type t = Jv.t
-
-  module VersionChange = struct
-    type t = Jv.t
-    type object_store = Jv.t
-
-    let create_object_store db ?(options = Jv.null) name =
-      Jv.call db "createObjectStore" [| Jv.of_jstr name; options |]
-
-    let delete_object_store db name =
-      ignore @@ Jv.call db "deleteObjectStore" [| Jv.of_jstr name |]
-
-    let create_index object_store ~key_path ?(object_parameters = Jv.null) name
-        =
-      ignore
-      @@ Jv.call object_store "createIndex"
-           [|
-             Jv.of_jstr name;
-             Jv.of_list Jv.of_string key_path;
-             object_parameters;
-           |]
-  end
-
-  let indexeddb = Jv.get Jv.global "indexedDB"
-
-  let open' ?version ?(on_version_change = fun _ -> ()) name =
-    let request =
-      Jv.call indexeddb "open"
-        [| Jv.of_jstr name; Jv.of_option ~none:Jv.null Jv.of_int version |]
-    in
-    Jv.set request "onupgradeneeded"
-    @@ Jv.repr (fun _ev ->
-           let version_change = Request.result request in
-           on_version_change version_change);
-
-    request |> Request.to_lwt
-
-  let delete name =
-    let request = Jv.call indexeddb "deleteDatabase" [| Jv.of_jstr name |] in
-    Request.to_lwt request |> Lwt.map ignore
-
-  let object_store_names db = Jv.get db "objectStoreNames" |> Jv.to_jstr_list
-  let close db = ignore @@ Jv.call db "close" [||]
-end
-
 module Cursor = struct
   type t = Jv.t
 
@@ -148,6 +102,41 @@ module ObjectStore = struct
 
   let index object_store index_name =
     Jv.call object_store "index" [| Jv.of_jstr index_name |]
+
+  let create_index object_store ~key_path ?(object_parameters = Jv.null) name =
+    Jv.call object_store "createIndex"
+      [| Jv.of_jstr name; Jv.of_list Jv.of_string key_path; object_parameters |]
+end
+
+module Database = struct
+  type t = Jv.t
+
+  let indexeddb = Jv.get Jv.global "indexedDB"
+
+  let open' ?version ?(on_version_change = fun _ -> ()) name =
+    let request =
+      Jv.call indexeddb "open"
+        [| Jv.of_jstr name; Jv.of_option ~none:Jv.null Jv.of_int version |]
+    in
+    Jv.set request "onupgradeneeded"
+    @@ Jv.repr (fun _ev ->
+           let version_change = Request.result request in
+           on_version_change version_change);
+
+    request |> Request.to_lwt
+
+  let create_object_store db ?(options = Jv.null) name =
+    Jv.call db "createObjectStore" [| Jv.of_jstr name; options |]
+
+  let delete_object_store db name =
+    ignore @@ Jv.call db "deleteObjectStore" [| Jv.of_jstr name |]
+
+  let delete name =
+    let request = Jv.call indexeddb "deleteDatabase" [| Jv.of_jstr name |] in
+    Request.to_lwt request |> Lwt.map ignore
+
+  let object_store_names db = Jv.get db "objectStoreNames" |> Jv.to_jstr_list
+  let close db = ignore @@ Jv.call db "close" [||]
 end
 
 module Transaction = struct
