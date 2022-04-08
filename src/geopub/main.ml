@@ -86,6 +86,8 @@ let main () =
   (* Initialize the database *)
   let* database = Database.init () in
 
+  let* () = Database.test_datalog database in
+
   (* Initialize Map *)
   let* map =
     Geopub_map.init

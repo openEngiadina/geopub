@@ -64,6 +64,27 @@ module Store = struct
 
     (* Encoding of Terms *)
 
+    (* Map some constants to hardcoded ids. This allows us to
+       formulate Datalog clauses that use the constants defined below. *)
+    let constants =
+      [
+        (-1, Rdf.Namespace.rdf "type");
+        (-2, Rdf.Namespace.rdfs "subPropertyOf");
+        (-3, Rdf.Namespace.rdfs "subClassOf");
+        (-4, Rdf.Namespace.rdfs "domain");
+        (-5, Rdf.Namespace.rdfs "range");
+      ]
+
+    let constant_get id =
+      List.assoc_opt id constants |> Option.map Rdf.Term.of_iri
+
+    let constant_lookup term =
+      List.find_map
+        (fun (id, c) ->
+          let c_term = Rdf.Term.of_iri c in
+          if Rdf.Term.compare term c_term = 0 then Some id else None)
+        constants
+
     let string_of_term term =
       let encode_iri iri = "<" ^ Rdf.Iri.to_string iri ^ ">" in
       let encode_blank_node bnode = "_:" ^ Rdf.Blank_node.identifier bnode in
@@ -143,20 +164,25 @@ module Store = struct
     (* ObjectStore access *)
 
     let get db ?(tx = ro_tx db) id =
-      let dictionary = object_store tx in
-      let* term_jv_opt = ObjectStore.get dictionary (Jv.of_int id) in
-      match term_jv_opt with
-      | Some term_jv -> term_of_jv (Jv.get term_jv "term") |> return
-      | None -> return_none
+      match constant_get id with
+      | Some term -> return_some term
+      | None -> (
+          let dictionary = object_store tx in
+          let* term_jv_opt = ObjectStore.get dictionary (Jv.of_int id) in
+          match term_jv_opt with
+          | Some term_jv -> term_of_jv (Jv.get term_jv "term") |> return
+          | None -> return_none)
 
     let lookup db ?(tx = ro_tx db) term =
-      let dictionary = object_store tx in
-      let term_index = term_index dictionary in
-      Index.get_key term_index (Jv.of_list jv_of_term [ term ])
-      >|= Jv.to_option Jv.to_int
+      match constant_lookup term with
+      | Some id -> return_some id
+      | None ->
+          let dictionary = object_store tx in
+          let term_index = term_index dictionary in
+          Index.get_key term_index (Jv.of_list jv_of_term [ term ])
+          >|= Jv.to_option Jv.to_int
 
-    let put db term =
-      let tx = rw_tx db in
+    let put db ?(tx = rw_tx db) term =
       let dictionary = object_store tx in
       let* key_opt = lookup db ~tx term in
       match key_opt with
@@ -266,17 +292,19 @@ module Store = struct
       | _ -> return_none
 
     let put db (triple : Rdf.Triple.t) =
+      let tx = rw_tx db in
+
       (* let triples = Triples.object_store tx in *)
       let* s_id =
-        triple.subject |> Rdf.Triple.Subject.to_term |> Dictionary.put db
+        triple.subject |> Rdf.Triple.Subject.to_term |> Dictionary.put db ~tx
       in
       let* p_id =
-        triple.predicate |> Rdf.Triple.Predicate.to_term |> Dictionary.put db
+        triple.predicate |> Rdf.Triple.Predicate.to_term
+        |> Dictionary.put db ~tx
       in
       let* o_id =
-        triple.object' |> Rdf.Triple.Object.to_term |> Dictionary.put db
+        triple.object' |> Rdf.Triple.Object.to_term |> Dictionary.put db ~tx
       in
-      let tx = rw_tx db in
       let triples = object_store tx in
 
       let spo_index = ObjectStore.index triples (Jstr.v "spo") in
@@ -384,7 +412,24 @@ module Datalog = struct
     type t = int
 
     let compare = Int.compare
-    let parser = Angstrom.fail "no parser"
+
+    let parser =
+      let constant iri =
+        Angstrom.(
+          match Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri iri with
+          | Some id -> return id
+          | None -> fail "not a valid term")
+      in
+      Angstrom.(
+        choice ~failure_msg:"not a valid term"
+          [
+            string "type" *> (constant @@ Rdf.Namespace.rdf "type");
+            string "sp" *> (constant @@ Rdf.Namespace.rdfs "subPropertyOf");
+            string "sc" *> (constant @@ Rdf.Namespace.rdfs "subClassOf");
+            string "dom" *> (constant @@ Rdf.Namespace.rdfs "domain");
+            string "range" *> (constant @@ Rdf.Namespace.rdfs "range");
+          ])
+
     let pp = Fmt.int
   end)
 
@@ -398,42 +443,37 @@ module Datalog = struct
       (* rhodf is an extension of rdf. This corresponds to the simple rules in the paper. *)
       "rhodf(?s,?p,?o) :- triples(?s,?p,?o).";
       (* Subproperty (a) *)
-      "rhodf(?a, rdfs:subPropertyOf, ?c) :- rhodf(?a, rdfs:subPropertyOf, ?b), \
-       rhodf(?b, rdfs:subPropertyOf, ?c).";
+      "rhodf(?a, sp, ?c) :- rhodf(?a, sp, ?b), rhodf(?b, sp, ?c).";
       (* Subproperty (b) *)
-      "rhodf(?x, ?b, ?y) :- rhodf(?a, rdfs:subPropertyOf, ?b), rhodf(?x, ?a, \
-       ?y).";
+      "rhodf(?x, ?b, ?y) :- rhodf(?a, sp, ?b), rhodf(?x, ?a, ?y).";
       (* Subclass (a) *)
-      "rhodf(?a, rdfs:subClassOf, ?c) :- rhodf(?a, rdfs:subClassOf, ?b), \
-       rhodf(?b, rdfs:subClassOf, ?c).";
+      "rhodf(?a, sc, ?c) :- rhodf(?a, sc, ?b), rhodf(?b, sc, ?c).";
       (* Subclass (b) *)
-      "rhodf(?x, rdf:type, ?b) :- rhodf(?a, rdfs:subClassOf, ?b), rhodf(?x, \
-       rdf:type, ?a).";
+      "rhodf(?x, type, ?b) :- rhodf(?a, sc, ?b), rhodf(?x, type, ?a).";
       (* Typing (a) *)
-      "rhodf(?x, rdf:type, ?b) :- rhodf(?a, rdfs:domain, ?b), rhodf(?x, ?a, \
-       ?y).";
+      "rhodf(?x, type, ?b) :- rhodf(?a, dom, ?b), rhodf(?x, ?a, ?y).";
       (* Typing (b) *)
-      "rhodf(?y, rdf:type, ?b) :- rhodf(?a, rdfs:range, ?b), rhodf(?x, ?a, ?y).";
+      "rhodf(?y, type, ?b) :- rhodf(?a, range, ?b), rhodf(?x, ?a, ?y).";
       (* Implicit typing (a) *)
-      "rhodf(?x, rdf:type, ?b) :- rhodf(?a, rdfs:domain, ?b), rhodf(?c, \
-       rdfs:subClassOf, ?a), rhodf(?x, ?c, ?y).";
+      "rhodf(?x, type, ?b) :- rhodf(?a, dom, ?b), rhodf(?c, sc, ?a), rhodf(?x, \
+       ?c, ?y).";
       (* Implicit typing (b) *)
-      "rhodf(?y, rdf:type, ?b) :- rhodf(?a, rdfs:range, ?b), rhodf(?c, \
-       rdfs:subClassOf, ?a), rhodf(?x, ?c, ?y)."
+      "rhodf(?y, type, ?b) :- rhodf(?a, range, ?b), rhodf(?c, sc, ?a), \
+       rhodf(?x, ?c, ?y)."
       (* Omitting the reflexiv subClassOf, subPropertyOf rules out of lazyness.*);
     ]
     |> String.concat "\n"
 
   let geopub_datalog_program =
-    (*  {datalog|
-     * rdf(?s,?p,?o) :- triples(?s,?p,?o).
-     * activity(?s) :- triples(?s,rdf:type,as:Create).
+    {datalog|
+    rdf(?s,?p,?o) :- triples(?s,?p,?o).
+      |datalog}
+    (* activity(?s) :- triples(?s,rdf:type,as:Create).
      * activity(?s) :- triples(?s,rdf:type,as:Listen).
      * activity(?s) :- triples(?s,rdf:type,as:Like).
      * withgeo(?s) :- triples(?s, geo:lat, ?lat), triples(?s, geo:long, ?lng).
      * |datalog} *)
-    (* ^ rhodf *)
-    ""
+    ^ rhodf
     |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
     |> Result.get_ok
 
@@ -442,25 +482,21 @@ end
 
 let add_graph = Store.add_graph
 
-let query db q =
-  let tx =
-    Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
-      [ Store.Triples.object_store_name ]
-  in
+let query db ?(tx = Store.ro_tx db) q =
   let* state, tuples =
     Datalog.(query_with_state ~database:(Store.edb tx) ~state:!geopub_state q)
   in
   Datalog.geopub_state := state;
   return tuples
 
-let query_string db q =
+let query_string db ?tx q =
   let* q =
     q |> Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Atom.parser
     |> function
     | Ok query -> return query
     | Error msg -> Lwt.fail_with msg
   in
-  query db q
+  query db ?tx q
 
 (* Return a RDF description for [iri] that is used in the inspect view *)
 let get_description db iri =
@@ -552,7 +588,13 @@ let delete db =
     Database.delete (Jstr.v geopub_database_name))
 
 let test_datalog db =
-  let* tuples = query_string db {query|withgeo(?s)|query} in
+  let tx = Store.ro_tx db in
+  let* tuples = query_string db ~tx {query|rhodf(?s,sc,?o)|query} in
 
-  Log.debug (fun m -> m "test_datalog: %a" Datalog.Tuple.Set.pp tuples);
-  return_unit
+  let* triples =
+    tuples |> Datalog.Tuple.Set.to_rev_seq |> List.of_seq
+    |> Lwt_list.filter_map_p (Store.Triples.deref db ~tx)
+  in
+
+  return
+  @@ Log.debug (fun m -> m "test_datalog: %a" Fmt.(list Rdf.Triple.pp) triples)
