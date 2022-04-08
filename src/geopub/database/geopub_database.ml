@@ -16,7 +16,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 type t = Indexeddb.Database.t
 
 (* Constants *)
-let geopub_database_version = 1
+let geopub_database_version = 2
 let geopub_database_name = "GeoPub"
 
 module Store = struct
