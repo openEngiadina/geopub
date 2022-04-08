@@ -103,11 +103,51 @@ let sort_activities =
   List.sort (fun a b ->
       Option.compare Rdf.Triple.Object.compare (published b) (published a))
 
+let get_activities db =
+  let type_id =
+    Database.Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri
+    @@ Rdf.Namespace.rdf "type"
+    |> Option.value ~default:(-99)
+  in
+
+  let* activity_id =
+    Database.Store.Dictionary.lookup db
+    @@ Rdf.Term.of_iri
+    (* TODO replace with Activity to use inference *)
+    @@ Namespace.activitystreams "Create"
+    >|= Option.value ~default:(-99)
+  in
+
+  let query =
+    Database.Datalog.(
+      Atom.make "rhodf"
+        Term.
+          [
+            make_variable "s"; make_constant type_id; make_constant activity_id;
+          ])
+  in
+
+  Log.debug (fun m -> m "Query: %a" Database.Datalog.Atom.pp query);
+
+  Database.query db query
+  >|= (fun tuples ->
+        Log.debug (fun m -> m "Tuples: %a" Database.Datalog.Tuple.Set.pp tuples);
+        tuples)
+  >|= Database.Datalog.Tuple.Set.to_seq >|= Lwt_stream.of_seq
+  >|= Lwt_stream.filter_map_s (function
+        | [ s_id; _; _ ] -> (
+            let* term_opt = Database.Store.Dictionary.get db s_id in
+            match term_opt with
+            | Some term -> return @@ Rdf.Term.to_iri term
+            | None -> return_none)
+        | _ -> return_none)
+  >|= Lwt_stream.map_s (Database.get_description db)
+  >>= Lwt_stream.to_list
+
 let activities =
   S.accum_s
     (E.map
-       (fun db _old_activities ->
-         Database.get_activities db >|= sort_activities)
+       (fun db _old_activities -> get_activities db >|= sort_activities)
        Database.Store.on_update)
     []
 

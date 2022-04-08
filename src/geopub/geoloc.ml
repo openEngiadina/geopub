@@ -27,7 +27,7 @@ let ns local = (geoloc_uri, local)
 let to_xml geoloc =
   Xmlc.Tree.(
     make_element
-      ~attributes:[ (Xmppl.Ns.xmlns "xmlns", geoloc_uri) ]
+      ~attributes:[ (Xmlc.Namespace.xmlns "xmlns", geoloc_uri) ]
       ~children:
         (List.filter_map
            (fun x -> x)

@@ -67,12 +67,16 @@ module Store = struct
     (* Map some constants to hardcoded ids. This allows us to
        formulate Datalog clauses that use the constants defined below. *)
     let constants =
+      let activitystreams =
+        Rdf.Namespace.make_namespace "https://www.w3.org/ns/activitystreams#"
+      in
       [
         (-1, Rdf.Namespace.rdf "type");
         (-2, Rdf.Namespace.rdfs "subPropertyOf");
         (-3, Rdf.Namespace.rdfs "subClassOf");
         (-4, Rdf.Namespace.rdfs "domain");
         (-5, Rdf.Namespace.rdfs "range");
+        (-20, activitystreams "Activity");
       ]
 
     let constant_get id =
@@ -536,18 +540,6 @@ let get_rdfs_label db iri =
       (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
   in
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
-
-let get_activities db =
-  ignore db;
-  return_nil
-(* query_string db {query|activity(?s)|query}
- * >|= Datalog.Tuple.Set.to_seq
- * >|= Seq.filter_map (function
- *       | [ term ] ->
- *           Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
- *       | _ -> None)
- * >|= List.of_seq
- * >>= Lwt_list.map_s (fun iri -> get_description db iri) *)
 
 let get_with_geo db =
   ignore db;

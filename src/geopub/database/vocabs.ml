@@ -25,7 +25,7 @@ let promise_of_fut_or_error fut =
 let vocabs =
   [
     "activitystreams2.xml";
-    "musicontology.xml";
+    (* "musicontology.xml"; *)
     "geo.xml";
     "rdfs.xml";
     "owl.xml";

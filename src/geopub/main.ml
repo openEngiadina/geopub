@@ -86,8 +86,6 @@ let main () =
   (* Initialize the database *)
   let* database = Database.init () in
 
-  let* () = Database.test_datalog database in
-
   (* Initialize Map *)
   let* map =
     Geopub_map.init
@@ -98,9 +96,9 @@ let main () =
   in
 
   (* Initialize XMPP *)
-  let xmpp = Loadable.Idle in
+  (* let xmpp = Loadable.Idle in *)
+  let* xmpp = Xmpp.login_dev () >|= Loadable.of_result in
 
-  (* let* xmpp = Xmpp.login_dev () >|= Loadable.of_result in *)
   let () =
     E.map_s
       (fun stanza ->
