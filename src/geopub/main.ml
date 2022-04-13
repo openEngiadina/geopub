@@ -67,7 +67,7 @@ let main () =
 
   (* Show a loading screen *)
   let body = Document.body G.document in
-  El.set_children body Ui.loading;
+  El.set_children body @@ Ui.loading "Initializing GeoPub ... ";
 
   (* Initialize random generator *)
   Random.self_init ();
@@ -84,7 +84,11 @@ let main () =
   let model_update_e, update = E.create () in
 
   (* Initialize the database *)
+  El.set_children body
+  @@ Ui.loading
+       "Initializing Database. This might take a few moments on first run... ";
   let* database = Database.init () in
+  El.set_children body @@ Ui.loading "Initializing GeoPub ... ";
 
   (* Initialize Map *)
   let* map =
