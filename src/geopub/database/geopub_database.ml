@@ -137,25 +137,11 @@ module Store = struct
           ]
       in
 
-      let make_prefix_parser prefix namespace =
-        string prefix *> char ':'
-        *> take_while (char_is_not_equal_to ([ ','; ')' ] @ whitespace_lst))
-        >>| namespace >>| Rdf.Term.of_iri
-      in
-
       choice
         [
           iri_parser >>| Rdf.Term.of_iri;
           bnode_parser >>| Rdf.Term.of_blank_node;
           literal_parser >>| Rdf.Term.of_literal;
-          make_prefix_parser "rdf" Rdf.Namespace.rdf;
-          make_prefix_parser "rdfs" Rdf.Namespace.rdfs;
-          make_prefix_parser "as"
-            (Rdf.Namespace.make_namespace
-               "https://www.w3.org/ns/activitystreams#");
-          make_prefix_parser "geo"
-            (Rdf.Namespace.make_namespace
-               "http://www.w3.org/2003/01/geo/wgs84_pos#");
         ]
 
     let term_of_jv jv =
