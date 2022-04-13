@@ -113,11 +113,11 @@ let get_activities db =
   let* activity_id =
     Database.Store.Dictionary.lookup db
     @@ Rdf.Term.of_iri
-    (* TODO replace with Activity to use inference *)
-    @@ Namespace.activitystreams "Create"
+    @@ Namespace.activitystreams "Activity"
     >|= Option.value ~default:(-99)
   in
 
+  (* This uses rhodf type inference to figure out what all is an Activity. *)
   let query =
     Database.Datalog.(
       Atom.make "rhodf"
@@ -127,13 +127,8 @@ let get_activities db =
           ])
   in
 
-  Log.debug (fun m -> m "Query: %a" Database.Datalog.Atom.pp query);
-
-  Database.query db query
-  >|= (fun tuples ->
-        Log.debug (fun m -> m "Tuples: %a" Database.Datalog.Tuple.Set.pp tuples);
-        tuples)
-  >|= Database.Datalog.Tuple.Set.to_seq >|= Lwt_stream.of_seq
+  Database.query db query >|= Database.Datalog.Tuple.Set.to_seq
+  >|= Lwt_stream.of_seq
   >|= Lwt_stream.filter_map_s (function
         | [ s_id; _; _ ] -> (
             let* term_opt = Database.Store.Dictionary.get db s_id in
