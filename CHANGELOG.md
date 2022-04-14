@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.0] - 2022-04-14
+
+- Use IndexedDB for local storage and Datalog for querying
+
 ## [0.4.0] - 2022-01-17
 
 - Transfer ActivityStreams content serialized as RDF/XML over an XMPP PEP node
