@@ -29,6 +29,8 @@ let vocabs =
     "geo.xml";
     "rdfs.xml";
     "owl.xml";
+    (* Not really a vocabulary - but we load some sample data here. *)
+    "sample-data.xml";
   ]
 
 let parse_xml s =

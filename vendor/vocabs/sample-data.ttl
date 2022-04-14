@@ -1,0 +1,33 @@
+@prefix as: <https://www.w3.org/ns/activitystreams#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix mo: <http://purl.org/ontology/mo/> .
+
+<urn:uuid:1da600cf-c852-469a-936f-e608d3d90d9b>
+  a as:Create ;
+  as:actor <xmpp:pukkamustard@jblis.xyz> ;
+  as:published "2022-04-14T09:04:45-00:00"^^xsd:dateTime ;
+  as:object <urn:uuid:1da600cf-c852-469a-936f-e608d3d90d9b#object> .
+
+<urn:uuid:1da600cf-c852-469a-936f-e608d3d90d9b#object>
+  a as:Note ;
+  geo:lat "46.7970040956";
+  geo:long "10.2982868244";
+  as:content "Hello! Thank you for trying GeoPub. This is a technical demo that showcases how a local-first web app can be built using RDF, Datalog, IndexedDB and XMPP. For more information see https://openengiadina.net/" .
+
+<urn:uuid:c34d4219-5fbb-4e54-9217-1cbdaf831a64> 
+  a as:Listen ;
+  as:published "2022-04-13T09:04:45-00:00"^^xsd:dateTime ;
+  as:actor <xmpp:pukkamustard@jblis.xyz> ;
+  as:object <urn:uuid:c34d4219-5fbb-4e54-9217-1cbdaf831a64#track> .
+
+<urn:uuid:c34d4219-5fbb-4e54-9217-1cbdaf831a64#track> 
+  a mo:Track ;
+  as:content "XMPP and ActivityStreams can be used as a scrobbler! See https://codeberg.org/pukkamustard/pequod" ;
+  dcterms:creator "Funki Porcini" ;
+  dcterms:title "Back Home" ;
+  mo:musicbrainz <urn:uuid:a9dae29a-3f23-4c4b-804d-e125d4582adf> ;
+  mo:release <urn:uuid:0f028066-5891-322e-ad8d-6aa588063a2e> ;
+  foaf:maker <urn:uuid:2adb429d-e39c-467b-b175-3f40440ff630> .
