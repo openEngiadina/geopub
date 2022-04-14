@@ -107,15 +107,54 @@ let view_backlinks database description =
       return El.[ h2 [ txt' "Backlinks" ]; dl backlink_dtdds ]
   | None -> return_nil
 
+let view_rhodf_types database description =
+  let subject_term =
+    Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
+  in
+  let* subject_id = Database.Store.Dictionary.lookup database subject_term in
+  let type_id =
+    Database.Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri
+    @@ Rdf.Namespace.rdf "type"
+    |> Option.value ~default:(-99)
+  in
+  match subject_id with
+  | Some subject_id ->
+      let query =
+        Database.Datalog.(
+          Atom.make "rhodf"
+            Term.
+              [
+                make_constant subject_id;
+                make_constant type_id;
+                make_variable "o";
+              ])
+      in
+      let* type_triples =
+        Database.query database query
+        >|= Database.Datalog.Tuple.Set.to_seq >|= List.of_seq
+        >>= Lwt_list.filter_map_p (Database.Store.Triples.deref database)
+      in
+      let* type_lis =
+        Lwt_list.map_s
+          (fun (triple : Rdf.Triple.t) ->
+            let* object_el = Ui_rdf.view_object database triple.object' in
+            return El.[ li [ object_el ] ])
+          type_triples
+        >|= List.concat
+      in
+      return El.[ h2 [ txt' "Inferred types" ]; ul type_lis ]
+  | None -> return_nil
+
 let view (model : Model.t) iri =
   let* description = Database.get_description model.database iri in
   let* statements = view_description_statements model.database description in
   let* backlinks = view_backlinks model.database description in
+  let* rhodf_types = view_rhodf_types model.database description in
   return
     El.
       [
         Ui.geopub_menu model;
         div
           ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
-          ([ view_header description ] @ statements @ backlinks);
+          ([ view_header description ] @ statements @ backlinks @ rhodf_types);
       ]
