@@ -13,6 +13,11 @@ let src = Logs.Src.create "GeoPub.Database"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+(* Namespaces *)
+let geo =
+  Rdf.Namespace.make_namespace "http://www.w3.org/2003/01/geo/wgs84_pos#"
+
+(* Type of database *)
 type t = Indexeddb.Database.t
 
 (* Event that signals new data in database. *)
@@ -78,6 +83,8 @@ module Store = struct
         (-4, Rdf.Namespace.rdfs "domain");
         (-5, Rdf.Namespace.rdfs "range");
         (-20, activitystreams "Activity");
+        (-30, geo "lat");
+        (-31, geo "long");
       ]
 
     let constant_get id =
@@ -419,6 +426,8 @@ module Datalog = struct
             string "sc" *> (constant @@ Rdf.Namespace.rdfs "subClassOf");
             string "dom" *> (constant @@ Rdf.Namespace.rdfs "domain");
             string "range" *> (constant @@ Rdf.Namespace.rdfs "range");
+            string "lat" *> (constant @@ geo "lat");
+            string "long" *> (constant @@ geo "long");
           ])
 
     let pp = Fmt.int
@@ -458,15 +467,15 @@ module Datalog = struct
   let geopub_datalog_program =
     {datalog|
     rdf(?s,?p,?o) :- triples(?s,?p,?o).
+    withgeo(?s) :- triples(?s, lat, ?lat), triples(?s, long, ?lng).
       |datalog}
-    (* activity(?s) :- triples(?s,rdf:type,as:Create).
-     * activity(?s) :- triples(?s,rdf:type,as:Listen).
-     * activity(?s) :- triples(?s,rdf:type,as:Like).
-     * withgeo(?s) :- triples(?s, geo:lat, ?lat), triples(?s, geo:long, ?lng).
-     * |datalog} *)
     ^ rhodf
     |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
-    |> Result.get_ok
+    |> function
+    | Ok program -> program
+    | Error msg ->
+        Log.err (fun m -> m "Could not parse Datalog program: %s" msg);
+        failwith ("Invalid Datalog program: " ^ msg)
 end
 
 let add_graph = Store.add_graph
@@ -524,16 +533,14 @@ let get_rdfs_label db iri =
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
 let get_with_geo db =
-  ignore db;
-  return_nil
-(* query_string db {query|withgeo(?s)|query}
- * >|= Datalog.Tuple.Set.to_seq
- * >|= Seq.filter_map (function
- *       | [ term ] ->
- *           Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None)
- *       | _ -> None)
- * >|= List.of_seq
- * >>= Lwt_list.map_s (fun iri -> get_description db iri) *)
+  query_string db {query|withgeo(?s)|query}
+  >|= Datalog.Tuple.Set.to_seq >|= List.of_seq
+  >>= Lwt_list.filter_map_p (function
+        | [ term_id ] -> Store.Dictionary.get db term_id
+        | _ -> return_none)
+  >|= List.filter_map (fun term ->
+          Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None))
+  >>= Lwt_list.map_s (fun iri -> get_description db iri)
 
 let init () =
   let* db = Store.init () in
