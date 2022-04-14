@@ -75,14 +75,47 @@ let view_description_statements database description =
                   dd [ ul ~at:At.[ class' @@ Jstr.v "objects" ] objects_lis ];
                 ])
 
+let view_backlinks database description =
+  let subject_term =
+    Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
+  in
+  let* subject_id = Database.Store.Dictionary.lookup database subject_term in
+  match subject_id with
+  | Some subject_id ->
+      let query =
+        Database.Datalog.(
+          Atom.make "rdf"
+            Term.
+              [ make_variable "s"; make_variable "p"; make_constant subject_id ])
+      in
+      let* backlink_triples =
+        Database.query database query
+        >|= Database.Datalog.Tuple.Set.to_seq >|= List.of_seq
+        >>= Lwt_list.filter_map_p (Database.Store.Triples.deref database)
+      in
+      let* backlink_dtdds =
+        Lwt_list.map_s
+          (fun (triple : Rdf.Triple.t) ->
+            let* predicate_el =
+              Ui_rdf.view_predicate database triple.predicate
+            in
+            let* subject_el = Ui_rdf.view_subject database triple.subject in
+            return El.[ dt [ predicate_el ]; dd [ subject_el ] ])
+          backlink_triples
+        >|= List.concat
+      in
+      return El.[ h2 [ txt' "Backlinks" ]; dl backlink_dtdds ]
+  | None -> return_nil
+
 let view (model : Model.t) iri =
   let* description = Database.get_description model.database iri in
   let* statements = view_description_statements model.database description in
+  let* backlinks = view_backlinks model.database description in
   return
     El.
       [
         Ui.geopub_menu model;
         div
           ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
-          ([ view_header description ] @ statements);
+          ([ view_header description ] @ statements @ backlinks);
       ]
