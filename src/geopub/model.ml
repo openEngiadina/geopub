@@ -9,6 +9,7 @@ module Xmpp = Geopub_xmpp
 
 type t = {
   database : Database.t;
+  activities : Rdf.Description.t list;
   route : Route.t;
   map : Geopub_map.t;
   xmpp : (Xmpp.t, exn) Loadable.t;

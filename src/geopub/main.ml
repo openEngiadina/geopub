@@ -86,9 +86,21 @@ let main () =
   (* Initialize the database *)
   El.set_children body
   @@ Ui.loading
-       "Initializing Database. This might take a few moments on first run... ";
+       "Initializing Database. This might take some time on first run... ";
   let* database = Database.init () in
   El.set_children body @@ Ui.loading "Initializing GeoPub ... ";
+
+  (* Get activities in database *)
+  let* activities = Activity.get_activities database in
+
+  (* Update activities on database updates. *)
+  let activities_update_e =
+    E.map_s
+      (fun () ->
+        let* activities = Activity.get_activities database in
+        return (fun (model : Model.t) -> return { model with activities }))
+      Database.on_update
+  in
 
   (* Initialize Map *)
   let* map =
@@ -120,8 +132,8 @@ let main () =
   (* Initialize model *)
   let model_s =
     S.accum_s ~eq:( == )
-      (E.select [ route_updater; model_update_e ])
-      { database; route; map; xmpp }
+      (E.select [ route_updater; model_update_e; activities_update_e ])
+      { database; activities; route; map; xmpp }
   in
 
   (* Set UI *)

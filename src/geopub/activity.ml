@@ -10,7 +10,6 @@ open Brr
 open Brr_io
 open Lwt
 open Lwt.Syntax
-open Lwt_react
 
 (* Setup logging *)
 
@@ -92,7 +91,7 @@ let make_create ~object' xmpp =
         |> add_seq (FragmentGraph.to_triples object')
         |> add_seq (FragmentGraph.to_triples create_activity)) )
 
-(* Signal carrying IRIs of actvitites *)
+(* Get Activity from DB *)
 
 let sort_activities =
   let published activity =
@@ -137,14 +136,7 @@ let get_activities db =
             | None -> return_none)
         | _ -> return_none)
   >|= Lwt_stream.map_s (Database.get_description db)
-  >>= Lwt_stream.to_list
-
-let activities =
-  S.accum_s
-    (E.map
-       (fun db _old_activities -> get_activities db >|= sort_activities)
-       Database.Store.on_update)
-    []
+  >>= Lwt_stream.to_list >|= sort_activities
 
 (* UI *)
 
@@ -336,18 +328,14 @@ let view_activity db activity =
 
 let view ?latlng ~update model =
   let* compose_note = view_compose_note ?latlng ~update model in
-  let activities_ul = El.ul ~at:At.[ class' @@ Jstr.v "activity" ] [] in
 
-  let update_s =
-    S.map_s
-      (fun activities ->
-        Lwt_list.filter_map_s (view_activity model.database) activities
-        >|= El.set_children activities_ul)
-      activities
+  let* activities_els =
+    Lwt_list.filter_map_s (view_activity model.database) model.activities
   in
 
-  (* keep reference to keep GC from collecting *)
-  Jv.set (El.to_jv activities_ul) "update_el" (Jv.repr update_s);
+  let activities_ul =
+    El.ul ~at:At.[ class' @@ Jstr.v "activity" ] activities_els
+  in
 
   return
   @@ El.(

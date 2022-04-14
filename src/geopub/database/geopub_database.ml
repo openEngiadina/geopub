@@ -15,6 +15,9 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 type t = Indexeddb.Database.t
 
+(* Event that signals new data in database. *)
+let on_update, updated = E.create ()
+
 (* Constants *)
 let geopub_database_version = 2
 let geopub_database_name = "GeoPub"
@@ -28,8 +31,6 @@ module Store = struct
 - Triples: Stores triples using keys of terms as stored in Dictionary.
 
    *)
-
-  let on_update, updated = E.create ()
 
   let ro_tx db =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
@@ -329,7 +330,7 @@ module Store = struct
     in
 
     (* Force update of triple store *)
-    updated db;
+    updated ();
 
     return db
 
@@ -342,7 +343,7 @@ module Store = struct
       Rdf.Graph.to_triples graph |> List.of_seq
       |> Lwt_list.iter_p (fun triple -> Triples.put db triple >|= ignore)
     in
-    return @@ updated db
+    return @@ updated ()
 
   let edb tx predicate pattern =
     let parse = Lwt_stream.map Triples.triple_of_jv in
@@ -356,41 +357,41 @@ module Store = struct
     (* Get triples with index matching the query pattern *)
     match (predicate, pattern) with
     | "triples", [ None; None; None ] ->
-        Log.debug (fun m -> m "EDB: getting all triples");
+        Log.warn (fun m -> m "EDB: getting all triples");
         ObjectStore.open_cursor triples Jv.undefined
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; None; None ] ->
-        Log.debug (fun m -> m "EDB: using s index");
+        (* Log.debug (fun m -> m "EDB: using s index"); *)
         let s_index = ObjectStore.index triples (Jstr.v "s") in
         Index.open_cursor s_index (jv_of_index [ s ])
         |> Cursor.to_stream |> parse
     | "triples", [ None; Some p; None ] ->
-        Log.debug (fun m -> m "EDB: using p index");
+        (* Log.debug (fun m -> m "EDB: using p index"); *)
         let p_index = ObjectStore.index triples (Jstr.v "p") in
         Index.open_cursor p_index (jv_of_index [ p ])
         |> Cursor.to_stream |> parse
     | "triples", [ None; None; Some o ] ->
-        Log.debug (fun m -> m "EDB: using o index");
+        (* Log.debug (fun m -> m "EDB: using o index"); *)
         let o_index = ObjectStore.index triples (Jstr.v "o") in
         Index.open_cursor o_index (jv_of_index [ o ])
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; Some p; None ] ->
-        Log.debug (fun m -> m "EDB: using sp index");
+        (* Log.debug (fun m -> m "EDB: using sp index"); *)
         let sp_index = ObjectStore.index triples (Jstr.v "sp") in
         Index.open_cursor sp_index (jv_of_index [ s; p ])
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; None; Some o ] ->
-        Log.debug (fun m -> m "EDB: using so index");
+        (* Log.debug (fun m -> m "EDB: using so index"); *)
         let so_index = ObjectStore.index triples (Jstr.v "so") in
         Index.open_cursor so_index (jv_of_index [ s; o ])
         |> Cursor.to_stream |> parse
     | "triples", [ None; Some p; Some o ] ->
-        Log.debug (fun m -> m "EDB: using po index");
+        (* Log.debug (fun m -> m "EDB: using po index"); *)
         let po_index = ObjectStore.index triples (Jstr.v "po") in
         Index.open_cursor po_index (jv_of_index [ p; o ])
         |> Cursor.to_stream |> parse
     | "triples", [ Some s; Some p; Some o ] ->
-        Log.debug (fun m -> m "EDB: using spo index");
+        (* Log.debug (fun m -> m "EDB: using spo index"); *)
         let spo_index = ObjectStore.index triples (Jstr.v "spo") in
         Index.open_cursor spo_index (jv_of_index [ s; p; o ])
         |> Cursor.to_stream |> parse
@@ -466,18 +467,13 @@ module Datalog = struct
     ^ rhodf
     |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
     |> Result.get_ok
-
-  let geopub_state = ref (init geopub_datalog_program)
 end
 
 let add_graph = Store.add_graph
 
 let query db ?(tx = Store.ro_tx db) q =
-  let* state, tuples =
-    Datalog.(query_with_state ~database:(Store.edb tx) ~state:!geopub_state q)
-  in
-  Datalog.geopub_state := state;
-  return tuples
+  Datalog.query ~database:(Store.edb tx) ~program:Datalog.geopub_datalog_program
+    q
 
 let query_string db ?tx q =
   let* q =
@@ -560,7 +556,6 @@ let init () =
 
 let delete db =
   Log.info (fun m -> m "Deleting IndexedDB databse.");
-  Datalog.geopub_state := Datalog.init Datalog.geopub_datalog_program;
   Indexeddb.(
     return @@ Database.close db >>= fun () ->
     Database.delete (Jstr.v geopub_database_name))
