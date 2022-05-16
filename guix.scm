@@ -249,7 +249,7 @@ document and by the text width.")
 (define-public ocaml-crowbar
   (package
     (name "ocaml-crowbar")
-    (version "0.2")
+    (version "0.2.1")
     (home-page "https://github.com/stedolan/crowbar")
     (source
      (origin
@@ -260,7 +260,7 @@ document and by the text width.")
        (file-name (git-file-name name version))
        (sha256
         (base32
-         "0wjfc9irvirfkic32ivvj6qb7r838w08b0d3vmngigbjpjyc9b14"))))
+         "11f3kiw58g8njx15akx16xcplzvzdw9y6c4jpyfxylkxws4g0f6j"))))
     (build-system dune-build-system)
     (arguments
      ;; Tests require ocaml-xmldiff which requires OCaml 4.12.0
