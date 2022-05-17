@@ -232,7 +232,7 @@ module Store = struct
       in
 
       (* Create the o index *)
-      let _p_index =
+      let _o_index =
         ObjectStore.create_index triples ~key_path:[ "o" ]
           ~object_parameters:Jv.(obj [| ("unique", false') |])
         @@ Jstr.v "o"
