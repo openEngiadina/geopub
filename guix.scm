@@ -606,6 +606,7 @@ stubs in Javascript for use in Js_of_ocaml")
       ocaml-rdf
       ocaml-uri
       ocaml-xmppl
+      ocaml-uuseg
       ocaml-datalogl
       ocaml-ptime
       ocaml-base32

@@ -62,7 +62,7 @@ module ObjectStore : sig
   (** {1 On Version Change} *)
 
   val create_index :
-    t -> key_path:string list -> ?object_parameters:Jv.t -> Jstr.t -> Index.t
+    t -> key_path:Jv.t -> ?object_parameters:Jv.t -> Jstr.t -> Index.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/createIndex *)
 end
 

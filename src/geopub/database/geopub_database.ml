@@ -24,7 +24,7 @@ type t = Indexeddb.Database.t
 let on_update, updated = E.create ()
 
 (* Constants *)
-let geopub_database_version = 2
+let geopub_database_version = 3
 let geopub_database_name = "GeoPub"
 
 module Store = struct
@@ -32,18 +32,77 @@ module Store = struct
 
   (** The Store is implemented using following IndexedDB ObjectStores:
 
-- Dictionary: Stores a mapping of RDF Terms to integer keys (auto incremented)
+- Fts: A full-text search index that maps stemmed terms to literals.
+- Dictionary: Stores a mapping of RDF Terms to integer keys (auto incremented).
 - Triples: Stores triples using keys of terms as stored in Dictionary.
 
    *)
 
   let ro_tx db =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
-      [ Jstr.v "dictionary"; Jstr.v "triples" ]
+      [ Jstr.v "dictionary"; Jstr.v "triples"; Jstr.v "fts" ]
 
   let rw_tx db =
     Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadWrite
-      [ Jstr.v "dictionary"; Jstr.v "triples" ]
+      [ Jstr.v "dictionary"; Jstr.v "triples"; Jstr.v "fts" ]
+
+  (* The Full-Text-Search index
+
+     This maintains an index from stemmed terms to literals.
+
+     The primary key of entries is the id as stored in the dictionary for the term.
+  *)
+  module Fts = struct
+    let object_store_name = Jstr.v "fts"
+
+    open Indexeddb
+
+    let on_version_change db =
+      let fts = Database.create_object_store db object_store_name in
+
+      let _terms_index =
+        ObjectStore.create_index fts
+          ~key_path:Jv.(of_string "terms")
+          ~object_parameters:Jv.(obj [| ("multiEntry", true') |])
+        @@ Jstr.v "fts_terms"
+      in
+
+      ()
+
+    let object_store tx = Transaction.object_store tx object_store_name
+
+    (* Returns list of stemmed terms that appear in `text` *)
+    let get_terms text =
+      let segments =
+        Uuseg_string.fold_utf_8 `Word (fun segs s -> List.cons s segs) [] text
+      in
+
+      List.filter_map
+        (fun segment ->
+          (* The Stemmer is buggy! *)
+          try Some (Stemmer.stem segment) with Invalid_argument _ -> None)
+        segments
+
+    let put db ?(tx = rw_tx db) literal key =
+      (* Check if Literal datatype is text/string *)
+      let datatype = Rdf.Literal.datatype literal in
+      let is_text_type =
+        Rdf.Iri.equal datatype (Rdf.Namespace.xsd "string")
+        || Rdf.Iri.equal datatype (Rdf.Namespace.rdf "langString")
+      in
+
+      if is_text_type then
+        let fts = object_store tx in
+        let terms = get_terms (Rdf.Literal.canonical literal) in
+        (* Log.debug (fun m ->
+         *     m "Fts.put %a (terms: %a)" Rdf.Literal.pp literal
+         *       Fmt.(list string)
+         *       terms); *)
+        ObjectStore.put fts ~key:(Jv.of_int key)
+          Jv.(obj [| ("terms", of_list of_string terms) |])
+        >|= ignore
+      else return_unit
+  end
 
   module Dictionary = struct
     let object_store_name = Jstr.v "dictionary"
@@ -58,7 +117,8 @@ module Store = struct
       in
 
       let _term_index =
-        ObjectStore.create_index dictionary ~key_path:[ "term" ]
+        ObjectStore.create_index dictionary
+          ~key_path:Jv.(of_list of_string [ "term" ])
           ~object_parameters:Jv.(obj [| ("unique", true') |])
         @@ Jstr.v "term"
       in
@@ -188,6 +248,13 @@ module Store = struct
           let* key =
             ObjectStore.put dictionary (jv_obj_of_term term) >|= Jv.to_int
           in
+
+          let* () =
+            (* If term is a literal, add entry in fts index *)
+            match Rdf.Term.to_literal term with
+            | Some literal -> Fts.put db ~tx literal key
+            | None -> return ()
+          in
           return key
       | Some key -> return key
   end
@@ -212,49 +279,56 @@ module Store = struct
 
       (* Create the spo index *)
       let _spo_index =
-        ObjectStore.create_index triples ~key_path:[ "s"; "p"; "o" ]
+        ObjectStore.create_index triples
+          ~key_path:Jv.(of_list of_string [ "s"; "p"; "o" ])
           ~object_parameters:Jv.(obj [| ("unique", true') |])
         @@ Jstr.v "spo"
       in
 
       (* Create the s index *)
       let _s_index =
-        ObjectStore.create_index triples ~key_path:[ "s" ]
+        ObjectStore.create_index triples
+          ~key_path:Jv.(of_list of_string [ "s" ])
           ~object_parameters:Jv.(obj [| ("unique", false') |])
         @@ Jstr.v "s"
       in
 
       (* Create the p index *)
       let _p_index =
-        ObjectStore.create_index triples ~key_path:[ "p" ]
+        ObjectStore.create_index triples
+          ~key_path:Jv.(of_list of_string [ "p" ])
           ~object_parameters:Jv.(obj [| ("unique", false') |])
         @@ Jstr.v "p"
       in
 
       (* Create the o index *)
       let _o_index =
-        ObjectStore.create_index triples ~key_path:[ "o" ]
+        ObjectStore.create_index triples
+          ~key_path:Jv.(of_list of_string [ "o" ])
           ~object_parameters:Jv.(obj [| ("unique", false') |])
         @@ Jstr.v "o"
       in
 
       (* Create the sp index *)
       let _sp_index =
-        ObjectStore.create_index triples ~key_path:[ "s"; "p" ]
+        ObjectStore.create_index triples
+          ~key_path:Jv.(of_list of_string [ "s"; "p" ])
           ~object_parameters:Jv.(obj [| ("unique", false') |])
         @@ Jstr.v "sp"
       in
 
       (* Create the so index *)
       let _so_index =
-        ObjectStore.create_index triples ~key_path:[ "s"; "o" ]
+        ObjectStore.create_index triples
+          ~key_path:Jv.(of_list of_string [ "s"; "o" ])
           ~object_parameters:Jv.(obj [| ("unique", false') |])
         @@ Jstr.v "so"
       in
 
       (* Create the po index *)
       let _po_index =
-        ObjectStore.create_index triples ~key_path:[ "p"; "o" ]
+        ObjectStore.create_index triples
+          ~key_path:Jv.(of_list of_string [ "p"; "o" ])
           ~object_parameters:Jv.(obj [| ("unique", false') |])
         @@ Jstr.v "po"
       in
@@ -331,7 +405,11 @@ module Store = struct
             (Indexeddb.Database.object_store_names db);
 
           (* Initialize Object stores and indices *)
+          Log.debug (fun m -> m "Creating fts ObjectStore.");
+          Fts.on_version_change db;
+          Log.debug (fun m -> m "Creating dictionary ObjectStore.");
           Dictionary.on_version_change db;
+          Log.debug (fun m -> m "Creating triples ObjectStore.");
           Triples.on_version_change db)
         (Jstr.v geopub_database_name)
     in

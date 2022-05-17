@@ -105,7 +105,7 @@ module ObjectStore = struct
 
   let create_index object_store ~key_path ?(object_parameters = Jv.null) name =
     Jv.call object_store "createIndex"
-      [| Jv.of_jstr name; Jv.of_list Jv.of_string key_path; object_parameters |]
+      [| Jv.of_jstr name; key_path; object_parameters |]
 end
 
 module Database = struct
