@@ -7,7 +7,16 @@
 module Cursor : sig
   type t
 
-  val to_stream : t -> Jv.t Lwt_stream.t
+  (** {1 Properties} *)
+
+  val value : t -> Jv.t
+  val key : t -> Jv.t
+  val primary_key : t -> Jv.t
+
+  (** {1 Iterators} *)
+
+  val to_seq : t -> t Lwt_seq.t
+  (** [to_seq cursor] returns a sequence of the same cursor that is advanced to the next position at every iteration. *)
 end
 
 module Index : sig
@@ -31,7 +40,7 @@ module Index : sig
   val get_key : t -> Jv.t -> Jv.t Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/getKey *)
 
-  val open_cursor : t -> Jv.t -> Cursor.t
+  val open_cursor : t -> Jv.t -> Cursor.t option Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/openCursor *)
 end
 
@@ -50,7 +59,7 @@ module ObjectStore : sig
   val get_all : t -> ?count:int -> Jv.t -> Jv.t list Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/getAll *)
 
-  val open_cursor : t -> Jv.t -> Cursor.t
+  val open_cursor : t -> Jv.t -> Cursor.t option Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore/openCursor *)
 
   val count : t -> Jv.t -> int Lwt.t

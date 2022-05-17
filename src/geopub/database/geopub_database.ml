@@ -431,11 +431,25 @@ module Store = struct
     return @@ updated ()
 
   let edb tx predicate pattern =
-    let parse = Lwt_stream.map Triples.triple_of_jv in
+    let open Indexeddb in
+    let triples_of_cursor (cursor_promise : Cursor.t option Lwt.t) =
+      (* The problem here is that openCursor returns a request that
+         resolves to a cursor. In the `edb` function we can not directly
+         resolve the request as it needs to return a Lwt_seq.t (and not a
+         `Lwt_seq.t Lwt.t`). We resolve this by unpacking the request
+         to a sequence directly. *)
+      Lwt_seq.(
+        return_lwt cursor_promise
+        |> flat_map (function
+             | Some cursor ->
+                 cons (Cursor.value cursor)
+                   (map Cursor.value (Cursor.to_seq cursor))
+             | None -> empty)
+        |> map Triples.triple_of_jv)
+    in
 
     let jv_of_index idx = Jv.of_list Jv.of_int idx in
 
-    let open Indexeddb in
     (* Open the triples object store *)
     let triples = Transaction.object_store tx Triples.object_store_name in
 
@@ -443,44 +457,37 @@ module Store = struct
     match (predicate, pattern) with
     | "triples", [ None; None; None ] ->
         Log.warn (fun m -> m "EDB: getting all triples");
-        ObjectStore.open_cursor triples Jv.undefined
-        |> Cursor.to_stream |> parse
+        ObjectStore.open_cursor triples Jv.undefined |> triples_of_cursor
     | "triples", [ Some s; None; None ] ->
         (* Log.debug (fun m -> m "EDB: using s index"); *)
         let s_index = ObjectStore.index triples (Jstr.v "s") in
-        Index.open_cursor s_index (jv_of_index [ s ])
-        |> Cursor.to_stream |> parse
+        Index.open_cursor s_index (jv_of_index [ s ]) |> triples_of_cursor
     | "triples", [ None; Some p; None ] ->
         (* Log.debug (fun m -> m "EDB: using p index"); *)
         let p_index = ObjectStore.index triples (Jstr.v "p") in
-        Index.open_cursor p_index (jv_of_index [ p ])
-        |> Cursor.to_stream |> parse
+        Index.open_cursor p_index (jv_of_index [ p ]) |> triples_of_cursor
     | "triples", [ None; None; Some o ] ->
         (* Log.debug (fun m -> m "EDB: using o index"); *)
         let o_index = ObjectStore.index triples (Jstr.v "o") in
-        Index.open_cursor o_index (jv_of_index [ o ])
-        |> Cursor.to_stream |> parse
+        Index.open_cursor o_index (jv_of_index [ o ]) |> triples_of_cursor
     | "triples", [ Some s; Some p; None ] ->
         (* Log.debug (fun m -> m "EDB: using sp index"); *)
         let sp_index = ObjectStore.index triples (Jstr.v "sp") in
-        Index.open_cursor sp_index (jv_of_index [ s; p ])
-        |> Cursor.to_stream |> parse
+        Index.open_cursor sp_index (jv_of_index [ s; p ]) |> triples_of_cursor
     | "triples", [ Some s; None; Some o ] ->
         (* Log.debug (fun m -> m "EDB: using so index"); *)
         let so_index = ObjectStore.index triples (Jstr.v "so") in
-        Index.open_cursor so_index (jv_of_index [ s; o ])
-        |> Cursor.to_stream |> parse
+        Index.open_cursor so_index (jv_of_index [ s; o ]) |> triples_of_cursor
     | "triples", [ None; Some p; Some o ] ->
         (* Log.debug (fun m -> m "EDB: using po index"); *)
         let po_index = ObjectStore.index triples (Jstr.v "po") in
-        Index.open_cursor po_index (jv_of_index [ p; o ])
-        |> Cursor.to_stream |> parse
+        Index.open_cursor po_index (jv_of_index [ p; o ]) |> triples_of_cursor
     | "triples", [ Some s; Some p; Some o ] ->
         (* Log.debug (fun m -> m "EDB: using spo index"); *)
         let spo_index = ObjectStore.index triples (Jstr.v "spo") in
         Index.open_cursor spo_index (jv_of_index [ s; p; o ])
-        |> Cursor.to_stream |> parse
-    | _, _ -> Lwt_stream.of_list []
+        |> triples_of_cursor
+    | _, _ -> Lwt_seq.empty
 end
 
 module Datalog = struct
@@ -579,9 +586,10 @@ let get_description db iri =
   match s_id_opt with
   | Some s_id ->
       Store.edb tx "triples" [ Some s_id; None; None ]
-      |> Lwt_stream.filter_map_s (Store.Triples.deref db ~tx)
-      |> fun stream ->
-      Lwt_stream.fold Rdf.Graph.add stream Rdf.Graph.empty
+      |> Lwt_seq.filter_map_s (Store.Triples.deref db ~tx)
+      |> Lwt_seq.fold_left
+           (fun graph triple -> Rdf.Graph.add triple graph)
+           Rdf.Graph.empty
       >|= Rdf.Graph.description (Rdf.Triple.Subject.of_iri iri)
   | None -> return @@ Rdf.Description.empty (Rdf.Triple.Subject.of_iri iri)
 
@@ -596,10 +604,10 @@ let get_property db subject predicate =
   match [ s_id_opt; p_id_opt ] with
   | [ Some s_id; Some p_id ] ->
       Store.edb tx "triples" [ Some s_id; Some p_id; None ]
-      |> Lwt_stream.filter_map_s (function
+      |> Lwt_seq.filter_map_s (function
            | [ _; _; o ] -> Store.Dictionary.get db ~tx o
            | _ -> return_none)
-      |> Lwt_stream.to_list
+      |> Lwt_seq.to_list
   | _ -> return_nil
 
 let get_rdfs_label db iri =

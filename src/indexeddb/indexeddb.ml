@@ -12,9 +12,12 @@ module Request = struct
   let to_lwt req =
     let promise, resolver = Lwt.wait () in
     Jv.set req "onsuccess"
-    @@ Jv.repr (fun _ev -> Lwt.wakeup_later resolver @@ result req);
+    @@ Jv.repr (fun _ev ->
+           Jv.set req "onsuccess" Jv.undefined;
+           Lwt.wakeup_later resolver @@ result req);
     Jv.set req "onerror"
     @@ Jv.repr (fun _ ->
+           Jv.set req "onerror" Jv.undefined;
            let error = Jv.get req "error" in
            Brr.Console.error [ error ];
            Lwt.wakeup_later_exn resolver @@ Jv.Error (Jv.to_error error));
@@ -24,17 +27,36 @@ end
 module Cursor = struct
   type t = Jv.t
 
-  let to_stream cursor =
-    let stream, push, set_reference = Lwt_stream.create_with_reference () in
-    Jv.set cursor "onsuccess"
+  let value t = Jv.get t "value"
+  let key t = Jv.get t "key"
+  let primary_key t = Jv.get t "primaryKey"
+
+  (* let to_stream cursor =
+   *   let stream, push, set_reference = Lwt_stream.create_with_reference () in
+   *   Jv.set cursor "onsuccess"
+   *   @@ Jv.repr (fun ev ->
+   *          match Jv.find_path ev [ "target"; "result" ] with
+   *          | Some cursor ->
+   *              push @@ Option.some @@ Jv.get cursor "value";
+   *              ignore @@ Jv.call cursor "continue" [||]
+   *          | None -> push None);
+   *   set_reference cursor;
+   *   stream *)
+
+  let request t = Jv.get t "request"
+
+  let rec to_seq cursor () =
+    let req = request cursor in
+    let promise, resolver = Lwt.wait () in
+    Jv.set req "onsuccess"
     @@ Jv.repr (fun ev ->
            match Jv.find_path ev [ "target"; "result" ] with
            | Some cursor ->
-               push @@ Option.some @@ Jv.get cursor "value";
-               ignore @@ Jv.call cursor "continue" [||]
-           | None -> push None);
-    set_reference cursor;
-    stream
+               Jv.set req "onsuccess" Jv.undefined;
+               Lwt.wakeup resolver @@ Lwt_seq.Cons (cursor, to_seq cursor)
+           | None -> Lwt.wakeup resolver Lwt_seq.Nil);
+    ignore @@ Jv.call cursor "continue" [||];
+    promise
 end
 
 module Index = struct
@@ -62,7 +84,11 @@ module Index = struct
         |> Lwt.map (Jv.to_list (fun x -> x))
 
   let get_key index query = Jv.call index "getKey" [| query |] |> Request.to_lwt
-  let open_cursor index query = Jv.call index "openCursor" [| query |]
+
+  let open_cursor index query =
+    Jv.call index "openCursor" [| query |]
+    |> Request.to_lwt
+    >|= Jv.to_option (fun x -> x)
 end
 
 module ObjectStore = struct
@@ -96,6 +122,8 @@ module ObjectStore = struct
 
   let open_cursor object_store query =
     Jv.call object_store "openCursor" [| query |]
+    |> Request.to_lwt
+    >|= Jv.to_option (fun x -> x)
 
   let count index key =
     Jv.call index "count" [| key |] |> Request.to_lwt |> Lwt.map Jv.to_int

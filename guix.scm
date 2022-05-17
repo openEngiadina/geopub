@@ -568,7 +568,7 @@ stubs in Javascript for use in Js_of_ocaml")
 (define-public ocaml-datalogl
   (package
     (name "ocaml-datalogl")
-    (version "295dc2efee66a5e570ded7bd6c26280b4353eca0")
+    (version "88862d50dec7340bb39bdd8da25b21f53550e46d")
     (home-page "https://codeberg.org/openEngiadina/ocaml-datalogl")
     (source
      (origin (method git-fetch)
@@ -577,7 +577,7 @@ stubs in Javascript for use in Js_of_ocaml")
                    (commit version)))
              (file-name (git-file-name name version))
              (sha256
-              (base32 "0p7ay96r7p7rfw70ngbax167qv6a7imb7qi8br32md31l8pl1a5l"))))
+              (base32 "05x3q46jrmhg2cq32cn9s6d9pyr905gyxqs6jxlciiwhqhvan1jq"))))
     (build-system dune-build-system)
     (arguments '())
     (propagated-inputs
