@@ -122,21 +122,24 @@ let get_activities db =
       Atom.make "rhodf"
         Term.
           [
-            make_variable "s"; make_constant type_id; make_constant activity_id;
+            make_variable "s";
+            make_constant @@ Term type_id;
+            make_constant @@ Term activity_id;
           ])
   in
 
-  Database.query db query >|= Database.Datalog.Tuple.Set.to_seq
-  >|= Lwt_stream.of_seq
-  >|= Lwt_stream.filter_map_s (function
-        | [ s_id; _; _ ] -> (
-            let* term_opt = Database.Store.Dictionary.get db s_id in
-            match term_opt with
-            | Some term -> return @@ Rdf.Term.to_iri term
-            | None -> return_none)
-        | _ -> return_none)
-  >|= Lwt_stream.map_s (Database.get_description db)
-  >>= Lwt_stream.to_list >|= sort_activities
+  Database.query db query |> Lwt_seq.return_lwt
+  |> Lwt_seq.flat_map (fun set ->
+         Lwt_seq.of_seq @@ Database.Datalog.Tuple.Set.to_seq set)
+  |> Lwt_seq.filter_map_s (function
+       | [ Database.Datalog.Term s_id; _; _ ] -> (
+           let* term_opt = Database.Store.Dictionary.get db s_id in
+           match term_opt with
+           | Some term -> return @@ Rdf.Term.to_iri term
+           | None -> return_none)
+       | _ -> return_none)
+  |> Lwt_seq.map_s (Database.get_description db)
+  |> Lwt_seq.to_list >|= sort_activities
 
 (* UI *)
 

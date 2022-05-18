@@ -40,7 +40,7 @@
 (define-public ocaml-rdf
   (package
     (name "ocaml-rdf")
-    (version "9aae0dbd86818a897015ed8e050b79bdafeb706a")
+    (version "05f33b2d4e9b4551d8d34b766df982005e318b70")
     (home-page "https://codeberg.org/openEngiadina/ocaml-rdf.git")
     (source
      (origin
@@ -50,7 +50,7 @@
             (commit version)))
       (file-name (git-file-name name version))
       (sha256
-       (base32 "0y4ry6y5fn1f7k893hxyfixpzz6g2gxyli0h2krk22vc580acs88"))))
+       (base32 "0blvfadr70cjv78bhyiipv6ca7gxdf9dxasw0bpm59dnjl7ifqdi"))))
     (build-system dune-build-system)
     (arguments `(#:tests? #f))
     (native-inputs

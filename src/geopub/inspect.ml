@@ -86,22 +86,21 @@ let view_backlinks database description =
         Database.Datalog.(
           Atom.make "rdf"
             Term.
-              [ make_variable "s"; make_variable "p"; make_constant subject_id ])
+              [
+                make_variable "s";
+                make_variable "p";
+                make_constant @@ Term subject_id;
+              ])
       in
-      let* backlink_triples =
-        Database.query database query
-        >|= Database.Datalog.Tuple.Set.to_seq >|= List.of_seq
-        >>= Lwt_list.filter_map_p (Database.Store.Triples.deref database)
-      in
+      let backlink_triples = Database.query_triples database query in
       let* backlink_dtdds =
-        Lwt_list.map_s
-          (fun (triple : Rdf.Triple.t) ->
-            let* predicate_el =
-              Ui_rdf.view_predicate database triple.predicate
-            in
-            let* subject_el = Ui_rdf.view_subject database triple.subject in
-            return El.[ dt [ predicate_el ]; dd [ subject_el ] ])
-          backlink_triples
+        backlink_triples |> Lwt_seq.to_list
+        >>= Lwt_list.map_s (fun (triple : Rdf.Triple.t) ->
+                let* predicate_el =
+                  Ui_rdf.view_predicate database triple.predicate
+                in
+                let* subject_el = Ui_rdf.view_subject database triple.subject in
+                return El.[ dt [ predicate_el ]; dd [ subject_el ] ])
         >|= List.concat
       in
       return El.[ h2 [ txt' "Backlinks" ]; dl backlink_dtdds ]
@@ -124,15 +123,13 @@ let view_rhodf_types database description =
           Atom.make "rhodf"
             Term.
               [
-                make_constant subject_id;
-                make_constant type_id;
+                make_constant @@ Term subject_id;
+                make_constant @@ Term type_id;
                 make_variable "o";
               ])
       in
       let* type_triples =
-        Database.query database query
-        >|= Database.Datalog.Tuple.Set.to_seq >|= List.of_seq
-        >>= Lwt_list.filter_map_p (Database.Store.Triples.deref database)
+        Database.query_triples database query |> Lwt_seq.to_list
       in
       let* type_lis =
         Lwt_list.map_s

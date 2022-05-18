@@ -136,7 +136,7 @@ let add_geo_object db map (latlng, description) =
 
 let view db map =
   let* () =
-    Database.get_with_geo db
+    Database.get_with_geo db |> Lwt_seq.to_list
     >|= List.filter_map (fun description ->
             match get_latlng description with
             | Some latlng -> Some (latlng, description)
