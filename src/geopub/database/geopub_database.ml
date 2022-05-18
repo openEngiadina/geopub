@@ -51,6 +51,8 @@ module Store = struct
      This maintains an index from stemmed terms to literals.
 
      The primary key of entries is the id as stored in the dictionary for the term.
+
+     Inspiration comes from this gist: https://gist.github.com/inexorabletash/a279f03ab5610817c0540c83857e4295
   *)
   module Fts = struct
     let object_store_name = Jstr.v "fts"
@@ -102,6 +104,77 @@ module Store = struct
           Jv.(obj [| ("terms", of_list of_string terms) |])
         >|= ignore
       else return_unit
+
+    let merge_join ?(compare = compare) seqs () =
+      let rec forward_node_to boundary node =
+        match node with
+        | Lwt_seq.Cons (v, rest) ->
+            if compare boundary v <= 0 then return node
+            else rest () >>= fun next_node -> forward_node_to boundary next_node
+        | Lwt_seq.Nil -> return node
+      in
+
+      let iter_node node =
+        match node with
+        | Lwt_seq.Cons (_, rest) -> rest ()
+        | Lwt_seq.Nil -> return Lwt_seq.Nil
+      in
+
+      let find_boundary nodes =
+        List.fold_left
+          (fun (at_end, max_opt) node ->
+            match (at_end, max_opt, node) with
+            | true, _, _ -> (true, None)
+            | false, _, Lwt_seq.Nil -> (true, None)
+            | false, Some max, Lwt_seq.Cons (v, _) ->
+                if compare max v <= 0 then (false, Some v) else (false, Some max)
+            | false, None, Lwt_seq.Cons (v, _) -> (false, Some v))
+          (false, None) nodes
+        |> snd
+      in
+
+      let rec iter nodes =
+        let boundary_opt = find_boundary nodes in
+        match boundary_opt with
+        | None -> return Lwt_seq.Nil
+        | Some boundary ->
+            let* forwarded_nodes =
+              Lwt_list.map_p (forward_node_to boundary) nodes
+            in
+            let forwarded_boundary = find_boundary forwarded_nodes in
+            if Option.compare compare forwarded_boundary boundary_opt = 0 then
+              let* next_nodes = Lwt_list.map_p iter_node nodes in
+              return @@ Lwt_seq.Cons (boundary, fun () -> iter next_nodes)
+            else iter forwarded_nodes
+      in
+
+      let* init_nodes = Lwt_list.map_p (fun seq -> seq ()) seqs in
+
+      iter init_nodes
+
+    (* [search tx query] retuns a sequence of term ids (as stored in dictionary) of literals that match with the query. *)
+    let search tx query : int Lwt_seq.t =
+      let terms = get_terms query in
+
+      Log.debug (fun m ->
+          m "Fts.search: terms=%a"
+            Fmt.(brackets @@ list ~sep:comma string)
+            terms);
+
+      ignore tx;
+
+      let fts = object_store tx in
+      let fts_terms = ObjectStore.index fts (Jstr.v "fts_terms") in
+
+      (* merge join over the fts_terms index with all terms appearing in query *)
+      merge_join ~compare:Int.compare
+        (List.map
+           (fun term ->
+             Index.open_cursor fts_terms (Jv.of_string term)
+             |> Cursor.opt_lwt_to_seq
+             |> Lwt_seq.map (fun cursor ->
+                    Jv.to_int @@ Cursor.primary_key cursor))
+           terms)
   end
 
   module Dictionary = struct
