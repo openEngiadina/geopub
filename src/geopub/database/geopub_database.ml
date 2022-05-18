@@ -589,6 +589,12 @@ module Datalog = struct
         let spo_index = ObjectStore.index triples (Jstr.v "spo") in
         Index.open_cursor spo_index (jv_of_index [ s; p; o ])
         |> triples_of_cursor
+    | "ftsstore", [ Some (String s); None ] ->
+        Store.Fts.search tx s
+        |> Lwt_seq.map (fun id ->
+               Brr.Console.log [ Jv.of_string "ftsstore:"; Jv.of_int id ];
+               id)
+        |> Lwt_seq.map (fun term_id -> [ String s; Term term_id ])
     | _, _ -> Lwt_seq.empty
 
   (* The ρdf fragment of RDF
@@ -623,8 +629,11 @@ module Datalog = struct
     |> String.concat "\n"
 
   let geopub_datalog_program =
+    (* It's kind of stupid that Datalogl does not allow directly
+       querying of EDB predicates ...*)
     {datalog|
     rdf(?s,?p,?o) :- triples(?s,?p,?o).
+    fts(?query, ?term) :- ftsstore(?query, ?term). 
     withgeo(?s) :- triples(?s, lat, ?lat), triples(?s, long, ?lng).
       |datalog}
     ^ rhodf
@@ -759,14 +768,19 @@ let delete db =
     return @@ Database.close db >>= fun () ->
     Database.delete (Jstr.v geopub_database_name))
 
-(* let test_datalog db =
- *   let tx = Store.ro_tx db in
- *   let* tuples = query_string db ~tx {query|rhodf(?s,sc,?o)|query} in
- * 
- *   let* triples =
- *     tuples |> Datalog.Tuple.Set.to_rev_seq |> List.of_seq
- *     |> Lwt_list.filter_map_p (Store.Triples.deref db ~tx)
- *   in
- * 
- *   return
- *   @@ Log.debug (fun m -> m "test_datalog: %a" Fmt.(list Rdf.Triple.pp) triples) *)
+let () = Datalog.set_debug true
+
+let test_datalog db =
+  let q =
+    Datalog.(
+      Atom.make "fts"
+        Term.[ make_constant @@ String "something"; make_variable "term" ])
+  in
+  let* tuples = query db q in
+
+  (* let* () =
+   *   Store.Fts.search (Store.ro_tx db) "you"
+   *   |> Lwt_seq.fold_left (fun () id -> Brr.Console.log [ Jv.of_int id ]) ()
+   * in *)
+  return
+  @@ Log.debug (fun m -> m "test_datalog: %a" Datalog.Tuple.Set.pp tuples)
