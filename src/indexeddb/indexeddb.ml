@@ -57,6 +57,13 @@ module Cursor = struct
            | None -> Lwt.wakeup resolver Lwt_seq.Nil);
     ignore @@ Jv.call cursor "continue" [||];
     promise
+
+  let opt_lwt_to_seq cursor_p =
+    Lwt_seq.(
+      return_lwt cursor_p
+      |> flat_map (function
+           | Some cursor -> cons cursor (to_seq cursor)
+           | None -> empty))
 end
 
 module Index = struct

@@ -17,6 +17,8 @@ module Cursor : sig
 
   val to_seq : t -> t Lwt_seq.t
   (** [to_seq cursor] returns a sequence of the same cursor that is advanced to the next position at every iteration. *)
+
+  val opt_lwt_to_seq : t option Lwt.t -> t Lwt_seq.t
 end
 
 module Index : sig

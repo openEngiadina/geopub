@@ -433,19 +433,8 @@ module Store = struct
   let edb tx predicate pattern =
     let open Indexeddb in
     let triples_of_cursor (cursor_promise : Cursor.t option Lwt.t) =
-      (* The problem here is that openCursor returns a request that
-         resolves to a cursor. In the `edb` function we can not directly
-         resolve the request as it needs to return a Lwt_seq.t (and not a
-         `Lwt_seq.t Lwt.t`). We resolve this by unpacking the request
-         to a sequence directly. *)
-      Lwt_seq.(
-        return_lwt cursor_promise
-        |> flat_map (function
-             | Some cursor ->
-                 cons (Cursor.value cursor)
-                   (map Cursor.value (Cursor.to_seq cursor))
-             | None -> empty)
-        |> map Triples.triple_of_jv)
+      cursor_promise |> Cursor.opt_lwt_to_seq |> Lwt_seq.map Cursor.value
+      |> Lwt_seq.map Triples.triple_of_jv
     in
 
     let jv_of_index idx = Jv.of_list Jv.of_int idx in
