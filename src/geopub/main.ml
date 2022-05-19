@@ -149,7 +149,7 @@ let main () =
     >|= S.keep
   in
 
-  (* let* () = Database.test_datalog database in *)
+  let* () = Database.test_datalog database in
   let () = Log.app (fun m -> m "GeoPub ready.") in
   return_unit
 

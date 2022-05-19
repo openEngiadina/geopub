@@ -119,7 +119,7 @@ let get_activities db =
   (* This uses rhodf type inference to figure out what all is an Activity. *)
   let query =
     Database.Datalog.(
-      Atom.make "rhodf"
+      Atom.make "triple-rhodf"
         Term.
           [
             make_variable "s";

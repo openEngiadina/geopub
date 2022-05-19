@@ -557,43 +557,40 @@ module Datalog = struct
 
     (* Get triples with index matching the query pattern *)
     match (predicate, pattern) with
-    | "triples", [ None; None; None ] ->
+    | "triple", [ None; None; None ] ->
         Log.warn (fun m -> m "EDB: getting all triples");
         ObjectStore.open_cursor triples Jv.undefined |> triples_of_cursor
-    | "triples", [ Some (Term s); None; None ] ->
+    | "triple", [ Some (Term s); None; None ] ->
         (* Log.debug (fun m -> m "EDB: using s index"); *)
         let s_index = ObjectStore.index triples (Jstr.v "s") in
         Index.open_cursor s_index (jv_of_index [ s ]) |> triples_of_cursor
-    | "triples", [ None; Some (Term p); None ] ->
+    | "triple", [ None; Some (Term p); None ] ->
         (* Log.debug (fun m -> m "EDB: using p index"); *)
         let p_index = ObjectStore.index triples (Jstr.v "p") in
         Index.open_cursor p_index (jv_of_index [ p ]) |> triples_of_cursor
-    | "triples", [ None; None; Some (Term o) ] ->
+    | "triple", [ None; None; Some (Term o) ] ->
         (* Log.debug (fun m -> m "EDB: using o index"); *)
         let o_index = ObjectStore.index triples (Jstr.v "o") in
         Index.open_cursor o_index (jv_of_index [ o ]) |> triples_of_cursor
-    | "triples", [ Some (Term s); Some (Term p); None ] ->
+    | "triple", [ Some (Term s); Some (Term p); None ] ->
         (* Log.debug (fun m -> m "EDB: using sp index"); *)
         let sp_index = ObjectStore.index triples (Jstr.v "sp") in
         Index.open_cursor sp_index (jv_of_index [ s; p ]) |> triples_of_cursor
-    | "triples", [ Some (Term s); None; Some (Term o) ] ->
+    | "triple", [ Some (Term s); None; Some (Term o) ] ->
         (* Log.debug (fun m -> m "EDB: using so index"); *)
         let so_index = ObjectStore.index triples (Jstr.v "so") in
         Index.open_cursor so_index (jv_of_index [ s; o ]) |> triples_of_cursor
-    | "triples", [ None; Some (Term p); Some (Term o) ] ->
+    | "triple", [ None; Some (Term p); Some (Term o) ] ->
         (* Log.debug (fun m -> m "EDB: using po index"); *)
         let po_index = ObjectStore.index triples (Jstr.v "po") in
         Index.open_cursor po_index (jv_of_index [ p; o ]) |> triples_of_cursor
-    | "triples", [ Some (Term s); Some (Term p); Some (Term o) ] ->
+    | "triple", [ Some (Term s); Some (Term p); Some (Term o) ] ->
         (* Log.debug (fun m -> m "EDB: using spo index"); *)
         let spo_index = ObjectStore.index triples (Jstr.v "spo") in
         Index.open_cursor spo_index (jv_of_index [ s; p; o ])
         |> triples_of_cursor
-    | "ftsstore", [ Some (String s); None ] ->
+    | "fts", [ Some (String s); None ] ->
         Store.Fts.search tx s
-        |> Lwt_seq.map (fun id ->
-               Brr.Console.log [ Jv.of_string "ftsstore:"; Jv.of_int id ];
-               id)
         |> Lwt_seq.map (fun term_id -> [ String s; Term term_id ])
     | _, _ -> Lwt_seq.empty
 
@@ -605,36 +602,38 @@ module Datalog = struct
   let rhodf =
     [
       (* rhodf is an extension of rdf. This corresponds to the simple rules in the paper. *)
-      "rhodf(?s,?p,?o) :- triples(?s,?p,?o).";
+      "triple-rhodf(?s,?p,?o) :- triple(?s,?p,?o).";
       (* Subproperty (a) *)
-      "rhodf(?a, sp, ?c) :- rhodf(?a, sp, ?b), rhodf(?b, sp, ?c).";
+      "triple-rhodf(?a, sp, ?c) :- triple-rhodf(?a, sp, ?b), triple-rhodf(?b, \
+       sp, ?c).";
       (* Subproperty (b) *)
-      "rhodf(?x, ?b, ?y) :- rhodf(?a, sp, ?b), rhodf(?x, ?a, ?y).";
+      "triple-rhodf(?x, ?b, ?y) :- triple-rhodf(?a, sp, ?b), triple-rhodf(?x, \
+       ?a, ?y).";
       (* Subclass (a) *)
-      "rhodf(?a, sc, ?c) :- rhodf(?a, sc, ?b), rhodf(?b, sc, ?c).";
+      "triple-rhodf(?a, sc, ?c) :- triple-rhodf(?a, sc, ?b), triple-rhodf(?b, \
+       sc, ?c).";
       (* Subclass (b) *)
-      "rhodf(?x, type, ?b) :- rhodf(?a, sc, ?b), rhodf(?x, type, ?a).";
+      "triple-rhodf(?x, type, ?b) :- triple-rhodf(?a, sc, ?b), \
+       triple-rhodf(?x, type, ?a).";
       (* Typing (a) *)
-      "rhodf(?x, type, ?b) :- rhodf(?a, dom, ?b), rhodf(?x, ?a, ?y).";
+      "triple-rhodf(?x, type, ?b) :- triple-rhodf(?a, dom, ?b), \
+       triple-rhodf(?x, ?a, ?y).";
       (* Typing (b) *)
-      "rhodf(?y, type, ?b) :- rhodf(?a, range, ?b), rhodf(?x, ?a, ?y).";
+      "triple-rhodf(?y, type, ?b) :- triple-rhodf(?a, range, ?b), \
+       triple-rhodf(?x, ?a, ?y).";
       (* Implicit typing (a) *)
-      "rhodf(?x, type, ?b) :- rhodf(?a, dom, ?b), rhodf(?c, sc, ?a), rhodf(?x, \
-       ?c, ?y).";
+      "triple-rhodf(?x, type, ?b) :- triple-rhodf(?a, dom, ?b), \
+       triple-rhodf(?c, sc, ?a), triple-rhodf(?x, ?c, ?y).";
       (* Implicit typing (b) *)
-      "rhodf(?y, type, ?b) :- rhodf(?a, range, ?b), rhodf(?c, sc, ?a), \
-       rhodf(?x, ?c, ?y)."
+      "triple-rhodf(?y, type, ?b) :- triple-rhodf(?a, range, ?b), \
+       triple-rhodf(?c, sc, ?a), triple-rhodf(?x, ?c, ?y)."
       (* Omitting the reflexiv subClassOf, subPropertyOf rules out of lazyness.*);
     ]
     |> String.concat "\n"
 
   let geopub_datalog_program =
-    (* It's kind of stupid that Datalogl does not allow directly
-       querying of EDB predicates ...*)
     {datalog|
-    rdf(?s,?p,?o) :- triples(?s,?p,?o).
-    fts(?query, ?term) :- ftsstore(?query, ?term). 
-    withgeo(?s) :- triples(?s, lat, ?lat), triples(?s, long, ?lng).
+    withgeo(?s) :- triple(?s, lat, ?lat), triple(?s, long, ?lng).
       |datalog}
     ^ rhodf
     |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
@@ -681,7 +680,7 @@ let get_description db iri =
   | Some s_id ->
       let q =
         Datalog.(
-          Atom.make "rdf"
+          Atom.make "triple"
             Term.
               [
                 make_constant @@ Term s_id; make_variable "p"; make_variable "o";
@@ -706,7 +705,7 @@ let get_property db subject predicate =
   | [ Some s_id; Some p_id ] ->
       let q =
         Datalog.(
-          Atom.make "rdf"
+          Atom.make "triple"
             Term.
               [
                 make_constant @@ Term s_id;

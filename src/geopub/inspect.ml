@@ -84,7 +84,7 @@ let view_backlinks database description =
   | Some subject_id ->
       let query =
         Database.Datalog.(
-          Atom.make "rdf"
+          Atom.make "triple"
             Term.
               [
                 make_variable "s";
