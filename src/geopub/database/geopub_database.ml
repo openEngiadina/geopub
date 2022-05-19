@@ -218,6 +218,7 @@ module Store = struct
         (-20, activitystreams "Activity");
         (-30, geo "lat");
         (-31, geo "long");
+        (-32, geo "SpatialThing");
       ]
 
     let constant_get id =
@@ -632,11 +633,7 @@ module Datalog = struct
     |> String.concat "\n"
 
   let geopub_datalog_program =
-    {datalog|
-    withgeo(?s) :- triple(?s, lat, ?lat), triple(?s, long, ?lng).
-      |datalog}
-    ^ rhodf
-    |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
+    rhodf |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
     |> function
     | Ok program -> program
     | Error msg ->
@@ -731,12 +728,24 @@ let get_rdfs_label db iri =
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
 let get_with_geo db =
-  query_string db {query|withgeo(?s)|query}
-  |> Lwt_seq.return_lwt
+  let q =
+    Datalog.(
+      Atom.make "triple-rhodf"
+        Term.
+          [
+            make_variable "s";
+            (* rdf:type *)
+            make_constant @@ Term (-1);
+            (* geo:SpatialThing *)
+            make_constant @@ Term (-32);
+          ])
+  in
+
+  query db q |> Lwt_seq.return_lwt
   |> Lwt_seq.flat_map (fun set ->
          Lwt_seq.of_seq @@ Datalog.Tuple.Set.to_seq set)
   |> Lwt_seq.filter_map_s (function
-       | [ Datalog.Term term_id ] -> Store.Dictionary.get db term_id
+       | [ Datalog.Term term_id; _; _ ] -> Store.Dictionary.get db term_id
        | _ -> return_none)
   |> Lwt_seq.filter_map (fun term ->
          Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None))
