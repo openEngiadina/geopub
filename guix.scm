@@ -40,7 +40,7 @@
 (define-public ocaml-rdf
   (package
     (name "ocaml-rdf")
-    (version "9aae0dbd86818a897015ed8e050b79bdafeb706a")
+    (version "05f33b2d4e9b4551d8d34b766df982005e318b70")
     (home-page "https://codeberg.org/openEngiadina/ocaml-rdf.git")
     (source
      (origin
@@ -50,7 +50,7 @@
             (commit version)))
       (file-name (git-file-name name version))
       (sha256
-       (base32 "0y4ry6y5fn1f7k893hxyfixpzz6g2gxyli0h2krk22vc580acs88"))))
+       (base32 "0blvfadr70cjv78bhyiipv6ca7gxdf9dxasw0bpm59dnjl7ifqdi"))))
     (build-system dune-build-system)
     (arguments `(#:tests? #f))
     (native-inputs
@@ -568,7 +568,7 @@ stubs in Javascript for use in Js_of_ocaml")
 (define-public ocaml-datalogl
   (package
     (name "ocaml-datalogl")
-    (version "295dc2efee66a5e570ded7bd6c26280b4353eca0")
+    (version "8384441213e08a6dcae179ad17f65e7e968427b1")
     (home-page "https://codeberg.org/openEngiadina/ocaml-datalogl")
     (source
      (origin (method git-fetch)
@@ -577,7 +577,7 @@ stubs in Javascript for use in Js_of_ocaml")
                    (commit version)))
              (file-name (git-file-name name version))
              (sha256
-              (base32 "0p7ay96r7p7rfw70ngbax167qv6a7imb7qi8br32md31l8pl1a5l"))))
+              (base32 "03lbsby7562578n1hcmnid3d9y0cgwk9mgsah54d15ah9ibl5rid"))))
     (build-system dune-build-system)
     (arguments '())
     (propagated-inputs
@@ -606,6 +606,7 @@ stubs in Javascript for use in Js_of_ocaml")
       ocaml-rdf
       ocaml-uri
       ocaml-xmppl
+      ocaml-uuseg
       ocaml-datalogl
       ocaml-ptime
       ocaml-base32

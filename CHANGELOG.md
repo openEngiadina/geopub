@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- Add index for full-text search
+
 ## [0.5.0] - 2022-04-14
 
 - Use IndexedDB for local storage and Datalog for querying

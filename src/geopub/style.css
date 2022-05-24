@@ -69,6 +69,7 @@ nav li a {
     align-self: flex-start;
     overflow: auto;
     margin-right: auto;
+    margin-bottom: 50px;
 }
 
 .content {
@@ -77,6 +78,7 @@ nav li a {
     max-width: 800px;
     margin-bottom: 50px;
 }
+
 
 .text-content {
     padding: 50px;
@@ -97,6 +99,30 @@ nav li a {
     width: 300px;
     margin: 10px;
 }
+
+/* Query UI */
+
+#query {
+    flex-grow: 1;
+    width: 100%;
+    padding: 50px;
+    margin-bottom: 50px;
+    overflow: auto;
+}
+
+#query .results-table {
+    font-size: 14px;
+}
+
+
+#query-string-input {
+    width: 80%;
+}
+
+#query table {border-collapse: collapse; width: 100%; margin: 1.5rem 0;}
+#query td, th {border: 1px solid black; text-align: left; padding: 0.5rem;}
+#query th {background: #4782a7; font-weight: bold;}
+
 
 /* Inspect UI */
 

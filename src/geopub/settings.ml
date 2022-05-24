@@ -35,7 +35,7 @@ let database_settings ~update (model : Model.t) =
                   Jv.set button "disabled" Jv.true';
                   Jv.set button "textContent" @@ Jv.of_string "Deleting...";
                   update (fun (model : Model.t) ->
-                      let* () = Database.delete model.database in
+                      let* () = Database.Store.delete model.database in
                       Brr.Window.reload G.window;
                       return model))
               @@ button [ txt' "Reset Database (will cause reload)" ];

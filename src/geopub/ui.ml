@@ -45,7 +45,12 @@ let geopub_menu (_model : Model.t) =
         menu_header;
         nav
           [
-            ul [ entry "Activity" (Route.Activity None); entry "Map" Route.Map ];
+            ul
+              [
+                entry "Activity" (Route.Activity None);
+                entry "Map" Route.Map;
+                entry "Query" (Route.Query "triple-fts(?s,?p,?o, \"Hello\")");
+              ];
           ];
         div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
         nav
@@ -76,7 +81,7 @@ let about =
       ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "text-content" ]
       [
         h1 [ txt' "GeoPub" ];
-        p [ txt' "Version 0.5.0" ];
+        p [ txt' "Version 0.6.0-dev" ];
         p [ txt' "GeoPub is an experimental XMPP client for geospatial data." ];
         p
           [

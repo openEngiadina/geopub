@@ -29,6 +29,9 @@ let view ~update (model : Model.t) =
   | Route.Map ->
       let* map = Geopub_map.view model.database model.map in
       return [ Ui.geopub_menu model; map ]
+  | Route.Query query ->
+      let* query_view = Query.view model query in
+      return [ Ui.geopub_menu model; query_view ]
   | Route.Inspect iri -> Inspect.view model iri
   | Route.Settings -> Settings.view ~update model
 
@@ -58,8 +61,9 @@ let main () =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
 
-  (* Logs.set_level @@ Some Logs.Debug; *)
-  Logs.set_level @@ Some Logs.Info;
+  Logs.set_level @@ Some Logs.Debug;
+
+  (* Logs.set_level @@ Some Logs.Info; *)
 
   (* Initialize the application *)
   let () = Log.app (fun m -> m "Initializing GeoPub.") in
@@ -148,7 +152,7 @@ let main () =
     >|= S.keep
   in
 
-  (* let* () = Database.test_datalog database in *)
+  let* () = Database.test_datalog database in
   let () = Log.app (fun m -> m "GeoPub ready.") in
   return_unit
 
