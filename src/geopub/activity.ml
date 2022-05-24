@@ -123,8 +123,8 @@ let get_activities db =
         Term.
           [
             make_variable "s";
-            make_constant @@ Term type_id;
-            make_constant @@ Term activity_id;
+            make_constant @@ Constant.Rdf type_id;
+            make_constant @@ Constant.Rdf activity_id;
           ])
   in
 
@@ -132,7 +132,7 @@ let get_activities db =
   |> Lwt_seq.flat_map (fun set ->
          Lwt_seq.of_seq @@ Database.Datalog.Tuple.Set.to_seq set)
   |> Lwt_seq.filter_map_s (function
-       | [ Database.Datalog.Term s_id; _; _ ] -> (
+       | [ Database.Datalog.Constant.Rdf s_id; _; _ ] -> (
            let* term_opt = Database.Store.Dictionary.get db s_id in
            match term_opt with
            | Some term -> return @@ Rdf.Term.to_iri term

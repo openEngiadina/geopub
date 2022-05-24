@@ -49,7 +49,7 @@ let geopub_menu (_model : Model.t) =
               [
                 entry "Activity" (Route.Activity None);
                 entry "Map" Route.Map;
-                entry "Query" Route.Query;
+                entry "Query" (Route.Query "triple-fts(?s,?p,?o, \"Hello\")");
               ];
           ];
         div ~at:At.[ class' @@ Jstr.v "spacer" ] [];

@@ -89,7 +89,7 @@ let view_backlinks database description =
               [
                 make_variable "s";
                 make_variable "p";
-                make_constant @@ Term subject_id;
+                make_constant @@ Constant.Rdf subject_id;
               ])
       in
       let backlink_triples = Database.query_triple database query in
@@ -123,8 +123,8 @@ let view_rhodf_types database description =
           Atom.make "rhodf"
             Term.
               [
-                make_constant @@ Term subject_id;
-                make_constant @@ Term type_id;
+                make_constant @@ Constant.Rdf subject_id;
+                make_constant @@ Constant.Rdf type_id;
                 make_variable "o";
               ])
       in

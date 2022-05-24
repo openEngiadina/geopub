@@ -11,26 +11,21 @@ let src = Logs.Src.create "GeoPub.Database.Datalog"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-(** Type of constants appearing in a Datalog program. This is either a RDF
-term referenced by its id as stored in Store.Dictionary or a string
-(for full-text searches).*)
-type constant' = Term of int | String of string
-
-include Datalogl.Make (struct
-  type t = constant'
+module Constant = struct
+  type t = Rdf of int | String of string
 
   let compare a b =
     match (a, b) with
-    | Term a, Term b -> Int.compare a b
-    | Term _, String _ -> -1
-    | String _, Term _ -> 1
+    | Rdf a, Rdf b -> Int.compare a b
+    | Rdf _, String _ -> -1
+    | String _, Rdf _ -> 1
     | String a, String b -> String.compare a b
 
   let parser =
     let constant iri =
       Angstrom.(
         match Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri iri with
-        | Some id -> return (Term id)
+        | Some id -> return (Rdf id)
         | None -> fail "not a valid term")
     in
     Angstrom.(
@@ -45,16 +40,19 @@ include Datalogl.Make (struct
 
   let pp ppf t =
     match t with
-    | Term t -> Fmt.pf ppf "%a" Fmt.int t
+    | Rdf t -> Fmt.pf ppf "%a" Fmt.int t
     | String t -> Fmt.pf ppf "%s" t
-end)
+end
+
+include Datalogl.Make (Constant)
 
 let edb tx predicate pattern =
   let open Indexeddb in
   let triples_of_cursor (cursor_promise : Cursor.t option Lwt.t) =
     cursor_promise |> Cursor.opt_lwt_to_seq |> Lwt_seq.map Cursor.value
     |> Lwt_seq.map Store.Triples.triple_of_jv
-    |> Lwt_seq.map (fun int_triples -> List.map (fun i -> Term i) int_triples)
+    |> Lwt_seq.map (fun int_triples ->
+           List.map (fun i -> Constant.Rdf i) int_triples)
   in
 
   let jv_of_index idx = Jv.of_list Jv.of_int idx in
@@ -67,37 +65,40 @@ let edb tx predicate pattern =
   | "triple", [ None; None; None ] ->
       Log.warn (fun m -> m "EDB: getting all triples");
       ObjectStore.open_cursor triples Jv.undefined |> triples_of_cursor
-  | "triple", [ Some (Term s); None; None ] ->
+  | "triple", [ Some (Constant.Rdf s); None; None ] ->
       (* Log.debug (fun m -> m "EDB: using s index"); *)
       let s_index = ObjectStore.index triples (Jstr.v "s") in
       Index.open_cursor s_index (jv_of_index [ s ]) |> triples_of_cursor
-  | "triple", [ None; Some (Term p); None ] ->
+  | "triple", [ None; Some (Constant.Rdf p); None ] ->
       (* Log.debug (fun m -> m "EDB: using p index"); *)
       let p_index = ObjectStore.index triples (Jstr.v "p") in
       Index.open_cursor p_index (jv_of_index [ p ]) |> triples_of_cursor
-  | "triple", [ None; None; Some (Term o) ] ->
+  | "triple", [ None; None; Some (Constant.Rdf o) ] ->
       (* Log.debug (fun m -> m "EDB: using o index"); *)
       let o_index = ObjectStore.index triples (Jstr.v "o") in
       Index.open_cursor o_index (jv_of_index [ o ]) |> triples_of_cursor
-  | "triple", [ Some (Term s); Some (Term p); None ] ->
+  | "triple", [ Some (Constant.Rdf s); Some (Constant.Rdf p); None ] ->
       (* Log.debug (fun m -> m "EDB: using sp index"); *)
       let sp_index = ObjectStore.index triples (Jstr.v "sp") in
       Index.open_cursor sp_index (jv_of_index [ s; p ]) |> triples_of_cursor
-  | "triple", [ Some (Term s); None; Some (Term o) ] ->
+  | "triple", [ Some (Constant.Rdf s); None; Some (Constant.Rdf o) ] ->
       (* Log.debug (fun m -> m "EDB: using so index"); *)
       let so_index = ObjectStore.index triples (Jstr.v "so") in
       Index.open_cursor so_index (jv_of_index [ s; o ]) |> triples_of_cursor
-  | "triple", [ None; Some (Term p); Some (Term o) ] ->
+  | "triple", [ None; Some (Constant.Rdf p); Some (Constant.Rdf o) ] ->
       (* Log.debug (fun m -> m "EDB: using po index"); *)
       let po_index = ObjectStore.index triples (Jstr.v "po") in
       Index.open_cursor po_index (jv_of_index [ p; o ]) |> triples_of_cursor
-  | "triple", [ Some (Term s); Some (Term p); Some (Term o) ] ->
+  | ( "triple",
+      [ Some (Constant.Rdf s); Some (Constant.Rdf p); Some (Constant.Rdf o) ] )
+    ->
       (* Log.debug (fun m -> m "EDB: using spo index"); *)
       let spo_index = ObjectStore.index triples (Jstr.v "spo") in
       Index.open_cursor spo_index (jv_of_index [ s; p; o ]) |> triples_of_cursor
   | "fts", [ Some (String s); None ] ->
       Store.Fts.search tx s
-      |> Lwt_seq.map (fun term_id -> [ String s; Term term_id ])
+      |> Lwt_seq.map (fun term_id ->
+             [ Constant.String s; Constant.Rdf term_id ])
   | _, _ -> Lwt_seq.empty
 
 (* The ρdf fragment of RDF
@@ -153,6 +154,6 @@ let query_triple db ?(tx = Store.ro_tx db) q : Rdf.Triple.t Lwt_seq.t =
   query db ~tx q |> Lwt_seq.return_lwt
   |> Lwt_seq.flat_map (fun set -> Lwt_seq.of_seq @@ Tuple.Set.to_seq set)
   |> Lwt_seq.filter_map_s (function
-       | [ Term s_id; Term p_id; Term o_id ] ->
+       | [ Constant.Rdf s_id; Constant.Rdf p_id; Constant.Rdf o_id ] ->
            Store.Triples.deref db ~tx [ s_id; p_id; o_id ]
        | _ -> return_none)

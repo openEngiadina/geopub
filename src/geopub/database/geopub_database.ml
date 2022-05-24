@@ -37,7 +37,9 @@ let get_description db iri =
           Atom.make "triple"
             Term.
               [
-                make_constant @@ Term s_id; make_variable "p"; make_variable "o";
+                make_constant @@ Constant.Rdf s_id;
+                make_variable "p";
+                make_variable "o";
               ])
       in
       Datalog.query_triple db ~tx q
@@ -62,8 +64,8 @@ let get_property db subject predicate =
           Atom.make "triple"
             Term.
               [
-                make_constant @@ Term s_id;
-                make_constant @@ Term p_id;
+                make_constant @@ Constant.Rdf s_id;
+                make_constant @@ Constant.Rdf p_id;
                 make_variable "o";
               ])
       in
@@ -71,7 +73,7 @@ let get_property db subject predicate =
       |> Lwt_seq.flat_map (fun set ->
              Lwt_seq.of_seq @@ Datalog.Tuple.Set.to_seq set)
       |> Lwt_seq.filter_map_s (function
-           | [ _; _; Datalog.Term o ] -> Store.Dictionary.get db ~tx o
+           | [ _; _; Datalog.Constant.Rdf o ] -> Store.Dictionary.get db ~tx o
            | _ -> return_none)
       |> Lwt_seq.to_list
   | _ -> return_nil
@@ -92,9 +94,9 @@ let get_with_geo db =
           [
             make_variable "s";
             (* rdf:type *)
-            make_constant @@ Term (-1);
+            make_constant @@ Constant.Rdf (-1);
             (* geo:SpatialThing *)
-            make_constant @@ Term (-32);
+            make_constant @@ Constant.Rdf (-32);
           ])
   in
 
@@ -102,7 +104,8 @@ let get_with_geo db =
   |> Lwt_seq.flat_map (fun set ->
          Lwt_seq.of_seq @@ Datalog.Tuple.Set.to_seq set)
   |> Lwt_seq.filter_map_s (function
-       | [ Datalog.Term term_id; _; _ ] -> Store.Dictionary.get db term_id
+       | [ Datalog.Constant.Rdf term_id; _; _ ] ->
+           Store.Dictionary.get db term_id
        | _ -> return_none)
   |> Lwt_seq.filter_map (fun term ->
          Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None))
