@@ -45,7 +45,12 @@ let geopub_menu (_model : Model.t) =
         menu_header;
         nav
           [
-            ul [ entry "Activity" (Route.Activity None); entry "Map" Route.Map ];
+            ul
+              [
+                entry "Activity" (Route.Activity None);
+                entry "Map" Route.Map;
+                entry "Query" Route.Query;
+              ];
           ];
         div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
         nav

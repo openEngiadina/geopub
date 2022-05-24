@@ -29,6 +29,9 @@ let view ~update (model : Model.t) =
   | Route.Map ->
       let* map = Geopub_map.view model.database model.map in
       return [ Ui.geopub_menu model; map ]
+  | Route.Query ->
+      let* query_view = Query.view model in
+      return [ Ui.geopub_menu model; query_view ]
   | Route.Inspect iri -> Inspect.view model iri
   | Route.Settings -> Settings.view ~update model
 

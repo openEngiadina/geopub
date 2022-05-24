@@ -19,6 +19,7 @@ type t =
   | About
   | Activity of Leaflet.LatLng.t option
   | Map
+  | Query
   | Inspect of Rdf.Iri.t
   | Settings
 
@@ -30,6 +31,7 @@ let parser uri =
   | [ "about" ] -> About
   | [ "activity" ] -> Activity None
   | [ "map" ] -> Map
+  | [ "query" ] -> Query
   | [ "inspect"; encoded_iri_s ] -> (
       match Uri.decode @@ Jstr.v encoded_iri_s with
       | Ok iri_jstr -> Inspect (Rdf.Iri.of_string @@ Jstr.to_string iri_jstr)
@@ -62,6 +64,7 @@ let to_uri route =
       in
       Uri.with_uri location ~fragment:(Jstr.v @@ "activity" ^ "=" ^ latlng_s)
   | Map -> Uri.with_uri location ~fragment:(Jstr.v "map")
+  | Query -> Uri.with_uri location ~fragment:(Jstr.v "query")
   | Inspect iri ->
       let encoded_iri =
         match Uri.encode @@ Jstr.v @@ Rdf.Iri.to_string iri with
