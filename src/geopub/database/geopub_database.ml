@@ -633,7 +633,8 @@ module Datalog = struct
     |> String.concat "\n"
 
   let geopub_datalog_program =
-    rhodf |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
+    rhodf ^ "triple-fts(?s, ?p, ?o, ?q) :- fts(?q,?o), triple(?s, ?p, ?o)."
+    |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
     |> function
     | Ok program -> program
     | Error msg ->
@@ -781,8 +782,14 @@ let () = Datalog.set_debug true
 let test_datalog db =
   let q =
     Datalog.(
-      Atom.make "fts"
-        Term.[ make_constant @@ String "something"; make_variable "term" ])
+      Atom.make "triple-fts"
+        Term.
+          [
+            make_variable "s";
+            make_variable "p";
+            make_variable "o";
+            make_constant @@ String "something";
+          ])
   in
   let* tuples = query db q in
 
