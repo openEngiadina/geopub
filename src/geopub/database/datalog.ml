@@ -148,7 +148,12 @@ let geopub_datalog_program =
       failwith ("Invalid Datalog program: " ^ msg)
 
 let query db ?(tx = Store.ro_tx db) q =
-  query ~database:(edb tx) ~program:geopub_datalog_program q
+  try query ~database:(edb tx) ~program:geopub_datalog_program q
+  with e ->
+    Log.err (fun m ->
+        m "Error while performing Datalog query (probably wrong arity): %s"
+          (Printexc.to_string e));
+    return Tuple.Set.empty
 
 let query_triple db ?(tx = Store.ro_tx db) q : Rdf.Triple.t Lwt_seq.t =
   query db ~tx q |> Lwt_seq.return_lwt
