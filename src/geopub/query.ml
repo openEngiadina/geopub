@@ -154,6 +154,56 @@ let query_string_form query_string =
         update_query_string query_string)
       form_el )
 
+let help =
+  El.(
+    div
+      [
+        p [ txt' "Here you can query the database with Datalog." ];
+        p
+          [
+            txt' "For example this can be used to search for all ";
+            a
+              ~at:
+                At.
+                  [
+                    href
+                    @@ Jstr.v
+                         "#query=triple(?s,type,<https://www.w3.org/ns/activitystreams#Note>)";
+                  ]
+              [ txt' "ActivityStream notes" ];
+            txt' ", for all ";
+            a
+              ~at:
+                At.
+                  [
+                    href
+                    @@ Jstr.v
+                         "http://localhost:8000/index.html?#query=triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)";
+                  ]
+              [ txt' "ActivityStreams activities using RDFS type inference" ];
+            txt' " or for anything that ";
+            a
+              ~at:At.[ href @@ Jstr.v "#query=triple-fts(?s,?p,?o, \"Hello\")" ]
+              [ txt' "contains the word \"Hello\" (full-text search)." ];
+          ];
+        p
+          [
+            txt'
+              "Try composing your own query below. You can use the pre-defined \
+               predicates: triple/3, triple-rhodf/3, triple-fts/4 or fts/2. \
+               Variables are prefixed with a question mark (\"?\"), IRIs are \
+               delimited by angle brackets and strings (for full-text search) \
+               with quotation marks.";
+          ];
+        p
+          [
+            txt'
+              "Note that this interface does currently not allow defining of \
+               your own Datalog program. In the future this will be added to \
+               allow the definition of custom predicates that can be queried.";
+          ];
+      ])
+
 let view (model : Model.t) query_string =
   let query_string_s, query_string_form = query_string_form query_string in
 
@@ -192,4 +242,4 @@ let view (model : Model.t) query_string =
   @@ El.(
        div
          ~at:At.[ id @@ Jstr.v "query" ]
-         [ h1 [ txt' "Query" ]; query_string_form; results_table_div ])
+         [ h1 [ txt' "Query" ]; help; query_string_form; results_table_div ])

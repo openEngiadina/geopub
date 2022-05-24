@@ -120,7 +120,7 @@ let view_rhodf_types database description =
   | Some subject_id ->
       let query =
         Database.Datalog.(
-          Atom.make "rhodf"
+          Atom.make "triple-rhodf"
             Term.
               [
                 make_constant @@ Constant.Rdf subject_id;
