@@ -114,6 +114,11 @@ nav li a {
     font-size: 14px;
 }
 
+
+#query-string-input {
+    width: 80%;
+}
+
 #query table {border-collapse: collapse; width: 100%; margin: 1.5rem 0;}
 #query td, th {border: 1px solid black; text-align: left; padding: 0.5rem;}
 #query th {background: #4782a7; font-weight: bold;}

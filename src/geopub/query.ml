@@ -51,10 +51,25 @@ module Query = struct
 
     let compare = compare
 
+    let iri_parser =
+      Angstrom.(
+        char '<'
+        *> (many_till any_char (char '>') >>| List.to_seq >>| String.of_seq)
+        >>| Rdf.Iri.of_string)
+
+    let string_parser =
+      Angstrom.(
+        char '"'
+        *> (many_till any_char (char '"') >>| List.to_seq >>| String.of_seq))
+
     let parser =
       Angstrom.(
         choice ~failure_msg:"not a valid RDF term"
-          [ string "type" *> (return @@ Iri (Rdf.Namespace.rdf "type")) ])
+          [
+            string "type" *> (return @@ Iri (Rdf.Namespace.rdf "type"));
+            (iri_parser >>| fun iri -> Iri iri);
+            (string_parser >>| fun s -> String s);
+          ])
 
     let pp ppf t =
       match t with
@@ -110,6 +125,7 @@ let query_string_form query_string =
                 [
                   type' @@ Jstr.v "search";
                   name @@ Jstr.v "query-string";
+                  id @@ Jstr.v "query-string-input";
                   value @@ Jstr.v query_string;
                 ]
             ();
