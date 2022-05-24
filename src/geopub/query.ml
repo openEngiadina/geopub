@@ -178,7 +178,7 @@ let help =
                   [
                     href
                     @@ Jstr.v
-                         "http://localhost:8000/index.html?#query=triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)";
+                         "#query=triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)";
                   ]
               [ txt' "ActivityStreams activities using RDFS type inference" ];
             txt' " or for anything that ";
