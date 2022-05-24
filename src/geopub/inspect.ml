@@ -92,7 +92,7 @@ let view_backlinks database description =
                 make_constant @@ Term subject_id;
               ])
       in
-      let backlink_triples = Database.query_triples database query in
+      let backlink_triples = Database.query_triple database query in
       let* backlink_dtdds =
         backlink_triples |> Lwt_seq.to_list
         >>= Lwt_list.map_s (fun (triple : Rdf.Triple.t) ->
@@ -129,7 +129,7 @@ let view_rhodf_types database description =
               ])
       in
       let* type_triples =
-        Database.query_triples database query |> Lwt_seq.to_list
+        Database.query_triple database query |> Lwt_seq.to_list
       in
       let* type_lis =
         Lwt_list.map_s
