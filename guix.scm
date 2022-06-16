@@ -143,14 +143,14 @@ feeds and subscriber lists.")
 (define-public ocaml-note
   (package
     (name "ocaml-note")
-    (version "0.0.1")
+    (version "0.0.2")
     (source
      (origin
        (method url-fetch)
-       (uri "https://erratique.ch/software/note/releases/note-0.0.1.tbz")
+       (uri "https://erratique.ch/software/note/releases/note-0.0.2.tbz")
        (sha256
         (base32
-         "1mb32nq39bzkxbk5bkcpi8r344d951crrkrdph79j5zs8lbplqhw"))))
+         "09la36kpb3hcfyhgkhr1j3b6l3g4jy9b0ps3qbm04pfll1qmfzkg"))))
     (build-system ocaml-build-system)
     (arguments `(#:build-flags (list "build" "--tests" "true")
                  #:phases
@@ -177,7 +177,7 @@ Note is distributed under the ISC license.
 (define-public ocaml-brr
   (package
     (name "ocaml-brr")
-    (version "0.0.2")
+    (version "0.0.3")
     (source
       (origin
         (method url-fetch)
@@ -187,7 +187,7 @@ Note is distributed under the ISC license.
 	  ".tbz"))
 	(sha256
           (base32
-            "1xf2sq2rszx5r2x01gc3krx20yh3wm6hwk15zfav0clm8afjsq6m"))))
+            "0vmh3imq18yybmc3h24wr0z28ql187nwps3kq4n9nsxc7fip3kgl"))))
     (build-system ocaml-build-system)
     (arguments `(#:build-flags (list "build" "--tests" "true")
                  #:phases
