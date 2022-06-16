@@ -131,7 +131,7 @@ let init () =
   return db
 
 let test_datalog db =
-  let () = Datalog.set_debug true in
+  (* let () = Datalog.set_debug true in *)
   let q =
     Datalog.(
       Atom.make "triple-fts"

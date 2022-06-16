@@ -25,7 +25,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 (* Constants *)
 
-let geopub_database_version = 3
+let geopub_database_version = 4
 let geopub_database_name = "GeoPub"
 
 (* Event that signals store updates *)
@@ -35,11 +35,11 @@ let on_update, updated = E.create ()
 
 let ro_tx db =
   Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
-    [ Jstr.v "dictionary"; Jstr.v "triples"; Jstr.v "fts" ]
+    [ Jstr.v "dictionary"; Jstr.v "triples"; Jstr.v "fts"; Jstr.v "geo" ]
 
 let rw_tx db =
   Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadWrite
-    [ Jstr.v "dictionary"; Jstr.v "triples"; Jstr.v "fts" ]
+    [ Jstr.v "dictionary"; Jstr.v "triples"; Jstr.v "fts"; Jstr.v "geo" ]
 
 module Fts = struct
   (** The Full-Text-Search index
@@ -332,6 +332,83 @@ and then referred to by lighter integer indexes.
     | Some key -> return key
 end
 
+module Geo = struct
+  (** The Geospatial index
+
+    This maintains an index from the Geohash to terms that have some geospatial information attached. *)
+
+  open Indexeddb
+
+  let object_store_name = Jstr.v "geo"
+
+  let on_version_change db =
+    let geo = Database.create_object_store db object_store_name in
+
+    let _geohash_index =
+      ObjectStore.create_index geo
+        ~key_path:Jv.(of_string "geohash")
+        ~object_parameters:Jv.(obj [| ("multiEntry", true') |])
+      @@ Jstr.v "geohash"
+    in
+
+    ()
+
+  let object_store tx = Transaction.object_store tx object_store_name
+
+  module IntMap = Map.Make (Int)
+
+  let geo_lang_long_of_term object' =
+    match Rdf.Triple.Object.to_literal object' with
+    | Some literal -> Float.of_string_opt @@ Rdf.Literal.canonical literal
+    | None -> None
+
+  let put tx seq =
+    (* Adds sequence of triples to the geo index. As some geo
+       information depends on multiple triples we need to process the
+       entire sequence and piece together the information *)
+    let lat_map = ref IntMap.empty in
+    let long_map = ref IntMap.empty in
+    let geo = object_store tx in
+
+    Lwt_seq.append
+      (Lwt_seq.map_s
+         (fun (s_id, p_id, object') ->
+           if p_id = -30 then
+             (* geo:lat *)
+             match geo_lang_long_of_term object' with
+             | Some lat ->
+                 lat_map := IntMap.add s_id lat !lat_map;
+                 return (s_id, p_id, object')
+             | None -> return (s_id, p_id, object')
+           else if p_id = -31 then
+             (* geo:long *)
+             match geo_lang_long_of_term object' with
+             | Some long ->
+                 long_map := IntMap.add s_id long !long_map;
+                 return (s_id, p_id, object')
+             | None -> return (s_id, p_id, object')
+           else return (s_id, p_id, object'))
+         seq)
+      (* Add a empty Seq at the end. Even if it is empty it will be
+         evaluated. Smells like finalizers of transducers ... *)
+        (fun () ->
+        let* () =
+          IntMap.merge
+            (fun _s_id lat_opt long_opt ->
+              match (lat_opt, long_opt) with
+              | Some lat, Some long ->
+                  Some (Geohash.encode ~precision:10 (lat, long))
+              | _ -> None)
+            !lat_map !long_map
+          |> IntMap.to_seq |> Lwt_seq.of_seq
+          |> Lwt_seq.iter_s (fun (s_id, geohash) ->
+                 ObjectStore.put geo ~key:(Jv.of_int s_id)
+                   Jv.(obj [| ("geohash", of_list of_string [ geohash ]) |])
+                 >|= ignore)
+        in
+        return Lwt_seq.Nil)
+end
+
 (* The Triple Store *)
 
 module Triples = struct
@@ -443,7 +520,7 @@ RDF terms are stored using integer identifiers as stored in the `Dictionary`.*)
     let tx = rw_tx db in
 
     Rdf.Graph.to_triples graph |> Lwt_seq.of_seq
-    |> Lwt_seq.iter_s (fun (triple : Rdf.Triple.t) ->
+    |> Lwt_seq.filter_map_s (fun (triple : Rdf.Triple.t) ->
            let* s_id =
              triple.subject |> Rdf.Triple.Subject.to_term
              |> Dictionary.put db ~tx
@@ -467,8 +544,15 @@ RDF terms are stored using integer identifiers as stored in the `Dictionary`.*)
 
            match key_opt with
            | None ->
-               ObjectStore.put triples (jv_of_triple s_id p_id o_id) >|= ignore
-           | Some _key -> return_unit)
+               let _key =
+                 ObjectStore.put triples (jv_of_triple s_id p_id o_id)
+               in
+
+               (* return the triple for further indexing (use subject
+                  and predicate ids instead of real terms) *)
+               return_some (s_id, p_id, triple.object')
+           | Some _key -> return_none)
+    |> Geo.put tx |> Lwt_seq.iter ignore
 end
 
 let init () =
@@ -484,6 +568,8 @@ let init () =
           (Indexeddb.Database.object_store_names db);
 
         (* Initialize Object stores and indices *)
+        Log.debug (fun m -> m "Creating geo ObjectStore.");
+        Geo.on_version_change db;
         Log.debug (fun m -> m "Creating fts ObjectStore.");
         Fts.on_version_change db;
         Log.debug (fun m -> m "Creating dictionary ObjectStore.");
