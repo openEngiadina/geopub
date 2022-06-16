@@ -439,32 +439,36 @@ RDF terms are stored using integer identifiers as stored in the `Dictionary`.*)
                (Object.of_term o))
     | _ -> return_none
 
-  let put db (triple : Rdf.Triple.t) =
+  let put_graph db (graph : Rdf.Graph.t) =
     let tx = rw_tx db in
 
-    (* let triples = Triples.object_store tx in *)
-    let* s_id =
-      triple.subject |> Rdf.Triple.Subject.to_term |> Dictionary.put db ~tx
-    in
-    let* p_id =
-      triple.predicate |> Rdf.Triple.Predicate.to_term |> Dictionary.put db ~tx
-    in
-    let* o_id =
-      triple.object' |> Rdf.Triple.Object.to_term |> Dictionary.put db ~tx
-    in
-    let triples = object_store tx in
+    Rdf.Graph.to_triples graph |> Lwt_seq.of_seq
+    |> Lwt_seq.iter_s (fun (triple : Rdf.Triple.t) ->
+           let* s_id =
+             triple.subject |> Rdf.Triple.Subject.to_term
+             |> Dictionary.put db ~tx
+           in
+           let* p_id =
+             triple.predicate |> Rdf.Triple.Predicate.to_term
+             |> Dictionary.put db ~tx
+           in
+           let* o_id =
+             triple.object' |> Rdf.Triple.Object.to_term
+             |> Dictionary.put db ~tx
+           in
+           let triples = object_store tx in
 
-    let spo_index = ObjectStore.index triples (Jstr.v "spo") in
+           let spo_index = ObjectStore.index triples (Jstr.v "spo") in
 
-    let* key_opt =
-      Index.get_key spo_index (Jv.of_list Jv.of_int [ s_id; p_id; o_id ])
-      >|= Jv.to_option Jv.to_int
-    in
+           let* key_opt =
+             Index.get_key spo_index (Jv.of_list Jv.of_int [ s_id; p_id; o_id ])
+             >|= Jv.to_option Jv.to_int
+           in
 
-    match key_opt with
-    | None ->
-        ObjectStore.put triples (jv_of_triple s_id p_id o_id) >|= Jv.to_int
-    | Some key -> return key
+           match key_opt with
+           | None ->
+               ObjectStore.put triples (jv_of_triple s_id p_id o_id) >|= ignore
+           | Some _key -> return_unit)
 end
 
 let init () =
@@ -504,9 +508,4 @@ let triple_count db =
   let tx = ro_tx db in
   Indexeddb.ObjectStore.count (Triples.object_store tx) Jv.undefined
 
-let add_graph db (graph : Rdf.Graph.t) =
-  let* () =
-    Rdf.Graph.to_triples graph |> List.of_seq
-    |> Lwt_list.iter_p (fun triple -> Triples.put db triple >|= ignore)
-  in
-  return @@ updated ()
+let add_graph db (graph : Rdf.Graph.t) = Triples.put_graph db graph >|= updated
