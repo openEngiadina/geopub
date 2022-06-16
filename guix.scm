@@ -75,17 +75,19 @@
 (define-public ocaml-ptime
   (package
   (name "ocaml-ptime")
-  (version "0.8.5")
+  (version "1.0.0")
   (source
     (origin
       (method url-fetch)
-      (uri "https://erratique.ch/software/ptime/releases/ptime-0.8.5.tbz")
+      (uri (string-append "https://erratique.ch/software/ptime/releases/ptime-"
+			  version
+			  ".tbz"))
       (sha256
         (base32
-          "1fxq57xy1ajzfdnvv5zfm7ap2nf49znw5f9gbi4kb9vds942ij27"))))
+          "02qiwafysw5vpbxmkhgf6hfr5fv967rxzfkfy18kgj3206686724"))))
   (build-system ocaml-build-system)
   (arguments
-   `(#:build-flags (list "build" "--with-js_of_ocaml" "true" "--tests" "true")
+   `(#:build-flags (list "build" "--tests" "true")
      #:phases
      (modify-phases %standard-phases
        (delete 'configure))))
