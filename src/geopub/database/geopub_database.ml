@@ -134,20 +134,11 @@ let test_datalog db =
   (* let () = Datalog.set_debug true in *)
   let q =
     Datalog.(
-      Atom.make "triple-fts"
+      Atom.make "geo"
         Term.
-          [
-            make_variable "s";
-            make_variable "p";
-            make_variable "o";
-            make_constant @@ FtsQuery "something";
-          ])
+          [ make_constant @@ GeoQuery (46.7935, 0.3009, 5); make_variable "s" ])
   in
   let* tuples = Datalog.query db q in
 
-  let* () =
-    Store.Geo.search (Store.ro_tx db) (46.79700, 10.298, 3)
-    |> Lwt_seq.fold_left (fun () id -> Brr.Console.log [ Jv.of_int id ]) ()
-  in
   return
   @@ Log.debug (fun m -> m "test_datalog: %a" Datalog.Tuple.Set.pp tuples)

@@ -23,6 +23,8 @@ let view_constant db = function
             (fun bnode -> return @@ Ui_rdf.view_blank_node bnode)
             (fun literal -> return @@ Ui_rdf.view_literal literal))
   | Datalog.Constant.FtsQuery s -> return @@ El.txt' s
+  | Datalog.Constant.GeoQuery _ as geo_query ->
+      return @@ El.txt' @@ Format.asprintf "%a" Datalog.Constant.pp geo_query
 
 let view_variable var = return @@ El.txt' ("?" ^ var)
 
@@ -47,7 +49,10 @@ let view_results db query results =
 
 module Query = struct
   module Constant = struct
-    type t = Iri of Rdf.Iri.t | FtsQuery of string
+    type t =
+      | Iri of Rdf.Iri.t
+      | FtsQuery of string
+      | GeoQuery of (float * float * int)
 
     let compare = compare
 
@@ -62,6 +67,25 @@ module Query = struct
         char '"'
         *> (many_till any_char (char '"') >>| List.to_seq >>| String.of_seq))
 
+    let geo_parser =
+      let to_float chars =
+        chars |> List.to_seq |> String.of_seq |> Float.of_string_opt |> function
+        | Some float -> Angstrom.return float
+        | None -> Angstrom.fail "could not parser float in GEO query"
+      in
+      let to_int chars =
+        chars |> List.to_seq |> String.of_seq |> int_of_string_opt |> function
+        | Some int -> Angstrom.return int
+        | None -> Angstrom.fail "could not parser integer in GEO query"
+      in
+
+      Angstrom.(
+        (fun _ lat long precision -> GeoQuery (lat, long, precision))
+        <$> string "GEO("
+        <*> (many_till any_char (char ',') >>= to_float)
+        <*> (many_till any_char (char ',') >>= to_float)
+        <*> (many_till any_char (char ')') >>= to_int))
+
     let parser =
       Angstrom.(
         choice ~failure_msg:"not a valid RDF term"
@@ -69,12 +93,16 @@ module Query = struct
             string "type" *> (return @@ Iri (Rdf.Namespace.rdf "type"));
             (iri_parser >>| fun iri -> Iri iri);
             (string_parser >>| fun s -> FtsQuery s);
+            geo_parser;
           ])
 
     let pp ppf t =
       match t with
       | Iri t -> Fmt.pf ppf "%a" Rdf.Iri.pp t
       | FtsQuery s -> Fmt.pf ppf "\"%s\"" s
+      | GeoQuery (lat, long, precision) ->
+          Fmt.pf ppf "%a" Datalog.Constant.pp
+            (Datalog.Constant.GeoQuery (lat, long, precision))
   end
 
   (* Instantiate a faux instance of Datalog for parsing *)
@@ -91,6 +119,10 @@ module Query = struct
             >|= Option.to_result ~none:"Could not lookup IRI in dictionary"
         | FtsQuery s ->
             Datalog.(Term.make_constant @@ Constant.FtsQuery s)
+            |> Lwt_result.return
+        | GeoQuery (lat, long, precision) ->
+            Datalog.(
+              Term.make_constant @@ Constant.GeoQuery (lat, long, precision))
             |> Lwt_result.return)
       term
 

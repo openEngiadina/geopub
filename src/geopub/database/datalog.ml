@@ -12,14 +12,25 @@ let src = Logs.Src.create "GeoPub.Database.Datalog"
 module Log = (val Logs.src_log src : Logs.LOG)
 
 module Constant = struct
-  type t = Rdf of int | FtsQuery of string
+  type t = Rdf of int | FtsQuery of string | GeoQuery of float * float * int
 
   let compare a b =
+    let compare3 c0 a0 b0 c1 a1 b1 c2 a2 b2 =
+      if c0 a0 b0 == 0 then if c1 a1 b1 == 0 then c2 a2 b2 else c1 a1 b1
+      else c0 a0 b0
+    in
     match (a, b) with
     | Rdf a, Rdf b -> Int.compare a b
     | Rdf _, FtsQuery _ -> -1
+    | Rdf _, GeoQuery _ -> -1
     | FtsQuery _, Rdf _ -> 1
+    | FtsQuery _, GeoQuery _ -> -1
     | FtsQuery a, FtsQuery b -> String.compare a b
+    | ( GeoQuery (a_lat, a_long, a_precision),
+        GeoQuery (b_lat, b_long, b_precision) ) ->
+        compare3 Float.compare a_lat b_lat Float.compare a_long b_long
+          Int.compare a_precision b_precision
+    | GeoQuery _, _ -> 1
 
   let parser =
     let constant iri =
@@ -42,6 +53,8 @@ module Constant = struct
     match t with
     | Rdf t -> Fmt.pf ppf "%a" Fmt.int t
     | FtsQuery t -> Fmt.pf ppf "\"%s\"" t
+    | GeoQuery (lat, long, precision) ->
+        Fmt.pf ppf "GEO(%f, %f, %d)" lat long precision
 end
 
 include Datalogl.Make (Constant)
@@ -102,10 +115,18 @@ let edb tx predicate pattern =
       let spo_index = ObjectStore.index triples (Jstr.v "spo") in
       Index.open_cursor spo_index (KeyRange.only @@ jv_of_index [ s; p; o ])
       |> triples_of_cursor
-  | "fts", [ Some (FtsQuery s); None ] ->
+  | "fts", [ Some (Constant.FtsQuery s); None ] ->
       Store.Fts.search tx s
       |> Lwt_seq.map (fun term_id ->
              [ Constant.FtsQuery s; Constant.Rdf term_id ])
+  | ( "geo",
+      [
+        Some (Constant.GeoQuery (lat, long, precision) as geo_query_constant);
+        None;
+      ] ) ->
+      Store.Geo.search tx (lat, long, precision)
+      |> Lwt_seq.map (fun term_id ->
+             [ geo_query_constant; Constant.Rdf term_id ])
   | _, _ -> Lwt_seq.empty
 
 (* The ρdf fragment of RDF
