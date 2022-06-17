@@ -213,19 +213,28 @@ let help =
                          "#query=triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)";
                   ]
               [ txt' "ActivityStreams activities using RDFS type inference" ];
-            txt' " or for anything that ";
+            txt' ", for anything that ";
             a
               ~at:At.[ href @@ Jstr.v "#query=triple-fts(?s,?p,?o, \"Hello\")" ]
-              [ txt' "contains the word \"Hello\" (full-text search)." ];
+              [ txt' "contains the word \"Hello\" (full-text search)" ];
+            txt' ", for things ";
+            a
+              ~at:At.[ href @@ Jstr.v "#query=geo(GEO(46.7965,10.2965,4), ?s)" ]
+              [ txt' "in the lower Engadin (geo-spatial search)." ];
           ];
         p
           [
             txt'
               "Try composing your own query below. You can use the pre-defined \
-               predicates: triple/3, triple-rhodf/3, triple-fts/4 or fts/2. \
-               Variables are prefixed with a question mark (\"?\"), IRIs are \
-               delimited by angle brackets and strings (for full-text search) \
-               with quotation marks.";
+               predicates: triple/3, triple-rhodf/3, triple-fts/4, fts/2 or \
+               geo/3. Variables are prefixed with a question mark (\"?\"), \
+               IRIs are delimited by angle brackets and strings (for full-text \
+               search) with quotation marks. Geo-spatial queries have the \
+               form ";
+            code [ txt' "GEO(lat,long,precision)" ];
+            txt' " where ";
+            code [ txt' "precision" ];
+            txt' " is the precision in number of GeoHash digits.";
           ];
         p
           [
