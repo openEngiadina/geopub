@@ -8,6 +8,7 @@ module KeyRange : sig
   type t
 
   val lower_bound : Jv.t -> t
+  val bound : Jv.t -> Jv.t -> t
   val only : Jv.t -> t
 end
 

@@ -29,6 +29,7 @@ module KeyRange = struct
 
   let idbkeyrange = Jv.get Jv.global "IDBKeyRange"
   let lower_bound v = Jv.call idbkeyrange "lowerBound" [| v |]
+  let bound lower upper = Jv.call idbkeyrange "bound" [| lower; upper |]
   let only v = Jv.call idbkeyrange "only" [| v |]
 end
 

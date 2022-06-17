@@ -419,7 +419,11 @@ module Geo = struct
     let geohash_index = ObjectStore.index geo (Jstr.v "geohash") in
 
     Index.open_cursor geohash_index
-      (KeyRange.lower_bound @@ Jv.of_string geohash_query)
+      (KeyRange.bound
+         (* lower bound is the geohash *)
+         (Jv.of_string geohash_query)
+         (* upper bound is geohash concatenated with z - the highest possible GeoHash digit *)
+         (Jv.of_string @@ geohash_query ^ "z"))
     |> Cursor.opt_lwt_to_seq
     |> Lwt_seq.map (fun cursor -> Jv.to_int @@ Cursor.primary_key cursor)
 end
