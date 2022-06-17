@@ -22,7 +22,7 @@ let view_constant db = function
             (Ui_rdf.view_pretty_iri db)
             (fun bnode -> return @@ Ui_rdf.view_blank_node bnode)
             (fun literal -> return @@ Ui_rdf.view_literal literal))
-  | Datalog.Constant.String s -> return @@ El.txt' s
+  | Datalog.Constant.FtsQuery s -> return @@ El.txt' s
 
 let view_variable var = return @@ El.txt' ("?" ^ var)
 
@@ -47,7 +47,7 @@ let view_results db query results =
 
 module Query = struct
   module Constant = struct
-    type t = Iri of Rdf.Iri.t | String of string
+    type t = Iri of Rdf.Iri.t | FtsQuery of string
 
     let compare = compare
 
@@ -68,13 +68,13 @@ module Query = struct
           [
             string "type" *> (return @@ Iri (Rdf.Namespace.rdf "type"));
             (iri_parser >>| fun iri -> Iri iri);
-            (string_parser >>| fun s -> String s);
+            (string_parser >>| fun s -> FtsQuery s);
           ])
 
     let pp ppf t =
       match t with
       | Iri t -> Fmt.pf ppf "%a" Rdf.Iri.pp t
-      | String s -> Fmt.pf ppf "\"%s\"" s
+      | FtsQuery s -> Fmt.pf ppf "\"%s\"" s
   end
 
   (* Instantiate a faux instance of Datalog for parsing *)
@@ -89,8 +89,8 @@ module Query = struct
             >|= Option.map (fun id ->
                     Datalog.(Term.make_constant @@ Constant.Rdf id))
             >|= Option.to_result ~none:"Could not lookup IRI in dictionary"
-        | String s ->
-            Datalog.(Term.make_constant @@ Constant.String s)
+        | FtsQuery s ->
+            Datalog.(Term.make_constant @@ Constant.FtsQuery s)
             |> Lwt_result.return)
       term
 

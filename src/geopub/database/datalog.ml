@@ -12,14 +12,14 @@ let src = Logs.Src.create "GeoPub.Database.Datalog"
 module Log = (val Logs.src_log src : Logs.LOG)
 
 module Constant = struct
-  type t = Rdf of int | String of string
+  type t = Rdf of int | FtsQuery of string
 
   let compare a b =
     match (a, b) with
     | Rdf a, Rdf b -> Int.compare a b
-    | Rdf _, String _ -> -1
-    | String _, Rdf _ -> 1
-    | String a, String b -> String.compare a b
+    | Rdf _, FtsQuery _ -> -1
+    | FtsQuery _, Rdf _ -> 1
+    | FtsQuery a, FtsQuery b -> String.compare a b
 
   let parser =
     let constant iri =
@@ -41,7 +41,7 @@ module Constant = struct
   let pp ppf t =
     match t with
     | Rdf t -> Fmt.pf ppf "%a" Fmt.int t
-    | String t -> Fmt.pf ppf "%s" t
+    | FtsQuery t -> Fmt.pf ppf "\"%s\"" t
 end
 
 include Datalogl.Make (Constant)
@@ -102,10 +102,10 @@ let edb tx predicate pattern =
       let spo_index = ObjectStore.index triples (Jstr.v "spo") in
       Index.open_cursor spo_index (KeyRange.only @@ jv_of_index [ s; p; o ])
       |> triples_of_cursor
-  | "fts", [ Some (String s); None ] ->
+  | "fts", [ Some (FtsQuery s); None ] ->
       Store.Fts.search tx s
       |> Lwt_seq.map (fun term_id ->
-             [ Constant.String s; Constant.Rdf term_id ])
+             [ Constant.FtsQuery s; Constant.Rdf term_id ])
   | _, _ -> Lwt_seq.empty
 
 (* The ρdf fragment of RDF

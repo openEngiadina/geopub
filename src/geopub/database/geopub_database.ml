@@ -140,7 +140,7 @@ let test_datalog db =
             make_variable "s";
             make_variable "p";
             make_variable "o";
-            make_constant @@ String "something";
+            make_constant @@ FtsQuery "something";
           ])
   in
   let* tuples = Datalog.query db q in
