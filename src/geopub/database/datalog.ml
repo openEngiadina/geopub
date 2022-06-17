@@ -54,7 +54,7 @@ module Constant = struct
     | Rdf t -> Fmt.pf ppf "%a" Fmt.int t
     | FtsQuery t -> Fmt.pf ppf "\"%s\"" t
     | GeoQuery (lat, long, precision) ->
-        Fmt.pf ppf "GEO(%f, %f, %d)" lat long precision
+        Fmt.pf ppf "GeoHash(%f, %f, %d)" lat long precision
 end
 
 include Datalogl.Make (Constant)

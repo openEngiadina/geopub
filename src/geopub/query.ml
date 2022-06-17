@@ -71,17 +71,17 @@ module Query = struct
       let to_float chars =
         chars |> List.to_seq |> String.of_seq |> Float.of_string_opt |> function
         | Some float -> Angstrom.return float
-        | None -> Angstrom.fail "could not parser float in GEO query"
+        | None -> Angstrom.fail "could not parser float in GeoHash query"
       in
       let to_int chars =
         chars |> List.to_seq |> String.of_seq |> int_of_string_opt |> function
         | Some int -> Angstrom.return int
-        | None -> Angstrom.fail "could not parser integer in GEO query"
+        | None -> Angstrom.fail "could not parser integer in GeoHash query"
       in
 
       Angstrom.(
         (fun _ lat long precision -> GeoQuery (lat, long, precision))
-        <$> string "GEO("
+        <$> string "GeoHash("
         <*> (many_till any_char (char ',') >>= to_float)
         <*> (many_till any_char (char ',') >>= to_float)
         <*> (many_till any_char (char ')') >>= to_int))
@@ -219,7 +219,11 @@ let help =
               [ txt' "contains the word \"Hello\" (full-text search)" ];
             txt' ", for things ";
             a
-              ~at:At.[ href @@ Jstr.v "#query=geo(GEO(46.7965,10.2965,4), ?s)" ]
+              ~at:
+                At.
+                  [
+                    href @@ Jstr.v "#query=geo(GeoHash(46.7965,10.2965,4), ?s)";
+                  ]
               [ txt' "in the lower Engadin (geo-spatial search)." ];
           ];
         p
