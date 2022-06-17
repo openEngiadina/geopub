@@ -3,6 +3,8 @@
 ## [UNRELEASED]
 
 - Add index for full-text search
+- Add index for geo-spatial search
+- Extract leaflet bindings to separate library ([swrup/leaflet](https://git.zapashcanon.fr/swrup/leaflet))
 
 ## [0.5.0] - 2022-04-14
 
