@@ -145,9 +145,9 @@ let test_datalog db =
   in
   let* tuples = Datalog.query db q in
 
-  (* let* () =
-   *   Store.Fts.search (Store.ro_tx db) "you"
-   *   |> Lwt_seq.fold_left (fun () id -> Brr.Console.log [ Jv.of_int id ]) ()
-   * in *)
+  let* () =
+    Store.Geo.search (Store.ro_tx db) (46.79700, 10.298, 3)
+    |> Lwt_seq.fold_left (fun () id -> Brr.Console.log [ Jv.of_int id ]) ()
+  in
   return
   @@ Log.debug (fun m -> m "test_datalog: %a" Datalog.Tuple.Set.pp tuples)

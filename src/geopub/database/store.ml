@@ -163,7 +163,7 @@ module Fts = struct
     merge_join ~compare:Int.compare
       (List.map
          (fun term ->
-           Index.open_cursor fts_terms (Jv.of_string term)
+           Index.open_cursor fts_terms (KeyRange.only @@ Jv.of_string term)
            |> Cursor.opt_lwt_to_seq
            |> Lwt_seq.map (fun cursor -> Jv.to_int @@ Cursor.primary_key cursor))
          terms)
@@ -407,6 +407,21 @@ module Geo = struct
                  >|= ignore)
         in
         return Lwt_seq.Nil)
+
+  let search tx (lat, long, precision) =
+    let geohash_query = Geohash.encode ~precision (lat, long) in
+
+    Log.debug (fun m ->
+        m "Geo.search: (%f, %f, %d), GeoHash: %s" lat long precision
+          geohash_query);
+
+    let geo = object_store tx in
+    let geohash_index = ObjectStore.index geo (Jstr.v "geohash") in
+
+    Index.open_cursor geohash_index
+      (KeyRange.lower_bound @@ Jv.of_string geohash_query)
+    |> Cursor.opt_lwt_to_seq
+    |> Lwt_seq.map (fun cursor -> Jv.to_int @@ Cursor.primary_key cursor)
 end
 
 (* The Triple Store *)

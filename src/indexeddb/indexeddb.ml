@@ -24,6 +24,14 @@ module Request = struct
     promise
 end
 
+module KeyRange = struct
+  type t = Jv.t
+
+  let idbkeyrange = Jv.get Jv.global "IDBKeyRange"
+  let lower_bound v = Jv.call idbkeyrange "lowerBound" [| v |]
+  let only v = Jv.call idbkeyrange "only" [| v |]
+end
+
 module Cursor = struct
   type t = Jv.t
 

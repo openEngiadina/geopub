@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: ISC
  *)
 
+module KeyRange : sig
+  type t
+
+  val lower_bound : Jv.t -> t
+  val only : Jv.t -> t
+end
+
 module Cursor : sig
   type t
 
@@ -42,7 +49,7 @@ module Index : sig
   val get_key : t -> Jv.t -> Jv.t Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/getKey *)
 
-  val open_cursor : t -> Jv.t -> Cursor.t option Lwt.t
+  val open_cursor : t -> KeyRange.t -> Cursor.t option Lwt.t
   (** https://developer.mozilla.org/en-US/docs/Web/API/IDBIndex/openCursor *)
 end
 
