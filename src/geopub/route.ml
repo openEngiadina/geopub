@@ -17,7 +17,7 @@ let history = Window.history G.window
 
 type t =
   | About
-  | Activity of Leaflet.LatLng.t option
+  | Activity of Leaflet.Latlng.t option
   | Map
   | Query of string
   | Inspect of Rdf.Iri.t
@@ -59,8 +59,8 @@ let to_uri route =
   | Activity None -> Uri.with_uri location ~fragment:(Jstr.v "activity")
   | Activity (Some latlng) ->
       let latlng_s =
-        (string_of_float @@ Leaflet.LatLng.lat latlng)
-        ^ "/" ^ string_of_float @@ Leaflet.LatLng.lng latlng
+        (string_of_float @@ Leaflet.Latlng.lat latlng)
+        ^ "/" ^ string_of_float @@ Leaflet.Latlng.lng latlng
       in
       Uri.with_uri location ~fragment:(Jstr.v @@ "activity" ^ "=" ^ latlng_s)
   | Map -> Uri.with_uri location ~fragment:(Jstr.v "map")

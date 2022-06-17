@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-open Brr
 open Lwt
 open Lwt.Syntax
 
@@ -44,11 +43,13 @@ let get_latlng description =
   in
 
   match (lat, long) with
-  | Some lat, Some long -> Some (Leaflet.LatLng.create lat long)
+  | Some lat, Some long -> Some (Leaflet.Latlng.create lat long)
   | _ -> None
 
 let init ~set_route () =
-  let map_container = El.div ~at:At.[ id @@ Jstr.v "map" ] [] in
+  (* create and append to body map_container *)
+  let map_container = Brr.El.div ~at:[ Brr.At.id @@ Jstr.v "map" ] [] in
+  Brr.El.append_children (Brr.Document.body Brr.G.document) [ map_container ];
 
   (* create a context menu *)
   let context_menu =
@@ -57,13 +58,13 @@ let init ~set_route () =
         Callback
           ( "Create post here",
             fun e ->
-              let latlng = Leaflet.Ev.MouseEvent.latlng e in
+              let latlng = Leaflet.Event.latlng e in
               set_route @@ Route.Activity (Some latlng);
               Log.debug (fun m ->
                   m "Create post at %a/%a" Fmt.float
-                    (Leaflet.LatLng.lat latlng)
+                    (Leaflet.Latlng.lat latlng)
                     Fmt.float
-                    (Leaflet.LatLng.lng latlng)) );
+                    (Leaflet.Latlng.lng latlng)) );
       ]
   in
 
@@ -75,23 +76,29 @@ let init ~set_route () =
   in
 
   (* Set up a listener for clicks on the map (currently not used) *)
-  Ev.listen Leaflet.Map.click (fun e ->
-      let latlng = e |> Ev.as_type |> Leaflet.Ev.MouseEvent.latlng in
+  let () =
+    let on_click e =
+      let latlng = Leaflet.Event.latlng e in
       Log.debug (fun m ->
           m "Click at %a/%a" Fmt.float
-            (Leaflet.LatLng.lat latlng)
+            (Leaflet.Latlng.lat latlng)
             Fmt.float
-            (Leaflet.LatLng.lng latlng)))
-  @@ Leaflet.Map.as_target map;
+            (Leaflet.Latlng.lng latlng))
+    in
+    Leaflet.Map.on Leaflet.Event.Click on_click map
+  in
 
   (* add the OSM tile layer *)
-  let tile_layer = Leaflet.TileLayer.create_osm () in
-  Leaflet.TileLayer.add_to tile_layer map;
+  let tile_layer = Leaflet.Layer.create_tile_osm None in
+  Leaflet.Layer.add_to map tile_layer;
+
+  (* set view *)
+  Leaflet.Map.set_view
+    (Leaflet.Latlng.create 46.794896096 10.3003317118)
+    ~zoom:(Some 10) map;
 
   (* return Map *)
-  map
-  |> Leaflet.(Map.set_view LatLng.(create 46.794896096 10.3003317118) ~zoom:10)
-  |> return
+  map |> return
 
 (* functions to modify map *)
 
@@ -131,8 +138,9 @@ let add_geo_object db map (latlng, description) =
   then return_unit
   else
     let* el = Ui_rdf.view_subject db @@ Rdf.Description.subject description in
-    let marker = Leaflet.Marker.create latlng |> Leaflet.Marker.bind_popup el in
-    return @@ Leaflet.Marker.add_to marker map
+    let marker = Leaflet.Layer.create_marker latlng in
+    Leaflet.Layer.bind_popup el marker;
+    return @@ Leaflet.Layer.add_to map marker
 
 let view db map =
   let* () =

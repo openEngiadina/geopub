@@ -53,14 +53,14 @@ let make_note ?latlng content =
          (Option.map
             (fun latlng ->
               Object.of_literal @@ Rdf.Literal.make_string @@ Float.to_string
-              @@ Leaflet.LatLng.lat latlng)
+              @@ Leaflet.Latlng.lat latlng)
             latlng)
     |> add_opt_statement
          (Predicate.of_iri @@ Geopub_namespace.geo "long")
          (Option.map
             (fun latlng ->
               Object.of_literal @@ Rdf.Literal.make_string @@ Float.to_string
-              @@ Leaflet.LatLng.lng latlng)
+              @@ Leaflet.Latlng.lng latlng)
             latlng))
 
 let make_create ~object' xmpp =
@@ -184,9 +184,9 @@ let view_compose_note ~update ?latlng (model : Model.t) =
                               value
                               @@ Jstr.v
                                    ((Float.to_string
-                                   @@ Leaflet.LatLng.lat latlng)
+                                   @@ Leaflet.Latlng.lat latlng)
                                    ^ ", " ^ Float.to_string
-                                   @@ Leaflet.LatLng.lng latlng);
+                                   @@ Leaflet.Latlng.lng latlng);
                             ]
                         ();
                     ]

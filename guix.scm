@@ -568,6 +568,26 @@ message report is decoupled from logging and is handled by a reporter.")
 stubs in Javascript for use in Js_of_ocaml")
    (license license:expat)))
 
+(define-public ocaml-leaflet
+  (package
+   (name "ocaml-leaflet")
+   (version "0.1")
+   (source
+    (origin (method git-fetch)
+	    (uri (git-reference
+		  (url "https://git.zapashcanon.fr/swrup/leaflet.git")
+		  (commit version)))
+	    (file-name (git-file-name name version))
+	    (sha256
+	     (base32 "1g832ab6fgjccq6i6q7kzh3v1bh8caw4nsgv8cx4y9kcxq5xz4cd"))))
+   (build-system dune-build-system)
+   (propagated-inputs
+    (list ocaml-brr js-of-ocaml))
+   (home-page "https://git.zapashcanon.fr/swrup/leaflet")
+   (synopsis "OCaml bindings for the Leaflet JavaScript library")
+   (description #f)
+   (license license:bsd-2)))
+
 (define-public ocaml-datalogl
   (package
     (name "ocaml-datalogl")
@@ -606,6 +626,7 @@ stubs in Javascript for use in Js_of_ocaml")
       ocaml-react
       ocaml-lwt-react
       ocaml-brr
+      ocaml-leaflet
       ocaml-rdf
       ocaml-uri
       ocaml-xmppl

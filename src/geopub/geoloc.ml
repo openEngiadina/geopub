@@ -87,4 +87,4 @@ let parser =
 
 (* Convert to Leaflet.LatLng *)
 
-let to_latlng geoloc = Leaflet.LatLng.create geoloc.latitude geoloc.longitude
+let to_latlng geoloc = Leaflet.Latlng.create geoloc.latitude geoloc.longitude

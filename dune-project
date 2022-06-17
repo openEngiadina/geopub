@@ -1,4 +1,4 @@
-(lang dune 2.7)
+(lang dune 2.8)
 (name geopub)
 
 (version 0.0.0)
@@ -11,4 +11,3 @@
 
 (package (name geopub))
 (package (name indexeddb))
-(package (name leaflet))

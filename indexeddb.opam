@@ -5,7 +5,7 @@ maintainer: ["pukkamustard <pukkamustard@posteo.net>"]
 authors: ["pukkamustard <pukkamustard@posteo.net>"]
 license: "AGPL-3.0-or-later"
 depends: [
-  "dune" {>= "2.7"}
+  "dune" {>= "2.8"}
   "odoc" {with-doc}
 ]
 build: [
