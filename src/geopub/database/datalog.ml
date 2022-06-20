@@ -61,60 +61,53 @@ include Datalogl.Make (Constant)
 
 let edb tx predicate pattern =
   let open Indexeddb in
-  let triples_of_cursor (cursor_promise : Cursor.t option Lwt.t) =
-    cursor_promise |> Cursor.opt_lwt_to_seq |> Lwt_seq.map Cursor.value
-    |> Lwt_seq.map Store.Triples.triple_of_jv
-    |> Lwt_seq.map (fun int_triples ->
-           List.map (fun i -> Constant.Rdf i) int_triples)
-  in
-
-  let jv_of_index idx = Jv.of_list Jv.of_int idx in
-
   (* Open the triples object store *)
   let triples = Transaction.object_store tx Store.Triples.object_store_name in
+
+  let query index q =
+    let keyrange q =
+      let jv_of_index q = Jv.of_list Jv.of_int q in
+      let jv_upper_bound q =
+        Jv.(
+          of_list
+            (function
+              | Some i -> Jv.of_int i
+              | None ->
+                  (* Use a empty string for the upper bound as strings are
+                     always ordered higher than integers *)
+                  Jv.of_string "")
+            (List.map Option.some q @ [ None ]))
+      in
+      KeyRange.bound (jv_of_index q) (jv_upper_bound q)
+    in
+    let triples_of_cursor (cursor_promise : Cursor.t option Lwt.t) =
+      cursor_promise |> Cursor.opt_lwt_to_seq |> Lwt_seq.map Cursor.value
+      |> Lwt_seq.map Store.Triples.triple_of_jv
+      |> Lwt_seq.map (fun int_triples ->
+             List.map (fun i -> Constant.Rdf i) int_triples)
+    in
+    let index = ObjectStore.index triples (Jstr.v index) in
+    Index.open_cursor index (keyrange q) |> triples_of_cursor
+  in
 
   (* Get triples with index matching the query pattern *)
   match (predicate, pattern) with
   | "triple", [ None; None; None ] ->
       Log.warn (fun m -> m "EDB: getting all triples");
-      ObjectStore.open_cursor triples Jv.undefined |> triples_of_cursor
-  | "triple", [ Some (Constant.Rdf s); None; None ] ->
-      (* Log.debug (fun m -> m "EDB: using s index"); *)
-      let s_index = ObjectStore.index triples (Jstr.v "s") in
-      Index.open_cursor s_index (KeyRange.only @@ jv_of_index [ s ])
-      |> triples_of_cursor
-  | "triple", [ None; Some (Constant.Rdf p); None ] ->
-      (* Log.debug (fun m -> m "EDB: using p index"); *)
-      let p_index = ObjectStore.index triples (Jstr.v "p") in
-      Index.open_cursor p_index (KeyRange.only @@ jv_of_index [ p ])
-      |> triples_of_cursor
-  | "triple", [ None; None; Some (Constant.Rdf o) ] ->
-      (* Log.debug (fun m -> m "EDB: using o index"); *)
-      let o_index = ObjectStore.index triples (Jstr.v "o") in
-      Index.open_cursor o_index (KeyRange.only @@ jv_of_index [ o ])
-      |> triples_of_cursor
+      query "spo" []
+  | "triple", [ Some (Constant.Rdf s); None; None ] -> query "spo" [ s ]
+  | "triple", [ None; Some (Constant.Rdf p); None ] -> query "pos" [ p ]
+  | "triple", [ None; None; Some (Constant.Rdf o) ] -> query "osp" [ o ]
   | "triple", [ Some (Constant.Rdf s); Some (Constant.Rdf p); None ] ->
-      (* Log.debug (fun m -> m "EDB: using sp index"); *)
-      let sp_index = ObjectStore.index triples (Jstr.v "sp") in
-      Index.open_cursor sp_index (KeyRange.only @@ jv_of_index [ s; p ])
-      |> triples_of_cursor
+      query "spo" [ s; p ]
   | "triple", [ Some (Constant.Rdf s); None; Some (Constant.Rdf o) ] ->
-      (* Log.debug (fun m -> m "EDB: using so index"); *)
-      let so_index = ObjectStore.index triples (Jstr.v "so") in
-      Index.open_cursor so_index (KeyRange.only @@ jv_of_index [ s; o ])
-      |> triples_of_cursor
+      query "osp" [ o; s ]
   | "triple", [ None; Some (Constant.Rdf p); Some (Constant.Rdf o) ] ->
-      (* Log.debug (fun m -> m "EDB: using po index"); *)
-      let po_index = ObjectStore.index triples (Jstr.v "po") in
-      Index.open_cursor po_index (KeyRange.only @@ jv_of_index [ p; o ])
-      |> triples_of_cursor
+      query "pos" [ p; o ]
   | ( "triple",
       [ Some (Constant.Rdf s); Some (Constant.Rdf p); Some (Constant.Rdf o) ] )
     ->
-      (* Log.debug (fun m -> m "EDB: using spo index"); *)
-      let spo_index = ObjectStore.index triples (Jstr.v "spo") in
-      Index.open_cursor spo_index (KeyRange.only @@ jv_of_index [ s; p; o ])
-      |> triples_of_cursor
+      query "spo" [ s; p; o ]
   | "fts", [ Some (Constant.FtsQuery s); None ] ->
       Store.Fts.search tx s
       |> Lwt_seq.map (fun term_id ->

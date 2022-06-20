@@ -25,7 +25,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 (* Constants *)
 
-let geopub_database_version = 4
+let geopub_database_version = 5
 let geopub_database_name = "GeoPub"
 
 (* Event that signals store updates *)
@@ -452,57 +452,25 @@ RDF terms are stored using integer identifiers as stored in the `Dictionary`.*)
     (* Create the spo index *)
     let _spo_index =
       ObjectStore.create_index triples
-        ~key_path:Jv.(of_list of_string [ "s"; "p"; "o" ])
+        ~key_path:Jv.(of_string "spo")
         ~object_parameters:Jv.(obj [| ("unique", true') |])
       @@ Jstr.v "spo"
     in
 
-    (* Create the s index *)
-    let _s_index =
+    (* Create the pos index *)
+    let _pos_index =
       ObjectStore.create_index triples
-        ~key_path:Jv.(of_list of_string [ "s" ])
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "s"
+        ~key_path:Jv.(of_string "pos")
+        ~object_parameters:Jv.(obj [| ("unique", true') |])
+      @@ Jstr.v "pos"
     in
 
-    (* Create the p index *)
-    let _p_index =
+    (* Create the osp index *)
+    let _pos_index =
       ObjectStore.create_index triples
-        ~key_path:Jv.(of_list of_string [ "p" ])
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "p"
-    in
-
-    (* Create the o index *)
-    let _o_index =
-      ObjectStore.create_index triples
-        ~key_path:Jv.(of_list of_string [ "o" ])
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "o"
-    in
-
-    (* Create the sp index *)
-    let _sp_index =
-      ObjectStore.create_index triples
-        ~key_path:Jv.(of_list of_string [ "s"; "p" ])
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "sp"
-    in
-
-    (* Create the so index *)
-    let _so_index =
-      ObjectStore.create_index triples
-        ~key_path:Jv.(of_list of_string [ "s"; "o" ])
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "so"
-    in
-
-    (* Create the po index *)
-    let _po_index =
-      ObjectStore.create_index triples
-        ~key_path:Jv.(of_list of_string [ "p"; "o" ])
-        ~object_parameters:Jv.(obj [| ("unique", false') |])
-      @@ Jstr.v "po"
+        ~key_path:Jv.(of_string "osp")
+        ~object_parameters:Jv.(obj [| ("unique", true') |])
+      @@ Jstr.v "osp"
     in
 
     ()
@@ -510,13 +478,14 @@ RDF terms are stored using integer identifiers as stored in the `Dictionary`.*)
   (* Encoding *)
 
   let jv_of_triple s p o =
-    Jv.obj [| ("s", Jv.of_int s); ("p", Jv.of_int p); ("o", Jv.of_int o) |]
+    Jv.obj
+      [|
+        ("spo", Jv.(of_list of_int [ s; p; o ]));
+        ("pos", Jv.(of_list of_int [ p; o; s ]));
+        ("osp", Jv.(of_list of_int [ o; s; p ]));
+      |]
 
-  let triple_of_jv jv =
-    let s = Jv.(to_int @@ get jv "s") in
-    let p = Jv.(to_int @@ get jv "p") in
-    let o = Jv.(to_int @@ get jv "o") in
-    [ s; p; o ]
+  let triple_of_jv jv = Jv.(to_list to_int @@ get jv "spo")
 
   (* ObjectStore access *)
 
