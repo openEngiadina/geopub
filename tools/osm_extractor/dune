@@ -1,0 +1,3 @@
+(executable
+ (name osm_extractor)
+ (libraries rdf rdf_ntriples rdf_xml))

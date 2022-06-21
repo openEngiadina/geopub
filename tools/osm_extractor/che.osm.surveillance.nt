@@ -1,0 +1,6 @@
+<https://www.openstreetmap.org/node/297684927> <http://www.opengis.net/ont/geosparql#hasGeometry> "POINT(7.4423769 46.9465550)"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .
+<https://www.openstreetmap.org/node/297684927> <https://www.openstreetmap.org/meta/envelope> "POLYGON((7.4423769 46.9465550,7.4423769 46.9465550,7.4423769 46.9465550,7.4423769 46.9465550,7.4423769 46.9465550))"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .
+<https://www.openstreetmap.org/node/297684927> <https://www.openstreetmap.org/meta/facts> "2"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<https://www.openstreetmap.org/node/297684927> <https://www.openstreetmap.org/wiki/Key:man_made> "surveillance" .
+<https://www.openstreetmap.org/node/297684927> <https://www.openstreetmap.org/wiki/Key:surveillance:type> "camera" .
+<https://www.openstreetmap.org/node/297684927> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.openstreetmap.org/node> .

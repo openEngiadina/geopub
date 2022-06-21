@@ -10,4 +10,7 @@
  (section share)
  (package geopub)
  (files
-  (hello.nt as sample_data/hello.nt)))
+  (hello.nt as sample_data/hello.nt)
+  (../../tools/osm_extractor/che.osm.surveillance.nt
+   as
+   sample_data/che.osm.surveillance.nt)))

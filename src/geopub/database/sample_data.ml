@@ -23,7 +23,7 @@ let promise_of_fut_or_error fut =
   | Ok v -> return v
   | Error e -> fail @@ Jv.Error e
 
-let sample_data = [ "hello.nt" ]
+let sample_data = [ "hello.nt"; "che.osm.surveillance.nt" ]
 
 let fetch file =
   let* s =
