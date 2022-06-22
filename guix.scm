@@ -40,7 +40,7 @@
 (define-public ocaml-rdf
   (package
     (name "ocaml-rdf")
-    (version "05f33b2d4e9b4551d8d34b766df982005e318b70")
+    (version "fc2c25994f76c963ca5b37c9da7337a992a6b943")
     (home-page "https://codeberg.org/openEngiadina/ocaml-rdf.git")
     (source
      (origin
@@ -50,24 +50,25 @@
             (commit version)))
       (file-name (git-file-name name version))
       (sha256
-       (base32 "0blvfadr70cjv78bhyiipv6ca7gxdf9dxasw0bpm59dnjl7ifqdi"))))
+       (base32 "1gh9f633g6amf07px352hnbpwkpq1gkz087w9cxrilgaw9z16njb"))))
     (build-system dune-build-system)
     (arguments `(#:tests? #f))
     (native-inputs
-     `(("alcotest" ,ocaml-alcotest)
-       ("qcheck" ,ocaml-qcheck)))
+     (list ocaml-alcotest
+	   ocaml-qcheck))
     (propagated-inputs
-     `(("ocaml-uri" ,ocaml-uri)
-       ("ocaml-yojson" ,ocaml-yojson)
-       ("ocaml-cbor" ,ocaml-cbor)
-       ("ocaml-angstrom" ,ocaml-angstrom)
-       ("ocaml-ctypes" ,ocaml-ctypes)
-       ("ocaml-xmlm" ,ocaml-xmlm)
-       ("ocaml-uunf" ,ocaml-uunf)
-       ("ocaml-uuidm" ,ocaml-uuidm)
-       ("ocaml-z3" ,ocaml-z3)
-       ("z3" ,z3)
-       ("serd" ,serd)))
+     (list ocaml-uri
+       ocaml-yojson
+       ocaml-cbor
+       ocaml-angstrom
+       ocaml-ctypes
+       ocaml-xmlm
+       ocaml-uunf
+       ocaml-uuidm
+       ocaml-sedlex
+       ocaml-z3
+       z3
+       serd))
     (synopsis "RDF library for OCaml")
     (description #f)
     (license license:agpl3+)))
