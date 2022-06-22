@@ -87,25 +87,13 @@ let get_rdfs_label db iri =
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
 let get_with_geo db =
-  let q =
-    Datalog.(
-      Atom.make "triple-rhodf"
-        Term.
-          [
-            make_variable "s";
-            (* rdf:type *)
-            make_constant @@ Constant.Rdf (-1);
-            (* geo:SpatialThing *)
-            make_constant @@ Constant.Rdf (-32);
-          ])
-  in
+  let q = Datalog.(Atom.make "subject-geo" Term.[ make_variable "s" ]) in
 
   Datalog.query db q |> Lwt_seq.return_lwt
   |> Lwt_seq.flat_map (fun set ->
          Lwt_seq.of_seq @@ Datalog.Tuple.Set.to_seq set)
   |> Lwt_seq.filter_map_s (function
-       | [ Datalog.Constant.Rdf term_id; _; _ ] ->
-           Store.Dictionary.get db term_id
+       | [ Datalog.Constant.Rdf term_id ] -> Store.Dictionary.get db term_id
        | _ -> return_none)
   |> Lwt_seq.filter_map (fun term ->
          Rdf.Term.map term Option.some (fun _ -> None) (fun _ -> None))

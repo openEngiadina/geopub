@@ -47,6 +47,12 @@ module Constant = struct
           string "sc" *> (constant @@ Rdf.Namespace.rdfs "subClassOf");
           string "dom" *> (constant @@ Rdf.Namespace.rdfs "domain");
           string "range" *> (constant @@ Rdf.Namespace.rdfs "range");
+          string "osmnode"
+          *> (constant @@ Rdf.Iri.of_string "https://www.openstreetmap.org/node");
+          string "SpatialThing"
+          *> (constant
+             @@ Rdf.Iri.of_string
+                  "http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing");
         ])
 
   let pp ppf t =
@@ -161,6 +167,8 @@ let rhodf =
 
 let geopub_datalog_program =
   rhodf ^ "triple-fts(?s, ?p, ?o, ?q) :- fts(?q,?o), triple(?s, ?p, ?o)."
+  ^ "subject-geo(?s) :- triple-rhodf(?s, type, SpatialThing)."
+  ^ "subject-geo(?s) :- triple(?s, type, osmnode)."
   |> Angstrom.parse_string ~consume:Angstrom.Consume.All Program.parser
   |> function
   | Ok program -> program

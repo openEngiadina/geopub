@@ -209,6 +209,9 @@ and then referred to by lighter integer indexes.
     let geo =
       Rdf.Namespace.make_namespace "http://www.w3.org/2003/01/geo/wgs84_pos#"
     in
+    let geosparql =
+      Rdf.Namespace.make_namespace "http://www.opengis.net/ont/geosparql#"
+    in
     [
       (-1, Rdf.Namespace.rdf "type");
       (-2, Rdf.Namespace.rdfs "subPropertyOf");
@@ -219,6 +222,8 @@ and then referred to by lighter integer indexes.
       (-30, geo "lat");
       (-31, geo "long");
       (-32, geo "SpatialThing");
+      (-40, geosparql "hasGeometry");
+      (-50, Rdf.Iri.of_string "https://www.openstreetmap.org/node");
     ]
 
   let constant_get id =
@@ -362,6 +367,36 @@ module Geo = struct
     | Some literal -> Float.of_string_opt @@ Rdf.Literal.canonical literal
     | None -> None
 
+  let wkt_point object' =
+    let geosparql =
+      Rdf.Namespace.make_namespace "http://www.opengis.net/ont/geosparql#"
+    in
+    let float_parser =
+      let open Angstrom in
+      many_till any_char (char ' ' <|> char ')')
+      >>| List.to_seq >>| String.of_seq
+      >>= fun s ->
+      match float_of_string_opt s with
+      | Some f -> return f
+      | None -> fail "could not parse float in wkt POINT"
+    in
+    let parser =
+      let open Angstrom in
+      (* Note lat and long seem to be switched up in WKT points *)
+      (fun _ long lat -> (lat, long))
+      <$> string "POINT(" <*> float_parser <*> float_parser
+    in
+    let parse s =
+      Angstrom.parse_string ~consume:Angstrom.Consume.All parser s
+      |> Result.to_option
+    in
+    match Rdf.Triple.Object.to_literal object' with
+    | Some literal ->
+        if Rdf.Iri.equal (Rdf.Literal.datatype literal) (geosparql "wktLiteral")
+        then parse (Rdf.Literal.canonical literal)
+        else None
+    | None -> None
+
   let put tx seq =
     (* Adds sequence of triples to the geo index. As some geo
        information depends on multiple triples we need to process the
@@ -386,6 +421,17 @@ module Geo = struct
              | Some long ->
                  long_map := IntMap.add s_id long !long_map;
                  return (s_id, p_id, object')
+             | None -> return (s_id, p_id, object')
+           else if p_id = -40 then
+             match wkt_point object' with
+             | Some (lat, long) ->
+                 let geohash = Geohash.encode ~precision:10 (lat, long) in
+                 Log.debug (fun m ->
+                     m "Added WKT POINT to geo index (%a). GeoHash: %s"
+                       Rdf.Triple.Object.pp object' geohash);
+                 ObjectStore.put geo ~key:(Jv.of_int s_id)
+                   Jv.(obj [| ("geohash", of_list of_string [ geohash ]) |])
+                 >>= fun _ -> return (s_id, p_id, object')
              | None -> return (s_id, p_id, object')
            else return (s_id, p_id, object'))
          seq)

@@ -46,6 +46,41 @@ let get_latlng description =
   | Some lat, Some long -> Some (Leaflet.Latlng.create lat long)
   | _ -> None
 
+let wkt_point description =
+  let geosparql =
+    Rdf.Namespace.make_namespace "http://www.opengis.net/ont/geosparql#"
+  in
+  let float_parser =
+    let open Angstrom in
+    many_till any_char (char ' ' <|> char ')') >>| List.to_seq >>| String.of_seq
+    >>= fun s ->
+    match float_of_string_opt s with
+    | Some f -> return f
+    | None -> fail "could not parse float in wkt POINT"
+  in
+  let parser =
+    let open Angstrom in
+    (* Note lat and long seem to be switched up in WKT points *)
+    (fun _ long lat -> Leaflet.Latlng.create lat long)
+    <$> string "POINT(" <*> float_parser <*> float_parser
+  in
+  let parse s =
+    Angstrom.parse_string ~consume:Angstrom.Consume.All parser s
+    |> Result.to_option
+  in
+  let literal_opt =
+    Rdf.Description.functional_property_literal
+      (Rdf.Triple.Predicate.of_iri
+      @@ Rdf.Iri.of_string "http://www.opengis.net/ont/geosparql#hasGeometry")
+      description
+  in
+  match literal_opt with
+  | Some literal ->
+      if Rdf.Iri.equal (Rdf.Literal.datatype literal) (geosparql "wktLiteral")
+      then parse (Rdf.Literal.canonical literal)
+      else None
+  | None -> None
+
 let init ~set_route () =
   (* create and append to body map_container *)
   let map_container = Brr.El.div ~at:[ Brr.At.id @@ Jstr.v "map" ] [] in
@@ -148,7 +183,10 @@ let view db map =
     >|= List.filter_map (fun description ->
             match get_latlng description with
             | Some latlng -> Some (latlng, description)
-            | None -> None)
+            | None -> (
+                match wkt_point description with
+                | Some latlng -> Some (latlng, description)
+                | None -> None))
     >>= Lwt_list.iter_s (add_geo_object db map)
   in
   return @@ Leaflet.Map.get_container map
