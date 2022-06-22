@@ -119,10 +119,17 @@ let init () =
   (* Load some vocabularies if db is empty *)
   let* () =
     if triple_count = 0 then
-      Vocabs.vocabs
-      |> Lwt_list.iter_p (fun vocab ->
-             Log.debug (fun m -> m "Loading vocabulary %s" vocab);
-             let* graph = Vocabs.fetch_vocab vocab in
+      let* () =
+        Vocabs.vocabs
+        |> Lwt_list.iter_p (fun vocab ->
+               Log.debug (fun m -> m "Loading vocabulary %s" vocab);
+               let* graph = Vocabs.fetch_vocab vocab in
+               Store.add_graph db graph)
+      in
+      Sample_data.sample_data
+      |> Lwt_list.iter_p (fun file ->
+             Log.debug (fun m -> m "Loading sample data %s" file);
+             let* graph = Sample_data.fetch file in
              Store.add_graph db graph)
     else return_unit
   in

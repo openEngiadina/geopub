@@ -1,4 +1,13 @@
 (library
  (name geopub_database)
  (public_name geopub.database)
- (libraries rdf rdf_xml xmlm indexeddb datalogl lwt_react uuseg.string geohash))
+ (libraries
+  rdf
+  rdf_xml
+  rdf_ntriples
+  xmlm
+  indexeddb
+  datalogl
+  lwt_react
+  uuseg.string
+  geohash))

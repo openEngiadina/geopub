@@ -6,6 +6,7 @@
 
 open Brr_io
 open Lwt
+open Lwt.Syntax
 
 (* Setup logging *)
 let src = Logs.Src.create "GeoPub.Database"
@@ -22,22 +23,14 @@ let promise_of_fut_or_error fut =
   | Ok v -> return v
   | Error e -> fail @@ Jv.Error e
 
-let vocabs =
-  [
-    "activitystreams2.xml";
-    "musicontology.xml";
-    "geo.xml";
-    "rdfs.xml";
-    "owl.xml";
-  ]
+let sample_data = [ "hello.nt" ]
 
-let parse_xml s =
-  Xmlm.make_input ~strip:true (`String (0, s))
-  |> Rdf_xml.xmlm_input_to_seq |> Rdf_xml.parse_to_graph
-
-let fetch_vocab vocab =
-  Fetch.url (Jstr.v @@ "vocabs/" ^ vocab)
-  |> promise_of_fut_or_error >|= Fetch.Response.as_body
-  >>= fun body ->
-  promise_of_fut_or_error @@ Fetch.Body.text body
-  >|= Jstr.to_string >|= parse_xml
+let fetch file =
+  let* s =
+    Fetch.url (Jstr.v @@ "sample_data/" ^ file)
+    |> promise_of_fut_or_error >|= Fetch.Response.as_body
+    >>= fun body ->
+    promise_of_fut_or_error @@ Fetch.Body.text body >|= Jstr.to_string
+  in
+  Rdf.Graph.add_seq (s |> String.to_seq |> Rdf_ntriples.parse) Rdf.Graph.empty
+  |> return

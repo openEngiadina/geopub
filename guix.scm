@@ -9,6 +9,7 @@
  (gnu packages maths)
  (gnu packages multiprecision)
  (gnu packages pkg-config)
+ (gnu packages pv)
  (gnu packages ocaml)
  (gnu packages rdf))
 
@@ -40,7 +41,7 @@
 (define-public ocaml-rdf
   (package
     (name "ocaml-rdf")
-    (version "fc2c25994f76c963ca5b37c9da7337a992a6b943")
+    (version "27dfba0802d0b5df4645133eeeb4b3d56b166538")
     (home-page "https://codeberg.org/openEngiadina/ocaml-rdf.git")
     (source
      (origin
@@ -50,7 +51,7 @@
             (commit version)))
       (file-name (git-file-name name version))
       (sha256
-       (base32 "1gh9f633g6amf07px352hnbpwkpq1gkz087w9cxrilgaw9z16njb"))))
+       (base32 "1hkiz27jkwbdphc68kvrpf2hy06an45caajfcvxlwcr1saqkz0v8"))))
     (build-system dune-build-system)
     (arguments `(#:tests? #f))
     (native-inputs
@@ -637,7 +638,8 @@ stubs in Javascript for use in Js_of_ocaml")
       js-of-ocaml
       ocaml-merlin
       ocaml-dot-merlin-reader
-      raptor2))
+      raptor2
+      pv))
     (home-page "https://gitlab.com/openengiadina/geopub")
     (synopsis #f)
     (description #f)

@@ -1,0 +1,13 @@
+(rule
+ (targets hello.nt)
+ (deps hello.ttl)
+ (action
+  (with-stdout-to
+   hello.nt
+   (run rapper -i turtle -o ntriples %{deps}))))
+
+(install
+ (section share)
+ (package geopub)
+ (files
+  (hello.nt as sample_data/hello.nt)))
