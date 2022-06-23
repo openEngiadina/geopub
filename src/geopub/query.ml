@@ -213,16 +213,6 @@ let help =
                          "#query=triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)";
                   ]
               [ txt' "ActivityStreams activities using RDFS type inference" ];
-            txt' ", ";
-            a
-              ~at:
-                At.
-                  [
-                    href
-                    @@ Jstr.v
-                         "#query=triple-rhodf(?s,type,<https://www.openstreetmap.org/node>)";
-                  ]
-              [ txt' "OpenStreetMap nodes" ];
             txt' ", for anything that ";
             a
               ~at:At.[ href @@ Jstr.v "#query=triple-fts(?s,?p,?o, \"Hello\")" ]
