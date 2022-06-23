@@ -5,6 +5,7 @@
  *)
 
 open Lwt
+open Lwt_react
 open Lwt.Syntax
 
 (* Setup logging *)
@@ -15,16 +16,12 @@ module Database = Geopub_database
 
 type t = Leaflet.Map.t
 
-module SubjectSet = Set.Make (struct
-  type t = Rdf.Triple.Subject.t
-
-  let compare = Rdf.Triple.Subject.compare
-end)
+(* Extract Latitude and Longitude from RDF *)
 
 (* Option.bind, when? *)
 let option_bind f opt = match opt with Some v -> f v | None -> None
 
-let get_latlng description =
+let get_geo_latlng description =
   let lat =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Namespace.geo "lat")
@@ -81,7 +78,49 @@ let wkt_point description =
       else None
   | None -> None
 
-let init ~set_route () =
+let get_latlng description =
+  match get_geo_latlng description with
+  | Some latlng -> Some latlng
+  | None -> (
+      match wkt_point description with
+      | Some latlng -> Some latlng
+      | None -> None)
+
+(* State management *)
+
+module SubjectMap = Map.Make (Rdf.Triple.Subject)
+module SubjectSet = Set.Make (Rdf.Triple.Subject)
+
+let query_visible db (lat, long, _zoom) =
+  let query =
+    Database.Datalog.(
+      Atom.make "triple-geo"
+        Term.
+          [
+            make_variable "s";
+            make_variable "p";
+            make_variable "o";
+            make_constant @@ Constant.GeoQuery (lat, long, 4);
+          ])
+  in
+  let* graph =
+    Database.query db query |> Lwt_seq.return_lwt
+    |> Lwt_seq.flat_map (fun set ->
+           Lwt_seq.of_seq @@ Database.Datalog.Tuple.Set.to_seq set)
+    |> Lwt_seq.filter_map_s (function
+         | Database.Datalog.Constant.[ Rdf s_id; Rdf p_id; Rdf o_id; _ ] ->
+             Database.Store.Triples.deref db [ s_id; p_id; o_id ]
+         | _ -> return_none)
+    |> Lwt_seq.fold_left
+         (fun graph triple -> Rdf.Graph.add triple graph)
+         Rdf.Graph.empty
+  in
+  Rdf.Graph.descriptions graph
+  |> Seq.map (fun description ->
+         (Rdf.Description.subject description, description))
+  |> SubjectMap.of_seq |> return
+
+let init db ~set_route () =
   (* create and append to body map_container *)
   let map_container = Brr.El.div ~at:Brr.At.[ id @@ Jstr.v "map" ] [] in
   Brr.El.append_children
@@ -112,27 +151,66 @@ let init ~set_route () =
       map_container
   in
 
+  (* Position and Zoom *)
+  let pos_zoom, set_pos_zoom = S.create (46.794896096, 10.3003317118, 10) in
+
   (* Set up a listener for clicks on the map (currently not used) *)
   let () =
-    let on_click e =
-      let latlng = Leaflet.Event.latlng e in
-      Log.debug (fun m ->
-          m "Click at %a/%a" Fmt.float
-            (Leaflet.Latlng.lat latlng)
-            Fmt.float
-            (Leaflet.Latlng.lng latlng))
+    let on_move_end _ =
+      let latlng = Leaflet.Map.get_center map in
+      let lat, long = Leaflet.Latlng.(lat latlng, lng latlng) in
+      let zoom = Leaflet.Map.get_zoom map in
+      set_pos_zoom (lat, long, zoom)
     in
-    Leaflet.Map.on Leaflet.Event.Click on_click map
+    Leaflet.Map.on Leaflet.Event.Move_end on_move_end map
   in
 
   (* add the OSM tile layer *)
   let tile_layer = Leaflet.Layer.create_tile_osm None in
   Leaflet.Layer.add_to map tile_layer;
 
-  (* set view *)
+  (* set initial position and zoom *)
   Leaflet.Map.set_view
     (Leaflet.Latlng.create 46.794896096 10.3003317118)
     ~zoom:(Some 10) map;
+
+  set_pos_zoom (46.794896096, 10.3003317118, 10);
+
+  (* Manage visible objects *)
+  let visible_descriptions =
+    S.changes pos_zoom |> E.map_p (fun pos_zoom -> query_visible db pos_zoom)
+  in
+
+  E.fold
+    (fun map_subjects visible_descriptions ->
+      SubjectMap.merge
+        (fun subject marker_opt visible_description_opt ->
+          match (marker_opt, visible_description_opt) with
+          | Some marker, Some _ -> Some marker
+          | Some marker, None ->
+              Leaflet.Layer.remove marker;
+              None
+          | None, Some description -> (
+              match
+                (Rdf.Triple.Subject.to_iri subject, get_latlng description)
+              with
+              | Some iri, Some latlng ->
+                  let el = Ui_rdf.view_iri iri in
+                  let marker = Leaflet.Layer.create_marker latlng in
+                  Leaflet.Layer.bind_popup el marker;
+                  Leaflet.Layer.add_to map marker;
+                  Some marker
+              | _ -> None)
+          | None, None -> None)
+        map_subjects visible_descriptions)
+    SubjectMap.empty visible_descriptions
+  |> E.keep;
+
+  S.map
+    (fun (lat, long, zoom) ->
+      Log.debug (fun m -> m "Map position and zoom: (%f, %f, %d)" lat long zoom))
+    pos_zoom
+  |> S.keep;
 
   (* return Map *)
   map |> return
@@ -140,55 +218,4 @@ let init ~set_route () =
 (* functions to modify map *)
 
 let invalidate_size model = Leaflet.Map.invalidate_size model
-
-(* let add_geoloc geoloc model =
- *   let marker = Geoloc.to_latlng geoloc |> Leaflet.Marker.create in
- *   Leaflet.Marker.add_to marker model.leaflet;
- *   model
- * 
- * let add_rdf rdf model =
- *   Activitystreams.activities rdf
- *   |> Seq.filter_map (Activitystreams.get_object rdf)
- *   |> Seq.filter_map (Activitystreams.get_geoloc rdf)
- *   |> Seq.fold_left (fun model geoloc -> add_geoloc geoloc model) model
- * 
- * let add_post post model =
- *   match post |> Xep_0277.Post.to_marker with
- *   | Some marker ->
- *       Leaflet.Marker.add_to marker model.leaflet;
- *       model
- *   | None -> model
- * 
- * let set_view latlng model =
- *   { model with leaflet = Leaflet.Map.set_view latlng ~zoom:10 model.leaflet }
- * 
- * (\* Subscription and view *\)
- * 
- * let subscriptions model = model.events |> Lwt_react.E.of_stream *)
-
-(* mutable map of added descriptions *)
-
-let added_geo_objects = ref SubjectSet.empty
-
-let add_geo_object db map (latlng, description) =
-  if SubjectSet.mem (Rdf.Description.subject description) !added_geo_objects
-  then return_unit
-  else
-    let* el = Ui_rdf.view_subject db @@ Rdf.Description.subject description in
-    let marker = Leaflet.Layer.create_marker latlng in
-    Leaflet.Layer.bind_popup el marker;
-    return @@ Leaflet.Layer.add_to map marker
-
-let view db map =
-  let* () =
-    Database.get_with_geo db |> Lwt_seq.to_list
-    >|= List.filter_map (fun description ->
-            match get_latlng description with
-            | Some latlng -> Some (latlng, description)
-            | None -> (
-                match wkt_point description with
-                | Some latlng -> Some (latlng, description)
-                | None -> None))
-    >>= Lwt_list.iter_s (add_geo_object db map)
-  in
-  return @@ Leaflet.Map.get_container map
+let view map = return @@ Leaflet.Map.get_container map

@@ -27,7 +27,7 @@ let view ~update (model : Model.t) =
       let* activity = Activity.view ?latlng ~update model in
       return [ Ui.geopub_menu model; activity ]
   | Route.Map ->
-      let* map = Geopub_map.view model.database model.map in
+      let* map = Geopub_map.view model.map in
       return [ Ui.geopub_menu model; map ]
   | Route.Query query ->
       let* query_view = Query.view model query in
@@ -106,7 +106,7 @@ let main () =
 
   (* Initialize Map *)
   let* map =
-    Geopub_map.init
+    Geopub_map.init database
       ~set_route:(fun route ->
         ignore @@ Route.set_route route;
         update (fun (model : Model.t) -> return { model with route }))
