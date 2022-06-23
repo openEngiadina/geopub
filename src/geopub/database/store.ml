@@ -426,9 +426,6 @@ module Geo = struct
              match wkt_point object' with
              | Some (lat, long) ->
                  let geohash = Geohash.encode ~precision:10 (lat, long) in
-                 Log.debug (fun m ->
-                     m "Added WKT POINT to geo index (%a). GeoHash: %s"
-                       Rdf.Triple.Object.pp object' geohash);
                  ObjectStore.put geo ~key:(Jv.of_int s_id)
                    Jv.(obj [| ("geohash", of_list of_string [ geohash ]) |])
                  >>= fun _ -> return (s_id, p_id, object')
