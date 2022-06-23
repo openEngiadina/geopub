@@ -89,7 +89,15 @@ let main () =
   El.set_children body
   @@ Ui.loading
        "Initializing Database. This might take some time on first run... ";
-  let* database = Database.init () in
+  let* database =
+    Database.init
+      ~set_loading_msg:(fun msg ->
+        El.set_children body
+        @@ Ui.loading
+             ("Initializing Database. This might take some time on first \
+               run... " ^ msg))
+      ()
+  in
   El.set_children body @@ Ui.loading "Initializing GeoPub ... ";
 
   (* Get activities in database *)

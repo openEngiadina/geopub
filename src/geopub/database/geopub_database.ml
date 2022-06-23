@@ -86,7 +86,7 @@ let get_rdfs_label db iri =
   in
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
-let init () =
+let init ~set_loading_msg () =
   let* db = Store.init () in
   let* triple_count = Store.triple_count db in
   Log.debug (fun m -> m "Triples in database: %d" triple_count);
@@ -96,20 +96,21 @@ let init () =
     if triple_count = 0 then
       let* () =
         Vocabs.vocabs
-        |> Lwt_list.iter_p (fun vocab ->
+        |> Lwt_list.iter_s (fun vocab ->
                Log.debug (fun m -> m "Loading vocabulary %s" vocab);
+               set_loading_msg ("(loading " ^ vocab ^ ")");
                let* graph = Vocabs.fetch_vocab vocab in
                Store.add_graph db graph)
       in
       Sample_data.sample_data
-      |> Lwt_list.iter_p (fun file ->
+      |> Lwt_list.iter_s (fun file ->
              Log.debug (fun m -> m "Loading sample data %s" file);
+             set_loading_msg ("(loading " ^ file ^ ")");
              let* graph = Sample_data.fetch file in
              Store.add_graph db graph)
     else return_unit
   in
   Log.info (fun m -> m "IndexedDB databse initialized.");
-  (* Log.debug (fun m -> m "Graph: %a" Rdf.Graph.pp as2); *)
   return db
 
 let test_datalog db =
