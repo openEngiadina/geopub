@@ -2,6 +2,7 @@
 
 ## [UNRELEASED]
 
+- Add sample data extracted from the [osm2rdf](https://osm2rdf.cs.uni-freiburg.de/) TTL extracts
 - Add index for full-text search
 - Add index for geo-spatial search
 - Extract leaflet bindings to separate library ([swrup/leaflet](https://git.zapashcanon.fr/swrup/leaflet))

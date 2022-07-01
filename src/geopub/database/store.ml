@@ -8,8 +8,9 @@
 
 (** The Store is implemented using following IndexedDB ObjectStores:
 
-- Fts: A full-text search index that maps stemmed terms to literals.
 - Dictionary: Stores a mapping of RDF Terms to integer keys (auto incremented).
+- Fts: A full-text search index that maps stemmed terms to literals.
+- Geo: A geo-spatial index that maps Geohash identifiers to subjects.
 - Triples: Stores triples using keys of terms as stored in Dictionary.
 
    *)
