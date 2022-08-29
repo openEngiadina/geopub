@@ -26,7 +26,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 (* Constants *)
 
-let geopub_database_version = 5
+let geopub_database_version = 6
 let geopub_database_name = "GeoPub"
 
 (* Event that signals store updates *)
@@ -170,6 +170,36 @@ module Fts = struct
          terms)
 end
 
+module Term = struct
+  (** Encoding of RDF terms using RDF/CBOR *)
+
+  open Brr
+
+  (** Returns a JavaScript ArrayBuffer that holds the encoded term. *)
+  let to_jv term =
+    Rdf_cbor.Term.encode term |> Cborl.write |> Seq.map Char.code
+    |> Array.of_seq
+    |> Tarray.(of_int_array Uint8)
+    |> Tarray.buffer |> Tarray.Buffer.to_jv
+
+  let to_jv_obj term = Jv.obj [| ("term", to_jv term) |]
+
+  let of_jv jv =
+    let tarray = jv |> Tarray.Buffer.of_jv |> Tarray.(of_buffer Uint8) in
+    let len = Tarray.length tarray in
+    let i = ref 0 in
+    let read () =
+      if !i < len then (
+        i := !i + 1;
+        Some (Tarray.get tarray (!i - 1)))
+      else None
+    in
+    Seq.of_dispenser read |> Seq.map Char.chr |> Cborl.read
+    |> Rdf_cbor.Term.decode
+
+  let of_jv_obj jv = of_jv (Jv.get jv "term")
+end
+
 module Dictionary = struct
   (** The Dictionary store maintains a mapping of RDF Terms to integer ids.
 
@@ -251,64 +281,15 @@ and then referred to by lighter integer indexes.
     in
     Rdf.Term.map encode_iri encode_blank_node encode_literal term
 
-  let jv_of_term term = Jv.of_string @@ string_of_term term
-  let jv_obj_of_term term = Jv.obj [| ("term", jv_of_term term) |]
-
-  let parser =
-    let open Angstrom in
-    let iri_parser =
-      char '<'
-      *> (many_till any_char (char '>') >>| List.to_seq >>| String.of_seq)
-      >>| Rdf.Iri.of_string
-    in
-    let whitespace_lst = [ '\x20'; '\x0a'; '\x0d'; '\x09' ] in
-    let char_is_not_equal_to lst d = List.for_all (fun x -> x != d) lst in
-    let bnode_parser =
-      string "_:"
-      *> take_while (char_is_not_equal_to ([ ','; ')' ] @ whitespace_lst))
-      >>| Rdf.Blank_node.of_string
-    in
-    let literal_value_parser =
-      char '"'
-      *> (many_till any_char (char '"') >>| List.to_seq >>| String.of_seq)
-    in
-
-    let literal_parser =
-      literal_value_parser >>= fun value ->
-      choice
-        [
-          ( char '@'
-          *> take_while (char_is_not_equal_to ([ ','; ')' ] @ whitespace_lst))
-          >>| fun language -> Rdf.Literal.make_string value ~language );
-          ( string "^^" *> iri_parser >>| fun datatype ->
-            Rdf.Literal.make value datatype );
-        ]
-    in
-
-    choice
-      [
-        iri_parser >>| Rdf.Term.of_iri;
-        bnode_parser >>| Rdf.Term.of_blank_node;
-        literal_parser >>| Rdf.Term.of_literal;
-      ]
-
-  let term_of_jv jv =
-    Angstrom.parse_string ~consume:Angstrom.Consume.All parser (Jv.to_string jv)
-    |> Result.to_option
-
-  let term_of_jv_obj jv = Jv.get jv "term" |> term_of_jv
-
   (* ObjectStore access *)
 
   let get db ?(tx = ro_tx db) id =
     match constant_get id with
     | Some term -> return_some term
-    | None -> (
+    | None ->
         let dictionary = object_store tx in
         let* term_jv_opt = ObjectStore.get dictionary (Jv.of_int id) in
-        match term_jv_opt with
-        | Some term_jv -> term_of_jv (Jv.get term_jv "term") |> return
-        | None -> return_none)
+        Option.map Term.of_jv_obj term_jv_opt |> return
 
   let lookup db ?(tx = ro_tx db) term =
     match constant_lookup term with
@@ -316,7 +297,7 @@ and then referred to by lighter integer indexes.
     | None ->
         let dictionary = object_store tx in
         let term_index = term_index dictionary in
-        Index.get_key term_index (Jv.of_list jv_of_term [ term ])
+        Index.get_key term_index (Jv.of_list Term.to_jv [ term ])
         >|= Jv.to_option Jv.to_int
 
   let put db ?(tx = rw_tx db) term =
@@ -325,7 +306,7 @@ and then referred to by lighter integer indexes.
     match key_opt with
     | None ->
         let* key =
-          ObjectStore.put dictionary (jv_obj_of_term term) >|= Jv.to_int
+          ObjectStore.put dictionary (Term.to_jv_obj term) >|= Jv.to_int
         in
 
         let* () =
