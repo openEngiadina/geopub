@@ -11,7 +11,134 @@
  (gnu packages pkg-config)
  (gnu packages pv)
  (gnu packages ocaml)
- (gnu packages rdf))
+ (gnu packages rdf)
+ (gnu packages zig))
+
+(define-public ocaml-crunch
+  (package
+   (name "ocaml-crunch")
+   (version "3.2.0")
+   (home-page "https://github.com/mirage/ocaml-crunch")
+   (source (origin
+            (method git-fetch)
+            (uri (git-reference
+		  (url home-page)
+		  (commit (string-append "v" version))))
+            (sha256
+             (base32
+              "0xsa9gciszz66q8firfzqxdg7h9v8l95xp86ngr5p4sljrj03cx2"))))
+   (build-system dune-build-system)
+   ;; require mirage-kv
+   (arguments '(#:tests? #f))
+   (propagated-inputs (list ocaml-cmdliner ocaml-ptime))
+   (native-inputs (list ocaml-lwt))
+   (synopsis "Convert a filesystem into a static OCaml module")
+   (description
+    "`ocaml-crunch` takes a directory of files and compiles them into a standalone
+OCaml module which serves the contents directly from memory.  This can be
+convenient for libraries that need a few embedded files (such as a web server)
+and do not want to deal with all the trouble of file configuration.")
+   (license license:isc)))
+
+(define-public ocaml-decoders
+  (package
+   (name "ocaml-decoders")
+   (version "0.7.0")
+   (home-page "https://github.com/mattjbray/ocaml-decoders")
+   (source (origin
+            (method git-fetch)
+            (uri (git-reference
+		  (url home-page)
+		  (commit (string-append "v" version))))
+            (sha256
+             (base32
+              "1h5q66nlapbjyqpjn93zpiwdvb9b2kxxgqw2jxyp6a5y815k5hfj"))))
+   (build-system dune-build-system)
+   (arguments `(#:tests? #f
+		#:package "decoders"))
+   (synopsis "Elm-inspired decoders for Ocaml")
+   (description
+    "This package provides a combinator library for \"decoding\" JSON-like values into
+your own Ocaml types, inspired by Elm's `Json.Decode` and `Json.Encode`.")
+   (license license:isc)))
+
+(define-public ocaml-decoders-yojson
+  (package
+   (inherit ocaml-decoders)
+   (name "ocaml-decoders-yojson")
+   (build-system dune-build-system)
+   (arguments `(#:tests? #f
+		#:package "decoders-yojson"))
+   (propagated-inputs (list ocaml-decoders ocaml-yojson))))
+
+
+(define-public ocaml-monocypher
+  (package
+   (name "ocaml-monocypher")
+   (version "0.1.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://inqlab.net/git/ocaml-monocypher.git")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "0pgmlcdg3hkiv97lfw0mza1q1k39hdz98b7xl3ri0prd4zhjm212"))))
+   (build-system dune-build-system)
+   (arguments '())
+   (propagated-inputs
+    (list ocaml-ctypes))
+   (native-inputs
+    (list ocaml-alcotest))
+   (home-page "https://inqlab.net/ocaml-monocypher.git")
+   (synopsis "OCaml bindings to the Monocypher cryptographic library")
+   (description "Monocypher is a cryptographic library. It provides functions
+for authenticated encryption, hashing, password hashing and key derivation, key
+exchange, and public key signatures.  This library provides OCaml bindings to
+Monocypher using Ctypes.")
+   (license license:bsd-2)))
+
+(define-public ocaml-eris
+  (package
+    (name "ocaml-eris")
+    (version "1.0.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://inqlab.net/git/ocaml-eris.git")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1kdmgi9mlgd2d0915i4jhjwsgwchzwf8fvqg1xas293lg90iiq3h"))))
+    (build-system dune-build-system)
+    (arguments `(#:package "eris"
+		 #:phases (modify-phases %standard-phases
+			    ;; required by Zig
+			    (add-before 'build 'set-xdg-cache-home
+			      (lambda _
+				(setenv "XDG_CACHE_HOME" "/tmp")
+				#t)))))
+    (native-inputs
+     (list zig
+	   ocaml-crunch
+	   ocaml-decoders-yojson
+	   ocaml-bos
+	   ocaml-alcotest
+	   ocaml-qcheck
+	   ocaml-benchmark))
+    (propagated-inputs
+     (list ocaml-ctypes
+	   ocaml-monocypher
+	   ocaml-base32
+	   ocaml-cborl
+	   ocaml-lwt
+	   js-of-ocaml))
+    (home-page "https://codeberg.org/eris/ocaml-eris")
+    (synopsis "OCaml implementation of ERIS")
+    (description #f)
+    (license license:agpl3+)))
 
 (define-public ocaml-cborl
   (package
@@ -432,6 +559,9 @@ stubs in Javascript for use in Js_of_ocaml")
       ocaml-lwt-react
       ocaml-brr
       ocaml-leaflet
+
+      ocaml-eris
+
       ocaml-rdf
       ocaml-uri
       ocaml-xmppl

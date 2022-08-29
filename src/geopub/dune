@@ -1,8 +1,25 @@
 (executable
  (name main)
- (libraries brr logs logs.browser js_of_ocaml js_of_ocaml-lwt lwt_react
-   loadable geopub.database geopub.xmpp rdf rdf_xml rdf_cbor base32
-   leaflet leaflet_contextmenu zarith_stubs_js digestif.ocaml)
+ (libraries
+  brr
+  logs
+  logs.browser
+  js_of_ocaml
+  js_of_ocaml-lwt
+  lwt_react
+  loadable
+  geopub.database
+  geopub.xmpp
+  rdf
+  rdf_xml
+  rdf_cbor
+  eris
+  eris.crypto-wasm
+  base32
+  leaflet
+  leaflet_contextmenu
+  zarith_stubs_js
+  digestif.ocaml)
  (modes js))
 
 (install
@@ -12,8 +29,9 @@
   ../../vendor/leaflet/leaflet.css
   (../../vendor/leaflet/images/layers-2x.png as images/layers-2x.png)
   (../../vendor/leaflet/images/layers.png as images/layers.png)
-  (../../vendor/leaflet/images/marker-icon-2x.png as
-    images/marker-icon-2x.png)
+  (../../vendor/leaflet/images/marker-icon-2x.png
+   as
+   images/marker-icon-2x.png)
   (../../vendor/leaflet/images/marker-icon.png as images/marker-icon.png)
   (../../vendor/leaflet/images/marker-shadow.png as images/marker-shadow.png)
   ../../vendor/Leaflet.contextmenu/leaflet.contextmenu.css

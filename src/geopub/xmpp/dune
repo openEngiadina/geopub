@@ -1,6 +1,16 @@
 (library
  (name geopub_xmpp)
  (public_name geopub.xmpp)
- (libraries xmppl xmppl_websocket xmppl.roster xmppl.disco
-   xmppl.entity_capabilities xmppl.mam xmppl.pubsub rdf rdf_xml uuidm ptime
-   ptime.clock.jsoo))
+ (libraries
+  xmppl
+  xmppl_websocket
+  xmppl.roster
+  xmppl.disco
+  xmppl.entity_capabilities
+  xmppl.mam
+  xmppl.pubsub
+  rdf
+  rdf_xml
+  uuidm
+  ptime
+  ptime.clock.jsoo))

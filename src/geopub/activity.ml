@@ -20,8 +20,12 @@ module Log = (val Logs.src_log src : Logs.LOG)
 (* Content-addressable RDF *)
 
 let hash s =
-  let digest = Digestif.BLAKE2B.(digest_string s |> to_raw_string) in
-  Rdf.Iri.of_string ("urn:blake2b:" ^ Base32.encode_string ~pad:false digest)
+  let _, read_cap =
+    Eris.(
+      encode_string ~convergence_secret:null_convergence_secret
+        ~block_size:`Small s)
+  in
+  Rdf.Iri.of_string @@ Eris.Read_capability.to_urn read_cap
 
 module Geopub_namespace = Namespace
 module Xmpp = Geopub_xmpp
