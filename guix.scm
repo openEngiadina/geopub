@@ -118,39 +118,6 @@ conversion with [RFC 3339 timestamps][rfc3339] and pretty printing to a
 human-readable, locale-independent representation.")
   (license license:isc)))
 
-(define-public ocaml-syndic
-  (package
-    (name "ocaml-syndic")
-    (version "1.6.1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri "https://github.com/Cumulus/Syndic/releases/download/v1.6.1/syndic-v1.6.1.tbz")
-       (sha256
-        (base32
-         "1i43yqg0i304vpiy3sf6kvjpapkdm6spkf83mj9ql1d4f7jg6c58"))))
-    (build-system dune-build-system)
-    (arguments `(#:tests? #f))
-    (propagated-inputs
-     `(("ocaml-ptime" ,ocaml-ptime)
-       ("ocaml-uri" ,ocaml-uri)
-       ("ocaml-xmlm" ,ocaml-xmlm)))
-    (native-inputs
-     `(
-       ;; ("ocaml-fmt" ,ocaml-fmt)
-       ;; ("ocaml-ocurl" ,ocaml-ocurl)
-       ;; ("ocaml-fpath" ,ocaml-fpath)
-       ;; ("ocaml-ocplib-json-typed" ,ocaml-ocplib-json-typed)
-       ;; ("ocaml-base-unix" ,ocaml-base-unix)
-       ;; ("ocaml-jsonm" ,ocaml-jsonm)
-       ))
-    (home-page "https://github.com/Cumulus/Syndic")
-    (synopsis "RSS1, RSS2, Atom and OPML1 parsing")
-    (description
-     "Pure OCaml Library for parsing and writing various types of
-feeds and subscriber lists.")
-    (license license:expat)))
-
 (define-public ocaml-note
   (package
     (name "ocaml-note")
