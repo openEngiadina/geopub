@@ -4,6 +4,7 @@
  (libraries
   rdf
   rdf_xml
+  rdf_cbor
   rdf_ntriples
   xmlm
   indexeddb

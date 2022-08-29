@@ -33,12 +33,11 @@ let view_header description =
         description
     with
     | Some object' ->
-        Rdf.Triple.Object.map object' Rdf.Iri.to_string
-          Rdf.Blank_node.identifier Rdf.Literal.canonical
+        Rdf.Triple.Object.map Rdf.Iri.to_string Rdf.Blank_node.identifier
+          Rdf.Literal.canonical object'
     | None ->
-        Rdf.Triple.Subject.map
+        Rdf.Triple.Subject.map Rdf.Iri.to_string Rdf.Blank_node.identifier
           (Rdf.Description.subject description)
-          Rdf.Iri.to_string Rdf.Blank_node.identifier
   in
   El.(
     header
@@ -48,9 +47,9 @@ let view_header description =
           ~at:At.[ class' @@ Jstr.v "iri"; class' @@ Jstr.v "meta" ]
           [
             txt'
-            @@ Rdf.Triple.Subject.map
-                 (Rdf.Description.subject description)
-                 Rdf.Iri.to_string Rdf.Blank_node.identifier;
+            @@ Rdf.Triple.Subject.map Rdf.Iri.to_string
+                 Rdf.Blank_node.identifier
+                 (Rdf.Description.subject description);
           ];
       ])
 

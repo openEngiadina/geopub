@@ -1,7 +1,7 @@
 (executable
  (name main)
  (libraries brr logs logs.browser js_of_ocaml js_of_ocaml-lwt lwt_react
-   loadable geopub.database geopub.xmpp rdf rdf_xml rdf_fragment_graph base32
+   loadable geopub.database geopub.xmpp rdf rdf_xml rdf_cbor base32
    leaflet leaflet_contextmenu zarith_stubs_js digestif.ocaml)
  (modes js))
 

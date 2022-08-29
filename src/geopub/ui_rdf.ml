@@ -35,10 +35,11 @@ let view_predicate database p =
   view_pretty_iri database @@ Rdf.Triple.Predicate.to_iri p
 
 let view_object database o =
-  Rdf.Triple.Object.map o (view_pretty_iri database)
+  Rdf.Triple.Object.map (view_pretty_iri database)
     (fun bnode -> return @@ view_blank_node bnode)
     (fun literal -> return @@ view_literal literal)
+    o
 
-let view_subject database s =
-  Rdf.Triple.Subject.map s (view_pretty_iri database) (fun bnode ->
+let view_subject database =
+  Rdf.Triple.Subject.map (view_pretty_iri database) (fun bnode ->
       return @@ view_blank_node bnode)

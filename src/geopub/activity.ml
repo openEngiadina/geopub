@@ -19,11 +19,9 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 (* Content-addressable RDF *)
 
-module FragmentGraph = Rdf_fragment_graph.Make (struct
-  let hash s =
-    let digest = Digestif.BLAKE2B.(digest_string s |> to_raw_string) in
-    Rdf.Iri.of_string ("urn:blake2b:" ^ Base32.encode_string ~pad:false digest)
-end)
+let hash s =
+  let digest = Digestif.BLAKE2B.(digest_string s |> to_raw_string) in
+  Rdf.Iri.of_string ("urn:blake2b:" ^ Base32.encode_string ~pad:false digest)
 
 module Geopub_namespace = Namespace
 module Xmpp = Geopub_xmpp
@@ -40,7 +38,7 @@ let rdf_to_xml rdf =
   Xmlc.Parser.parse_stream Xmlc.Tree.parser stream
 
 let make_note ?latlng content =
-  FragmentGraph.(
+  Rdf_cbor.Content_addressable.(
     empty
     |> add_statement
          (Predicate.of_iri @@ Rdf.Namespace.rdf "type")
@@ -65,9 +63,9 @@ let make_note ?latlng content =
 
 let make_create ~object' xmpp =
   let* actor = Xmpp.user_iri xmpp in
-  let object_id = FragmentGraph.base_subject object' in
+  let object_id = Rdf_cbor.Content_addressable.base_subject ~hash object' in
   let create_activity =
-    FragmentGraph.(
+    Rdf_cbor.Content_addressable.(
       empty
       |> add_statement Namespace.a
            (Object.of_iri @@ Geopub_namespace.activitystreams "Create")
@@ -85,11 +83,12 @@ let make_create ~object' xmpp =
                 (Rdf.Namespace.xsd "dateTime")))
   in
   return
-    ( FragmentGraph.base_subject create_activity,
+    ( Rdf_cbor.Content_addressable.base_subject ~hash create_activity,
       Rdf.Graph.(
         empty
-        |> add_seq (FragmentGraph.to_triples object')
-        |> add_seq (FragmentGraph.to_triples create_activity)) )
+        |> add_seq (Rdf_cbor.Content_addressable.to_triples ~hash object')
+        |> add_seq
+             (Rdf_cbor.Content_addressable.to_triples ~hash create_activity)) )
 
 (* Get Activity from DB *)
 

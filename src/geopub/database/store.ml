@@ -249,7 +249,7 @@ and then referred to by lighter integer indexes.
           ^ "\"^^" ^ encode_iri
           @@ Rdf.Literal.datatype literal
     in
-    Rdf.Term.map term encode_iri encode_blank_node encode_literal
+    Rdf.Term.map encode_iri encode_blank_node encode_literal term
 
   let jv_of_term term = Jv.of_string @@ string_of_term term
   let jv_obj_of_term term = Jv.obj [| ("term", jv_of_term term) |]
@@ -540,11 +540,13 @@ RDF terms are stored using integer identifiers as stored in the `Dictionary`.*)
         return_some
         @@ Rdf.Triple.(
              make
-               (Rdf.Term.map s Subject.of_iri Subject.of_blank_node (fun _ ->
-                    failwith "unexpcted literal"))
-               (Rdf.Term.map p Predicate.of_iri
+               (Rdf.Term.map Subject.of_iri Subject.of_blank_node
+                  (fun _ -> failwith "unexpcted literal")
+                  s)
+               (Rdf.Term.map Predicate.of_iri
                   (fun _ -> failwith "unexpected blank_node")
-                  (fun _ -> failwith "unexpected literal"))
+                  (fun _ -> failwith "unexpected literal")
+                  p)
                (Object.of_term o))
     | _ -> return_none
 

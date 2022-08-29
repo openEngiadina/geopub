@@ -13,35 +13,38 @@
  (gnu packages ocaml)
  (gnu packages rdf))
 
-(define-public ocaml-cbor
+(define-public ocaml-cborl
   (package
-    (name "ocaml-cbor")
-    (version "11261798db015a768d4759b33a529395e2ab5a30")
-    (home-page "https://inqlab.net/git/ocaml-cbor.git")
-    (source
-     (origin (method git-fetch)
-             (uri (git-reference
-                   (url home-page)
-                   (commit version)))
-             (file-name (git-file-name name version))
-             (sha256
-              (base32 "12l3xz1jpnw87w0k506qh2hv8aiw0sq2fz5ri8rka1glizhb5wvn"))))
+    (name "ocaml-cborl")
+    (version "0.1.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://inqlab.net/git/ocaml-cborl.git")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "15bw3s82qpwxs9q42sx9rm0qjk1kdy3zm8m283rc907mls0rjx1i"))))
     (build-system dune-build-system)
-    (native-inputs
-     `(("alcotest" ,ocaml-alcotest)
-       ("qcheck" ,ocaml-qcheck)))
+    (arguments '())
     (propagated-inputs
-     `(("angstrom" ,ocaml-angstrom)
-       ("zarith" ,ocaml-zarith)
-       ("gmp" ,gmp)))
-    (synopsis #f)
-    (description #f)
+     (list ocaml-zarith gmp ocaml-fmt))
+    (native-inputs
+     (list ocaml-alcotest ocaml-qcheck))
+    (home-page "https://inqlab.net/git/ocaml-cborl")
+    (synopsis "OCaml CBOR library")
+    (description 
+     "The Concise Binary Object Representation (CBOR), as specified by
+RFC 8949, is a binary data serialization format.  CBOR is similar to
+JSON but serializes to binary which is smaller and faster to generate
+and parse.  This package provides an OCaml implementation of CBOR.")
     (license license:agpl3+)))
 
 (define-public ocaml-rdf
   (package
     (name "ocaml-rdf")
-    (version "27dfba0802d0b5df4645133eeeb4b3d56b166538")
+    (version "76bcc116e9eb0bc42c2743f4a57335a803b03fd3")
     (home-page "https://codeberg.org/openEngiadina/ocaml-rdf.git")
     (source
      (origin
@@ -51,25 +54,31 @@
             (commit version)))
       (file-name (git-file-name name version))
       (sha256
-       (base32 "1hkiz27jkwbdphc68kvrpf2hy06an45caajfcvxlwcr1saqkz0v8"))))
+       (base32 "0y7hn4m0a0v4knygrdan6s4fcjzm6ifq7bywp2ji5kgxbkhaamp8"))))
     (build-system dune-build-system)
     (arguments `(#:tests? #f))
     (native-inputs
      (list ocaml-alcotest
 	   ocaml-qcheck))
     (propagated-inputs
-     (list ocaml-uri
-       ocaml-yojson
-       ocaml-cbor
-       ocaml-angstrom
-       ocaml-ctypes
-       ocaml-xmlm
-       ocaml-uunf
-       ocaml-uuidm
-       ocaml-sedlex
-       ocaml-z3
-       z3
-       serd))
+     (list
+      ;; core dependencies
+      ocaml-uri
+      ocaml-fmt
+      ocaml-uuidm
+
+      ;; serializations
+      ocaml-yojson
+      ocaml-xmlm
+      ocaml-uunf
+      ocaml-sedlex
+
+      ;; CBOR
+      ocaml-cborl
+      ocaml-base64
+      ocaml-base32
+      ocaml-uri
+      ocaml-z3 z3))
     (synopsis "RDF library for OCaml")
     (description #f)
     (license license:agpl3+)))

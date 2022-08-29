@@ -18,10 +18,11 @@ let view_constant db = function
       match term with
       | None -> return @@ El.txt' "ERROR: Could not get term for id"
       | Some term ->
-          Rdf.Term.map term
+          Rdf.Term.map
             (Ui_rdf.view_pretty_iri db)
             (fun bnode -> return @@ Ui_rdf.view_blank_node bnode)
-            (fun literal -> return @@ Ui_rdf.view_literal literal))
+            (fun literal -> return @@ Ui_rdf.view_literal literal)
+            term)
   | Datalog.Constant.FtsQuery s -> return @@ El.txt' s
   | Datalog.Constant.GeoQuery _ as geo_query ->
       return @@ El.txt' @@ Format.asprintf "%a" Datalog.Constant.pp geo_query
