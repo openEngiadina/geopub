@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- Use [ERIS](http://purl.org/eris) for content-addressing
+
 ## [0.6.0] - 2022-07-01
 
 - Add sample data extracted from the [osm2rdf](https://osm2rdf.cs.uni-freiburg.de/) TTL extracts
