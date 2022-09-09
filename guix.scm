@@ -443,7 +443,7 @@ message report is decoupled from logging and is handled by a reporter.")
 (define-public ocaml-xmppl
   (package
     (name "ocaml-xmppl")
-    (version "1a5fe11ac13b706816c04447c58d1e2ef965ff23")
+    (version "d36b66d0778dfb2cc1c06d657ecd222cdb575acf")
     (home-page "https://codeberg.org/openEngiadina/ocaml-xmppl.git")
     (source
      (origin (method git-fetch)
@@ -452,7 +452,7 @@ message report is decoupled from logging and is handled by a reporter.")
                    (commit version)))
              (file-name (git-file-name name version))
              (sha256
-              (base32 "10nflskphfzwjswd6jamgyyhbsc7r52wp21ss6ymfhrkicf79paw"))))
+              (base32 "040vhm17r168pc9x4gmvy9bnbaiz0fhgsq0vww7mvd1arf1iryq0"))))
     ;; (arguments `(#:tests? #f))
     (build-system dune-build-system)
     (native-inputs
