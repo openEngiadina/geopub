@@ -86,42 +86,38 @@ let get_rdfs_label db iri =
   in
   labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
-let init ~set_loading_msg () =
+(* Component *)
+
+open Archi_lwt
+
+let start () =
   let* db = Store.init () in
+
   let* triple_count = Store.triple_count db in
   Log.debug (fun m -> m "Triples in database: %d" triple_count);
 
   (* Load some vocabularies if db is empty *)
-  let* () =
-    if triple_count = 0 then
-      let* () =
-        Vocabs.vocabs
-        |> Lwt_list.iter_s (fun vocab ->
-               Log.debug (fun m -> m "Loading vocabulary %s" vocab);
-               set_loading_msg ("(loading " ^ vocab ^ ")");
-               let* graph = Vocabs.fetch_vocab vocab in
-               Store.add_graph db graph)
-      in
-      Sample_data.sample_data
-      |> Lwt_list.iter_s (fun file ->
-             Log.debug (fun m -> m "Loading sample data %s" file);
-             set_loading_msg ("(loading " ^ file ^ ")");
-             let* graph = Sample_data.fetch file in
-             Store.add_graph db graph)
-    else return_unit
-  in
-  Log.info (fun m -> m "IndexedDB databse initialized.");
-  return db
+  (* let* () =
+   *   if triple_count = 0 then
+   *     let* () =
+   *       Vocabs.vocabs
+   *       |> Lwt_list.iter_s (fun vocab ->
+   *              Log.debug (fun m -> m "Loading vocabulary %s" vocab);
+   *              let* graph = Vocabs.fetch_vocab vocab in
+   *              Store.add_graph db graph)
+   *     in
+   *     Sample_data.sample_data
+   *     |> Lwt_list.iter_s (fun file ->
+   *            Log.debug (fun m -> m "Loading sample data %s" file);
+   *            let* graph = Sample_data.fetch file in
+   *            Store.add_graph db graph)
+   *   else return_unit
+   * in *)
+  Log.info (fun m -> m "Database started.");
+  return_ok db
 
-let test_datalog db =
-  (* let () = Datalog.set_debug true in *)
-  let q =
-    Datalog.(
-      Atom.make "geo"
-        Term.
-          [ make_constant @@ GeoQuery (46.7935, 0.3009, 5); make_variable "s" ])
-  in
-  let* tuples = Datalog.query db q in
+let stop _db =
+  Log.info (fun m -> m "Database stopped.");
+  return_unit
 
-  return
-  @@ Log.debug (fun m -> m "test_datalog: %a" Datalog.Tuple.Set.pp tuples)
+let component = Component.make ~start ~stop

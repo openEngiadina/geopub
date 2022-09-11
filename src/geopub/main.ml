@@ -8,6 +8,7 @@ open Brr
 open Lwt
 open Lwt.Syntax
 open Lwt_react
+open Archi_lwt
 
 (* Setup logging *)
 
@@ -57,6 +58,8 @@ let observe_for_map el map =
   let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
   ignore @@ Jv.call observer "observe" [| El.to_jv el; opts |]
 
+let system = System.make [ ("db", Geopub_database.component) ]
+
 let main () =
   (* Setup logging *)
   Logs.set_reporter @@ Logs_browser.console_reporter ();
@@ -75,6 +78,10 @@ let main () =
   (* Initialize random generator *)
   Random.self_init ();
 
+  (* Start the app *)
+  let* geopub = System.start () system in
+  ignore geopub;
+
   (* Initialize Route *)
   let route = Route.init () in
 
@@ -90,15 +97,7 @@ let main () =
   El.set_children body
   @@ Ui.loading
        "Initializing Database. This might take some time on first run... ";
-  let* database =
-    Database.init
-      ~set_loading_msg:(fun msg ->
-        El.set_children body
-        @@ Ui.loading
-             ("Initializing Database. This might take some time on first \
-               run... " ^ msg))
-      ()
-  in
+  let* database = Database.start () >|= Result.get_ok in
   El.set_children body @@ Ui.loading "Initializing GeoPub ... ";
 
   (* Get activities in database *)
@@ -160,7 +159,6 @@ let main () =
     >|= S.keep
   in
 
-  let* () = Database.test_datalog database in
   let () = Log.app (fun m -> m "GeoPub ready.") in
   return_unit
 
