@@ -12,7 +12,6 @@ open Lwt.Syntax
 let src = Logs.Src.create "Geopub_map"
 
 module Log = (val Logs.src_log src : Logs.LOG)
-module Database = Geopub_database
 
 type t = Leaflet.Map.t
 

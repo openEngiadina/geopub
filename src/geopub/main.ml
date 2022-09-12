@@ -15,10 +15,6 @@ let src = Logs.Src.create "GeoPub"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-(* GeoPub components *)
-
-module Database = Geopub_database
-
 (* A small hack to invalidate the size of the Leaflet map when it is
    dynamically loaded. If not it would not be displayed correctly until a
    manual window resize. *)
@@ -41,8 +37,7 @@ let observe_for_map el map =
   let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
   ignore @@ Jv.call observer "observe" [| El.to_jv el; opts |]
 
-let system =
-  System.make [ ("ui", Ui.component); ("db", Geopub_database.component) ]
+let system = System.make [ ("ui", Ui.component); ("db", Database.component) ]
 
 let main () =
   (* Setup logging *)

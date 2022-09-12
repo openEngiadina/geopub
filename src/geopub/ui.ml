@@ -9,7 +9,6 @@ open Lwt.Syntax
 open Lwt_react
 open Brr
 open Archi_lwt
-module Database = Geopub_database
 
 let geopub_menu (_model : Model.t) =
   let menu_header =

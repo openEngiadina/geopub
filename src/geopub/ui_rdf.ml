@@ -7,7 +7,6 @@
 open Brr
 open Lwt
 open Lwt.Syntax
-module Database = Geopub_database
 
 let view_iri iri =
   El.(

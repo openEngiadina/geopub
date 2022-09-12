@@ -53,13 +53,11 @@ module Fts = struct
   *)
   let object_store_name = Jstr.v "fts"
 
-  open Indexeddb
-
   let on_version_change db =
-    let fts = Database.create_object_store db object_store_name in
+    let fts = Indexeddb.Database.create_object_store db object_store_name in
 
     let _terms_index =
-      ObjectStore.create_index fts
+      Indexeddb.ObjectStore.create_index fts
         ~key_path:Jv.(of_string "terms")
         ~object_parameters:Jv.(obj [| ("multiEntry", true') |])
       @@ Jstr.v "fts_terms"
@@ -67,7 +65,7 @@ module Fts = struct
 
     ()
 
-  let object_store tx = Transaction.object_store tx object_store_name
+  let object_store tx = Indexeddb.Transaction.object_store tx object_store_name
 
   (* Returns list of stemmed terms that appear in `text` *)
   let get_terms text =
@@ -96,7 +94,7 @@ module Fts = struct
        *     m "Fts.put %a (terms: %a)" Rdf.Literal.pp literal
        *       Fmt.(list string)
        *       terms); *)
-      ObjectStore.put fts ~key:(Jv.of_int key)
+      Indexeddb.ObjectStore.put fts ~key:(Jv.of_int key)
         Jv.(obj [| ("terms", of_list of_string terms) |])
       >|= ignore
     else return_unit
@@ -158,16 +156,18 @@ module Fts = struct
     ignore tx;
 
     let fts = object_store tx in
-    let fts_terms = ObjectStore.index fts (Jstr.v "fts_terms") in
+    let fts_terms = Indexeddb.ObjectStore.index fts (Jstr.v "fts_terms") in
 
     (* merge join over the fts_terms index with all terms appearing in query *)
     merge_join ~compare:Int.compare
-      (List.map
-         (fun term ->
-           Index.open_cursor fts_terms (KeyRange.only @@ Jv.of_string term)
-           |> Cursor.opt_lwt_to_seq
-           |> Lwt_seq.map (fun cursor -> Jv.to_int @@ Cursor.primary_key cursor))
-         terms)
+      Indexeddb.(
+        List.map
+          (fun term ->
+            Index.open_cursor fts_terms (KeyRange.only @@ Jv.of_string term)
+            |> Cursor.opt_lwt_to_seq
+            |> Lwt_seq.map (fun cursor ->
+                   Jv.to_int @@ Cursor.primary_key cursor))
+          terms)
 end
 
 module Term = struct
@@ -212,7 +212,7 @@ and then referred to by lighter integer indexes.
 
   let on_version_change db =
     let dictionary =
-      Database.create_object_store db
+      Indexeddb.Database.create_object_store db
         ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
         object_store_name
     in
@@ -329,7 +329,7 @@ module Geo = struct
   let object_store_name = Jstr.v "geo"
 
   let on_version_change db =
-    let geo = Database.create_object_store db object_store_name in
+    let geo = Indexeddb.Database.create_object_store db object_store_name in
 
     let _geohash_index =
       ObjectStore.create_index geo
@@ -469,7 +469,7 @@ RDF terms are stored using integer identifiers as stored in the `Dictionary`.*)
   let on_version_change db =
     (* Create an ObjectStore for triples *)
     let triples =
-      Database.create_object_store db
+      Indexeddb.Database.create_object_store db
         ~options:(Jv.obj [| ("autoIncrement", Jv.true') |])
         object_store_name
     in
@@ -601,9 +601,8 @@ let init () =
 
 let delete db =
   Log.info (fun m -> m "Deleting IndexedDB databse.");
-  Indexeddb.(
-    return @@ Database.close db >>= fun () ->
-    Database.delete (Jstr.v geopub_database_name))
+  return @@ Indexeddb.Database.close db >>= fun () ->
+  Indexeddb.Database.delete (Jstr.v geopub_database_name)
 
 let triple_count db =
   let tx = ro_tx db in
