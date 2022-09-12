@@ -34,6 +34,8 @@ let on_update, updated = E.create ()
 
 (* Helpers for creating IndexedDB transactions *)
 
+type transaction = Indexeddb.Transaction.t
+
 let ro_tx db =
   Indexeddb.Transaction.create db ~mode:Indexeddb.Transaction.ReadOnly
     [ Jstr.v "dictionary"; Jstr.v "triples"; Jstr.v "fts"; Jstr.v "geo" ]

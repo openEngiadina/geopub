@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-open Lwt
-
 (* Setup logging *)
 let src = Logs.Src.create "GeoPub.Database.Datalog"
 
@@ -174,19 +172,3 @@ let geopub_datalog_program =
   | Error msg ->
       Log.err (fun m -> m "Could not parse Datalog program: %s" msg);
       failwith ("Invalid Datalog program: " ^ msg)
-
-let query db ?(tx = Store.ro_tx db) q =
-  try query ~database:(edb tx) ~program:geopub_datalog_program q
-  with e ->
-    Log.err (fun m ->
-        m "Error while performing Datalog query (probably wrong arity): %s"
-          (Printexc.to_string e));
-    return Tuple.Set.empty
-
-let query_triple db ?(tx = Store.ro_tx db) q : Rdf.Triple.t Lwt_seq.t =
-  query db ~tx q |> Lwt_seq.return_lwt
-  |> Lwt_seq.flat_map (fun set -> Lwt_seq.of_seq @@ Tuple.Set.to_seq set)
-  |> Lwt_seq.filter_map_s (function
-       | [ Constant.Rdf s_id; Constant.Rdf p_id; Constant.Rdf o_id ] ->
-           Store.Triples.deref db ~tx [ s_id; p_id; o_id ]
-       | _ -> return_none)

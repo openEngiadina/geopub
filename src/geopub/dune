@@ -2,6 +2,7 @@
  (name main)
  (libraries
   brr
+  note
   logs
   logs.browser
   js_of_ocaml

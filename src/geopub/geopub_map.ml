@@ -90,7 +90,7 @@ let get_latlng description =
 module SubjectMap = Map.Make (Rdf.Triple.Subject)
 module SubjectSet = Set.Make (Rdf.Triple.Subject)
 
-let query_visible db (lat, long, _zoom) =
+let visible db (lat, long, _zoom) =
   let query =
     Database.Datalog.(
       Atom.make "triple-geo"
@@ -102,22 +102,21 @@ let query_visible db (lat, long, _zoom) =
             make_constant @@ Constant.GeoQuery (lat, long, 4);
           ])
   in
-  let* graph =
-    Database.query db query |> Lwt_seq.return_lwt
-    |> Lwt_seq.flat_map (fun set ->
-           Lwt_seq.of_seq @@ Database.Datalog.Tuple.Set.to_seq set)
-    |> Lwt_seq.filter_map_s (function
-         | Database.Datalog.Constant.[ Rdf s_id; Rdf p_id; Rdf o_id; _ ] ->
-             Database.Store.Triples.deref db [ s_id; p_id; o_id ]
-         | _ -> return_none)
-    |> Lwt_seq.fold_left
-         (fun graph triple -> Rdf.Graph.add triple graph)
-         Rdf.Graph.empty
-  in
-  Rdf.Graph.descriptions graph
-  |> Seq.map (fun description ->
-         (Rdf.Description.subject description, description))
-  |> SubjectMap.of_seq |> return
+  Database.query db query
+  >>= S.map_s ~eq:Rdf.Graph.equal (fun (tx, tuples) ->
+          Database.Datalog.Tuple.Set.to_seq tuples
+          |> Lwt_seq.of_seq
+          |> Lwt_seq.filter_map_s (function
+               | [ s; p; o; _ ] -> Database.deref_triple db tx [ s; p; o ]
+               | _ -> return_none)
+          |> Lwt_seq.fold_left
+               (fun graph triple -> Rdf.Graph.add triple graph)
+               Rdf.Graph.empty)
+  >|= S.map ~eq:(SubjectMap.equal Rdf.Description.equal) (fun graph ->
+          Rdf.Graph.descriptions graph
+          |> Seq.map (fun description ->
+                 (Rdf.Description.subject description, description))
+          |> SubjectMap.of_seq)
 
 let init db ~set_route () =
   (* create and append to body map_container *)

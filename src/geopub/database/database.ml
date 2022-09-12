@@ -6,6 +6,7 @@
 
 open Lwt
 open Lwt.Syntax
+open Lwt_react
 
 (* Setup logging *)
 let src = Logs.Src.create "GeoPub.Database"
@@ -16,75 +17,6 @@ module Log = (val Logs.src_log src : Logs.LOG)
 type t = Indexeddb.Database.t
 
 module Store = Store
-
-let on_update = Store.on_update
-let add_graph = Store.add_graph
-
-module Datalog = Datalog
-
-let query = Datalog.query
-let query_triple = Datalog.query_triple
-
-(* Return a RDF description for [iri] that is used in the inspect view *)
-let get_description db iri =
-  let tx = Store.ro_tx db in
-  let* s_id_opt = Store.Dictionary.lookup db ~tx (Rdf.Term.of_iri iri) in
-
-  match s_id_opt with
-  | Some s_id ->
-      let q =
-        Datalog.(
-          Atom.make "triple"
-            Term.
-              [
-                make_constant @@ Constant.Rdf s_id;
-                make_variable "p";
-                make_variable "o";
-              ])
-      in
-      Datalog.query_triple db ~tx q
-      |> Lwt_seq.fold_left
-           (fun graph triple -> Rdf.Graph.add triple graph)
-           Rdf.Graph.empty
-      >|= Rdf.Graph.description (Rdf.Triple.Subject.of_iri iri)
-  | None -> return @@ Rdf.Description.empty (Rdf.Triple.Subject.of_iri iri)
-
-let get_property db subject predicate =
-  let tx = Store.ro_tx db in
-  let* s_id_opt =
-    Store.Dictionary.lookup db ~tx (Rdf.Triple.Subject.to_term subject)
-  in
-  let* p_id_opt =
-    Store.Dictionary.lookup db ~tx (Rdf.Triple.Predicate.to_term predicate)
-  in
-  match [ s_id_opt; p_id_opt ] with
-  | [ Some s_id; Some p_id ] ->
-      let q =
-        Datalog.(
-          Atom.make "triple"
-            Term.
-              [
-                make_constant @@ Constant.Rdf s_id;
-                make_constant @@ Constant.Rdf p_id;
-                make_variable "o";
-              ])
-      in
-      Datalog.query db ~tx q |> Lwt_seq.return_lwt
-      |> Lwt_seq.flat_map (fun set ->
-             Lwt_seq.of_seq @@ Datalog.Tuple.Set.to_seq set)
-      |> Lwt_seq.filter_map_s (function
-           | [ _; _; Datalog.Constant.Rdf o ] -> Store.Dictionary.get db ~tx o
-           | _ -> return_none)
-      |> Lwt_seq.to_list
-  | _ -> return_nil
-
-let get_rdfs_label db iri =
-  let* labels =
-    get_property db
-      (Rdf.Triple.Subject.of_iri iri)
-      (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
-  in
-  labels |> List.find_map (fun term -> Rdf.Term.to_literal term) |> return
 
 (* Component *)
 
@@ -121,3 +53,127 @@ let stop _db =
   return_unit
 
 let component = Component.make ~start ~stop
+
+(* Query *)
+
+(* Transactions *)
+
+type transaction = Indexeddb.Transaction.t
+
+let read_only db = Store.ro_tx db
+
+(* Inserting data *)
+
+let add_graph = Store.add_graph
+
+(* Getting data *)
+
+module Datalog = Datalog
+
+let query db q =
+  (* start an initial read only transaction *)
+  let init_tx = read_only db in
+
+  (* run an initial datalog query *)
+  let* init_state, init_tuples =
+    Datalog.(
+      query_with_state ~database:(edb init_tx)
+        ~state:(init geopub_datalog_program)
+        q)
+  in
+
+  (* update tuples with incremental evaluation when Store.on_update fires *)
+  let update_e =
+    E.map
+      (fun () (state, _tx, _tuples) ->
+        let tx = read_only db in
+        let* state', tuples' =
+          Datalog.(query_with_state ~database:(edb tx) ~state q)
+        in
+
+        return (state', tx, tuples'))
+      Store.on_update
+  in
+
+  (* accumulate signal *)
+  S.accum_s update_e (init_state, init_tx, init_tuples)
+  |> S.map (fun (_state, tx, tuples) -> (tx, tuples))
+  |> return
+
+let deref_triple db tx = function
+  | Datalog.[ Constant.Rdf s_id; Constant.Rdf p_id; Constant.Rdf o_id ] ->
+      Store.Triples.deref db ~tx [ s_id; p_id; o_id ]
+  | _ -> return_none
+
+let query_rdf db q =
+  query db q
+  >>= S.map_s ~eq:Rdf.Graph.equal (fun (tx, tuples) ->
+          Datalog.Tuple.Set.to_seq tuples
+          |> Lwt_seq.of_seq
+          |> Lwt_seq.filter_map_s (deref_triple db tx)
+          |> Lwt_seq.fold_left
+               (fun graph triple -> Rdf.Graph.add triple graph)
+               Rdf.Graph.empty)
+
+let term_lookup db term =
+  let* id_opt = Store.Dictionary.lookup db ~tx:(read_only db) term in
+
+  let updates =
+    E.map
+      (fun () id_opt ->
+        match id_opt with
+        | Some id -> return_some id
+        | None -> Store.Dictionary.lookup db ~tx:(read_only db) term)
+      Store.on_update
+  in
+
+  return @@ S.accum_s ~eq:( = ) updates id_opt
+
+let description db iri =
+  let* q_opt_s =
+    term_lookup db (Rdf.Term.of_iri iri)
+    >|= S.map
+          (Option.map (fun s_id ->
+               Datalog.(
+                 Atom.make "triple"
+                   Term.
+                     [
+                       make_constant @@ Constant.Rdf s_id;
+                       make_variable "p";
+                       make_variable "o";
+                     ])))
+  in
+
+  let s = Rdf.Triple.Subject.of_iri iri in
+
+  S.bind_s ~eq:Rdf.Description.equal q_opt_s (function
+    | Some q -> query_rdf db q >|= S.map (Rdf.Graph.description s)
+    | None -> return @@ S.const (Rdf.Description.empty s))
+
+let functional_property db subject predicate =
+  let* s_id_s = term_lookup db (Rdf.Triple.Subject.to_term subject) in
+  let* p_id_s = term_lookup db (Rdf.Triple.Predicate.to_term predicate) in
+
+  let q_opt_s =
+    S.l2
+      (fun s_id_opt p_id_opt ->
+        match (s_id_opt, p_id_opt) with
+        | Some s_id, Some p_id ->
+            Option.some
+            @@ Datalog.(
+                 Atom.make "triple"
+                   Term.
+                     [
+                       make_constant @@ Constant.Rdf s_id;
+                       make_constant @@ Constant.Rdf p_id;
+                       make_variable "o";
+                     ])
+        | _ -> None)
+      s_id_s p_id_s
+  in
+
+  S.bind_s ~eq:( = ) q_opt_s (function
+    | Some q ->
+        query_rdf db q
+        >|= S.map (Rdf.Graph.functional_property subject predicate)
+    | None -> return @@ S.const None)
