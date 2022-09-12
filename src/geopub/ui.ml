@@ -4,26 +4,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-open Brr
 open Lwt
+open Lwt.Syntax
+open Lwt_react
+open Brr
+open Archi_lwt
 module Database = Geopub_database
-
-let on_el ?(capture = false) ?propagate ?default type' f el =
-  let instruct ?(propagate = true) ?(default = true) e =
-    if default then () else Ev.prevent_default e;
-    if propagate then () else Ev.stop_propagation e
-  in
-  let opts =
-    match capture with
-    | false -> None
-    | true -> Some (Ev.listen_opts ~capture ())
-  in
-  let f ev =
-    instruct ?propagate ?default ev;
-    f ev
-  in
-  Ev.listen ?opts type' f (El.as_target el);
-  el
 
 let geopub_menu (_model : Model.t) =
   let menu_header =
@@ -110,3 +96,44 @@ let about =
             txt' ".";
           ];
       ])
+
+(* Component *)
+
+type t = Model.t
+
+let view t =
+  t.router
+  |> S.map_s ~eq:( = ) (function
+       | Route.About -> return [ geopub_menu t; about ]
+       | route -> return @@ loading (route |> Route.to_jstr |> Jstr.to_string))
+
+(* match Router.current t.router with
+ * | Route.About -> return [ Ui.geopub_menu model; Ui.about ]
+ * | Route.Activity latlng ->
+ *     let* activity = Activity.view ?latlng ~update model in
+ *     return [ Ui.geopub_menu model; activity ]
+ * | Route.Map ->
+ *     let* map = Geopub_map.view model.map in
+ *     return [ Ui.geopub_menu model; map ]
+ * | Route.Query query ->
+ *     let* query_view = Query.view model query in
+ *     return [ Ui.geopub_menu model; query_view ]
+ * | Route.Inspect iri -> Inspect.view model iri
+ * | Route.Settings -> Settings.view ~update model *)
+
+let start () router database xmpp_connection :
+    (t, [ `Msg of string ]) Result.t Lwt.t =
+  let model : Model.t = { router; database; xmpp_connection } in
+
+  (* Set the UI on the document body *)
+  let body = Document.body G.document in
+  let* () = view model >|= S.map ~eq:( = ) (El.set_children body) >|= S.keep in
+
+  return_ok model
+
+let stop _ = return_unit
+
+let component =
+  Component.using ~start ~stop
+    ~dependencies:
+      [ Router.component; Database.component; Xmpp.Connection.component ]

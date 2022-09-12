@@ -1,5 +1,5 @@
 (library
- (name geopub_xmpp)
+ (name xmpp)
  (public_name geopub.xmpp)
  (libraries
   xmppl
@@ -9,6 +9,8 @@
   xmppl.entity_capabilities
   xmppl.mam
   xmppl.pubsub
+  archi-lwt
+  geopub.loadable
   rdf
   rdf_xml
   uuidm

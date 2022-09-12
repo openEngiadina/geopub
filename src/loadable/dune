@@ -1,2 +1,4 @@
 (library
- (name loadable))
+ (name loadable)
+ (public_name geopub.loadable))
+

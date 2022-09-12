@@ -5,15 +5,6 @@
  *)
 
 open Brr
-open Lwt_react
-
-(* Setup logging *)
-
-let src = Logs.Src.create "GeoPub.Router"
-
-module Log = (val Logs.src_log src : Logs.LOG)
-
-let history = Window.history G.window
 
 type t =
   | About
@@ -40,17 +31,6 @@ let parser uri =
           Inspect (Rdf.Iri.of_string "urn:something:went:wrong"))
   | [ "settings" ] -> Settings
   | _ -> About
-
-let get_location () =
-  Window.location G.window |> Uri.to_jstr |> Jstr.to_string |> Rdf.Iri.of_string
-  |> parser
-
-let update =
-  let e, push_state = E.create () in
-  Ev.listen Window.History.Ev.popstate
-    (fun _ -> get_location () |> push_state)
-    (Window.as_target G.window);
-  e
 
 let to_uri route =
   let location = Window.location G.window in
@@ -82,9 +62,3 @@ let to_uri route =
   |> Result.value ~default:location
 
 let to_jstr route = to_uri route |> Uri.to_jstr
-
-let set_route route =
-  Window.History.push_state ~uri:(to_uri route) history;
-  route
-
-let init () = get_location ()
