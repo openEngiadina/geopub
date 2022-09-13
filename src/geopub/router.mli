@@ -18,4 +18,4 @@ val component : (unit, t) Component.t
 (** The router component *)
 
 val current : t -> Route.t
-val set_route : Route.t -> unit
+val set_route : t -> Route.t -> unit

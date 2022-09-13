@@ -40,5 +40,5 @@ let stop _ = return_unit
 let component = Component.make ~start ~stop
 let current t = S.value t
 
-let set_route route =
+let set_route _t route =
   Window.History.push_state ~uri:(Route.to_uri route) history

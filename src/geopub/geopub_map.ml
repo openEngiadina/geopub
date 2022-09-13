@@ -209,7 +209,7 @@ let setup_map_size_invalidator map =
   let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
   ignore @@ Jv.call observer "observe" [| El.to_jv body; opts |]
 
-let init_leaflet () =
+let init_leaflet router () =
   (* create and append to body map_container *)
   let map_container = Brr.El.div ~at:Brr.At.[ id @@ Jstr.v "map" ] [] in
   Brr.El.append_children
@@ -224,7 +224,7 @@ let init_leaflet () =
           ( "Create post here",
             fun e ->
               let latlng = Leaflet.Event.latlng e in
-              Router.set_route @@ Route.Activity (Some latlng);
+              Router.set_route router @@ Route.Activity (Some latlng);
               Log.debug (fun m ->
                   m "Create post at %a/%a" Fmt.float
                     (Leaflet.Latlng.lat latlng)
@@ -258,11 +258,8 @@ type t = {
 }
 
 let start () database router =
-  ignore database;
-  ignore router;
-
   (* initialize the Leaflet map *)
-  let leaflet = init_leaflet () in
+  let leaflet = init_leaflet router () in
 
   (* watch the position *)
   let position =
