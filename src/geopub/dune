@@ -28,16 +28,25 @@
  (section share)
  (package geopub)
  (files
+
+  ; Leaflet
   ../../vendor/leaflet/leaflet.css
   (../../vendor/leaflet/images/layers-2x.png as images/layers-2x.png)
   (../../vendor/leaflet/images/layers.png as images/layers.png)
-  (../../vendor/leaflet/images/marker-icon-2x.png
-   as
-   images/marker-icon-2x.png)
+  (../../vendor/leaflet/images/marker-icon-2x.png as images/marker-icon-2x.png)
   (../../vendor/leaflet/images/marker-icon.png as images/marker-icon.png)
   (../../vendor/leaflet/images/marker-shadow.png as images/marker-shadow.png)
   ../../vendor/Leaflet.contextmenu/leaflet.contextmenu.css
+
+  ; UIKit
+  (../../vendor/uikit/css/uikit.min.css as uikit.min.css)
+  (../../vendor/uikit/js/uikit.min.js as uikit.min.js)
+  (../../vendor/uikit/js/uikit-icons.min.js as uikit-icons.min.js)
+
+  ; GeoPub HTML, custom CSS and logo
   index.html
+  style.css
   sgraffito.svg
-  (main.bc.js as geopub.js)
-  style.css))
+
+  ; GeoPub JS application 
+  (main.bc.js as geopub.js)))
