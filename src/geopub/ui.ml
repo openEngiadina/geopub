@@ -100,21 +100,19 @@ let about =
 
 type t = Model.t
 
-let view t =
-  t.router
-  |> S.map_s ~eq:( = ) (function
-       | Route.About -> return [ geopub_menu t; about ]
-       | Route.Map -> return [ geopub_menu t; Geopub_map.view t.map ]
-       | route -> return @@ loading (route |> Route.to_jstr |> Jstr.to_string))
+let view (t : Model.t) =
+  S.bind_s ~eq:( = ) t.router (function
+    | Route.About -> return @@ S.const [ geopub_menu t; about ]
+    | Route.Map -> return @@ S.const [ geopub_menu t; Geopub_map.view t.map ]
+    | Route.Inspect iri ->
+        Inspect.view t iri >|= S.map (fun view -> geopub_menu t :: view)
+    | route ->
+        return @@ S.const @@ loading (route |> Route.to_jstr |> Jstr.to_string))
 
 (* match Router.current t.router with
- * | Route.About -> return [ Ui.geopub_menu model; Ui.about ]
  * | Route.Activity latlng ->
  *     let* activity = Activity.view ?latlng ~update model in
  *     return [ Ui.geopub_menu model; activity ]
- * | Route.Map ->
- *     let* map = Geopub_map.view model.map in
- *     return [ Ui.geopub_menu model; map ]
  * | Route.Query query ->
  *     let* query_view = Query.view model query in
  *     return [ Ui.geopub_menu model; query_view ]
