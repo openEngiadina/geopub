@@ -65,3 +65,4 @@ let to_uri route =
   |> Result.value ~default:location
 
 let to_jstr route = to_uri route |> Uri.to_jstr
+let href route = At.href @@ to_jstr route

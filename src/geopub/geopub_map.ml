@@ -212,6 +212,7 @@ let setup_map_size_invalidator map =
 let init_leaflet router () =
   (* create and append to body map_container *)
   let map_container = Brr.El.div ~at:Brr.At.[ id @@ Jstr.v "map" ] [] in
+
   Brr.El.append_children
     (Brr.Document.body Brr.G.document)
     [ Brr.El.div ~at:Brr.At.[ hidden ] [ map_container ] ];

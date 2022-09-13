@@ -10,60 +10,29 @@ open Lwt_react
 open Brr
 open Archi_lwt
 
-let geopub_menu (_model : Model.t) =
-  let menu_header =
-    El.(
-      header
-        [
-          a
-            ~at:At.[ href @@ Jstr.v "#user" ]
-            [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
-        ])
-  in
-  let entry name route =
-    El.(li [ a ~at:At.[ href @@ Route.to_jstr route ] [ txt' name ] ])
-  in
-  El.(
-    nav
-      ~at:At.[ id @@ Jstr.v "menu" ]
-      [
-        menu_header;
-        nav
-          [
-            ul
-              [
-                entry "Activity" (Route.Activity None);
-                entry "Map" Route.Map;
-                entry "Query" (Route.Query "triple-fts(?s,?p,?o, \"Hello\")");
-              ];
-          ];
-        div ~at:At.[ class' @@ Jstr.v "spacer" ] [];
-        nav
-          [ ul [ entry "About" Route.About; entry "Settings" Route.Settings ] ];
-      ])
-
-let placeholder (model : Model.t) =
-  return
-  @@ El.
-       [
-         geopub_menu model;
-         div
-           ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "text-content" ]
-           [ txt' "TODO" ];
-       ]
-
-let loading msg =
+let loading =
   El.
     [
       div
-        ~at:At.[ class' @@ Jstr.v "loading" ]
-        [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] (); p [ txt' msg ] ];
+        ~at:[ UIKit.container; UIKit.Position.center ]
+        [
+          img
+            ~at:
+              At.
+                [
+                  id @@ Jstr.v "sgraffito-large";
+                  src (Jstr.v "sgraffito.svg");
+                  UIKit.Align.center;
+                ]
+            ();
+          p [ txt' "Loading GeoPub..." ];
+        ];
     ]
 
 let about =
   El.(
     div
-      ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "text-content" ]
+      ~at:[ UIKit.container; UIKit.margin ]
       [
         h1 [ txt' "GeoPub" ];
         p [ txt' "Version 0.7.0-dev" ];
@@ -101,15 +70,14 @@ let about =
 type t = Model.t
 
 let view (t : Model.t) =
-  S.bind_s ~eq:( = ) t.router (function
-    | Route.About -> return @@ S.const [ geopub_menu t; about ]
-    | Route.User ->
-        User.view t.user >|= S.map (fun view -> geopub_menu t :: view)
-    | Route.Map -> return @@ S.const [ geopub_menu t; Geopub_map.view t.map ]
-    | Route.Inspect iri ->
-        Inspect.view t iri >|= S.map (fun view -> geopub_menu t :: view)
-    | route ->
-        return @@ S.const @@ loading (route |> Route.to_jstr |> Jstr.to_string))
+  S.bind_s ~eq:( = ) t.router (fun current_route ->
+      let with_navbar = S.map (fun c -> Navbar.view current_route :: c) in
+      match current_route with
+      | Route.About -> return @@ with_navbar @@ S.const [ about ]
+      | Route.User -> User.view t.user >|= with_navbar
+      | Route.Map -> return @@ with_navbar @@ S.const [ Geopub_map.view t.map ]
+      | Route.Inspect iri -> Inspect.view t iri >|= with_navbar
+      | _ -> return @@ S.const @@ loading)
 
 (* match Router.current t.router with
  * | Route.Activity latlng ->

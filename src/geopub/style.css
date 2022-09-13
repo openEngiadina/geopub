@@ -1,262 +1,278 @@
 body {
-    font-family: Helvetica, sans-serif;
-    font-size: 18px;
-    margin: 0;
-    padding: 0;
-    display: flex;
     height: 100vh;
-    flex-direction: row;
-    overflow: hidden;
 }
 
-/* Common components */
-
-.loading {
-    margin: auto;
-    text-align: center;
-    color: grey;
+.uk-navbar-container:not(.uk-navbar-transparent) {
+    /* background: #4782a7; */
 }
 
-.loading img {
-    max-height: 50px;
-}
-
-.spacer {
-    flex-grow: 1
-}
-
-/* Main menu */
-
-#menu {
-    height: 100vh;
-    width: 15vw;
-    color: white;
-    background-color: #4782a7;
-
-    padding: 0px 20px 0px 20px;
-
-    display: flex;
-    flex-direction: column;
-}
-
-#menu header {
-    margin-top: 30px;
-}
-
-#menu nav {
-    margin: 20px 0 20px 0;
-}
-
-#menu header img {
+#sgraffito {
     max-height: 30px;
 }
 
-nav ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-nav li a {
-    color: white;
-    text-decoration: none;
-    font-size: 1.4em;
-}
-
-/* Main */
-
-#main {
-    flex-grow: 1;
-    align-self: flex-start;
-    overflow: auto;
-    margin-right: auto;
-    margin-bottom: 50px;
-}
-
-.content {
-    padding: 50px;
-    height: 80%;
-    margin-bottom: 50px;
-}
-
-
-.text-content {
-    padding: 50px;
-    width: 50vw;
-    max-width: 800px;
-    height: 100%;
-    margin: auto;
+#sgraffito-large {
+    max-height: 60px;
 }
 
 #map {
-    flex-grow: 1;
     height: 100%;
     width: 100%;
 }
 
-.sidebar {
-    background-color: #e9f7ff;
-    width: 300px;
-    margin: 10px;
-}
+/* body { */
+/*     font-family: Helvetica, sans-serif; */
+/*     font-size: 18px; */
+/*     margin: 0; */
+/*     padding: 0; */
+/*     display: flex; */
+/*     height: 100vh; */
+/*     flex-direction: row; */
+/*     overflow: hidden; */
+/* } */
 
-/* Query UI */
+/* /\* Common components *\/ */
 
-#query {
-    flex-grow: 1;
-    width: 100%;
-    padding: 50px;
-    margin-bottom: 50px;
-    overflow: auto;
-}
+/* .loading { */
+/*     margin: auto; */
+/*     text-align: center; */
+/*     color: grey; */
+/* } */
 
-#query .results-table {
-    font-size: 14px;
-}
+/* .loading img { */
+/*     max-height: 50px; */
+/* } */
 
+/* .spacer { */
+/*     flex-grow: 1 */
+/* } */
 
-#query-string-input {
-    width: 80%;
-}
+/* /\* Main menu *\/ */
 
-#query table {border-collapse: collapse; width: 100%; margin: 1.5rem 0;}
-#query td, th {border: 1px solid black; text-align: left; padding: 0.5rem;}
-#query th {background: #4782a7; font-weight: bold;}
+/* #menu { */
+/*     height: 100vh; */
+/*     width: 15vw; */
+/*     color: white; */
+/*     background-color: #4782a7; */
 
+/*     padding: 0px 20px 0px 20px; */
 
-/* Inspect UI */
+/*     display: flex; */
+/*     flex-direction: column; */
+/* } */
 
-.meta {
-    color: grey;
-    font-size: 14px;
-}
+/* #menu header { */
+/*     margin-top: 30px; */
+/* } */
 
-.objects {
-    list-style-type: none;
-}
+/* #menu nav { */
+/*     margin: 20px 0 20px 0; */
+/* } */
 
-/* Action Bar */
+/* #menu header img { */
+/*     max-height: 30px; */
+/* } */
 
-#action-bar {
-    height: 100vh;
-    margin-left: auto;
-    width: 30vw;
-    max-width: 30vw;
-    border-left: 1px solid black;
-}
+/* nav ul { */
+/*     list-style-type: none; */
+/*     padding: 0; */
+/* } */
 
+/* nav li a { */
+/*     color: white; */
+/*     text-decoration: none; */
+/*     font-size: 1.4em; */
+/* } */
 
-/* Roster */
+/* /\* Main *\/ */
 
-.roster {
-    list-style-type: none;
-}
+/* #main { */
+/*     flex-grow: 1; */
+/*     align-self: flex-start; */
+/*     overflow: auto; */
+/*     margin-right: auto; */
+/*     margin-bottom: 50px; */
+/* } */
 
-.roster-item a {
-    text-decoration: none;
-}
-
-.roster-item a:hover {
-    font-weight: 600;
-}
-
-.roster-item-selected {
-    font-weight: 600;
-}
-
-
-/* Posts */
-
-/* post compose form */
-.post-compose {
-    width: 100%;
-    margin-right: 50px;
-}
-
-.post-compose ul {
-    list-style-type: none;
-}
-
-.post-compose li {
-    display: flex;
-    flex-direction: row;
-}
-
-.post-compose label {
-    min-width: 120px;
-}
-
-.post-compose input {
-    flex-grow: 1;
-}
-
-.post-compose textarea {
-    height: 60px;
-    flex-grow: 1;
-}
-
-/* The activity timeline view */
-
-ul.activity {
-    margin: 0;
-    list-style-type: none;
-    padding-left: 0;
-    width: 100%;
-}
-
-.activity li {
-    border-bottom: solid 0.3px grey;
-}
+/* .content { */
+/*     padding: 50px; */
+/*     height: 80%; */
+/*     margin-bottom: 50px; */
+/* } */
 
 
-/* Individual post */
-
-.activity {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-.activity header {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-}
-
-.activity .post-from {
-    min-width: 33%;
-}
-
-.activity .post-title {
-    min-width: 33%;
-}
-
-.activity .post-date {
-    min-width: 33%;
-}
+/* .text-content { */
+/*     padding: 50px; */
+/*     width: 50vw; */
+/*     max-width: 800px; */
+/*     height: 100%; */
+/*     margin: auto; */
+/* } */
 
 
-.activity .post-date {
-    text-align: right;
-    color: grey;
-}
+/* .sidebar { */
+/*     background-color: #e9f7ff; */
+/*     width: 300px; */
+/*     margin: 10px; */
+/* } */
 
-.activity .post-content {
-    flex-grow: 1;
-}
+/* /\* Query UI *\/ */
+
+/* #query { */
+/*     flex-grow: 1; */
+/*     width: 100%; */
+/*     padding: 50px; */
+/*     margin-bottom: 50px; */
+/*     overflow: auto; */
+/* } */
+
+/* #query .results-table { */
+/*     font-size: 14px; */
+/* } */
 
 
-.activity footer {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-end;
-}
+/* #query-string-input { */
+/*     width: 80%; */
+/* } */
 
-.activity .post-geoloc {
-    flex-grow: 1;
-}
+/* #query table {border-collapse: collapse; width: 100%; margin: 1.5rem 0;} */
+/* #query td, th {border: 1px solid black; text-align: left; padding: 0.5rem;} */
+/* #query th {background: #4782a7; font-weight: bold;} */
 
-.activity .post-inspect {
-    color: grey;
-    font-size: 12px;
-}
+
+/* /\* Inspect UI *\/ */
+
+/* .meta { */
+/*     color: grey; */
+/*     font-size: 14px; */
+/* } */
+
+/* .objects { */
+/*     list-style-type: none; */
+/* } */
+
+/* /\* Action Bar *\/ */
+
+/* #action-bar { */
+/*     height: 100vh; */
+/*     margin-left: auto; */
+/*     width: 30vw; */
+/*     max-width: 30vw; */
+/*     border-left: 1px solid black; */
+/* } */
+
+
+/* /\* Roster *\/ */
+
+/* .roster { */
+/*     list-style-type: none; */
+/* } */
+
+/* .roster-item a { */
+/*     text-decoration: none; */
+/* } */
+
+/* .roster-item a:hover { */
+/*     font-weight: 600; */
+/* } */
+
+/* .roster-item-selected { */
+/*     font-weight: 600; */
+/* } */
+
+
+/* /\* Posts *\/ */
+
+/* /\* post compose form *\/ */
+/* .post-compose { */
+/*     width: 100%; */
+/*     margin-right: 50px; */
+/* } */
+
+/* .post-compose ul { */
+/*     list-style-type: none; */
+/* } */
+
+/* .post-compose li { */
+/*     display: flex; */
+/*     flex-direction: row; */
+/* } */
+
+/* .post-compose label { */
+/*     min-width: 120px; */
+/* } */
+
+/* .post-compose input { */
+/*     flex-grow: 1; */
+/* } */
+
+/* .post-compose textarea { */
+/*     height: 60px; */
+/*     flex-grow: 1; */
+/* } */
+
+/* /\* The activity timeline view *\/ */
+
+/* ul.activity { */
+/*     margin: 0; */
+/*     list-style-type: none; */
+/*     padding-left: 0; */
+/*     width: 100%; */
+/* } */
+
+/* .activity li { */
+/*     border-bottom: solid 0.3px grey; */
+/* } */
+
+
+/* /\* Individual post *\/ */
+
+/* .activity { */
+/*     margin-top: 20px; */
+/*     display: flex; */
+/*     flex-direction: column; */
+/*     gap: 30px; */
+/* } */
+
+/* .activity header { */
+/*     display: flex; */
+/*     flex-direction: row; */
+/*     justify-content: space-between; */
+/* } */
+
+/* .activity .post-from { */
+/*     min-width: 33%; */
+/* } */
+
+/* .activity .post-title { */
+/*     min-width: 33%; */
+/* } */
+
+/* .activity .post-date { */
+/*     min-width: 33%; */
+/* } */
+
+
+/* .activity .post-date { */
+/*     text-align: right; */
+/*     color: grey; */
+/* } */
+
+/* .activity .post-content { */
+/*     flex-grow: 1; */
+/* } */
+
+
+/* .activity footer { */
+/*     display: flex; */
+/*     flex-direction: row; */
+/*     justify-content: flex-end; */
+/* } */
+
+/* .activity .post-geoloc { */
+/*     flex-grow: 1; */
+/* } */
+
+/* .activity .post-inspect { */
+/*     color: grey; */
+/*     font-size: 12px; */
+/* } */

@@ -38,10 +38,9 @@ let main () =
 
   (* Show a loading screen *)
   let body = Document.body G.document in
-  El.set_children body @@ Ui.loading "Initializing GeoPub ... ";
+  El.set_children body @@ Ui.loading;
 
-  (* Initialize random generator *)
-  Random.self_init ();
+  (* Initialize random generator *) Random.self_init ();
 
   (* Start the app *)
   let* system = System.start () system in
