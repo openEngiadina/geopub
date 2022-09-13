@@ -51,11 +51,24 @@ let client (state, _) =
 (* Login methods *)
 let login (_, set_state) ?(options = Xmppl_websocket.default_options) ~password
     jid =
-  Client.create options ~credentials:(`JidPassword (jid, password))
-  |> Lwt_result.catch >|= Loadable.of_result >|= set_state ?step:None
+  set_state ?step:None Loadable.Loading;
+  let* client =
+    Client.create options ~credentials:(`JidPassword (jid, password))
+  in
+
+  Client.connect client |> Lwt_result.catch
+  >|= Result.map (fun () -> client)
+  >|= Loadable.of_result >|= set_state ?step:None
 
 let login_anonymous_demo (_, set_state) =
-  Client.create
-    { ws_endpoint = Some "wss://openengiadina.net/xmpp-websocket" }
-    ~credentials:(`Anonymous "demo.openengiadina.net")
-  |> Lwt_result.catch >|= Loadable.of_result >|= set_state ?step:None
+  set_state ?step:None Loadable.Loading;
+
+  let* client =
+    Client.create
+      { ws_endpoint = Some "wss://openengiadina.net/xmpp-websocket" }
+      ~credentials:(`Anonymous "demo.openengiadina.net")
+  in
+
+  Client.connect client |> Lwt_result.catch
+  >|= Result.map (fun () -> client)
+  >|= Loadable.of_result >|= set_state ?step:None

@@ -16,7 +16,7 @@ let geopub_menu (_model : Model.t) =
       header
         [
           a
-            ~at:At.[ href @@ Jstr.v "#about" ]
+            ~at:At.[ href @@ Jstr.v "#user" ]
             [ img ~at:At.[ src (Jstr.v "sgraffito.svg") ] () ];
         ])
   in
@@ -103,6 +103,8 @@ type t = Model.t
 let view (t : Model.t) =
   S.bind_s ~eq:( = ) t.router (function
     | Route.About -> return @@ S.const [ geopub_menu t; about ]
+    | Route.User ->
+        User.view t.user >|= S.map (fun view -> geopub_menu t :: view)
     | Route.Map -> return @@ S.const [ geopub_menu t; Geopub_map.view t.map ]
     | Route.Inspect iri ->
         Inspect.view t iri >|= S.map (fun view -> geopub_menu t :: view)
@@ -116,12 +118,10 @@ let view (t : Model.t) =
  * | Route.Query query ->
  *     let* query_view = Query.view model query in
  *     return [ Ui.geopub_menu model; query_view ]
- * | Route.Inspect iri -> Inspect.view model iri
  * | Route.Settings -> Settings.view ~update model *)
 
-let start () router database xmpp_connection map :
-    (t, [ `Msg of string ]) Result.t Lwt.t =
-  let model : Model.t = { router; database; xmpp_connection; map } in
+let start () router database user map : (t, [ `Msg of string ]) Result.t Lwt.t =
+  let model : Model.t = { router; database; user; map } in
 
   (* Set the UI on the document body *)
   let body = Document.body G.document in
@@ -137,6 +137,6 @@ let component =
       [
         Router.component;
         Database.component;
-        Xmpp.Connection.component;
+        User.component;
         Geopub_map.component;
       ]

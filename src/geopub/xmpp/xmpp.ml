@@ -32,13 +32,13 @@ module Connection = Connection
 
 (* Main component *)
 
-type t = unit
+type t = { connection : Connection.t }
 
-let start () _connection =
+let start () connection =
   Log.info (fun m -> m "XMPP component started");
-  return_ok ()
+  return_ok { connection }
 
-let stop () = return_unit
+let stop _ = return_unit
 
 let component =
   Component.using ~start ~stop ~dependencies:[ Connection.component ]

@@ -40,6 +40,6 @@ module Connection : sig
   val login_anonymous_demo : t -> unit Lwt.t
 end
 
-type t
+type t = { connection : Connection.t }
 
 val component : (unit, t) Component.t

@@ -8,6 +8,7 @@ open Brr
 
 type t =
   | About
+  | User
   | Activity of Leaflet.Latlng.t option
   | Map
   | Query of string
@@ -20,6 +21,7 @@ let parser uri =
   in
   match path with
   | [ "about" ] -> About
+  | [ "user" ] -> User
   | [ "activity" ] -> Activity None
   | [ "map" ] -> Map
   | [ "query"; query ] -> Query query
@@ -36,6 +38,7 @@ let to_uri route =
   let location = Window.location G.window in
   (match route with
   | About -> Uri.with_uri location ~fragment:(Jstr.v "about")
+  | User -> Uri.with_uri location ~fragment:(Jstr.v "user")
   | Activity None -> Uri.with_uri location ~fragment:(Jstr.v "activity")
   | Activity (Some latlng) ->
       let latlng_s =
