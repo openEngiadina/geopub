@@ -18,24 +18,24 @@ module Log = (val Logs.src_log src : Logs.LOG)
 (* A small hack to invalidate the size of the Leaflet map when it is
    dynamically loaded. If not it would not be displayed correctly until a
    manual window resize. *)
-let observe_for_map el map =
-  let observer records _obs =
-    let on_node node =
-      match Jv.(to_option to_string @@ get node "id") with
-      | Some "map" -> Geopub_map.invalidate_size map
-      | _ -> ()
-    in
-
-    records
-    |> Jv.to_list (fun x -> x)
-    |> List.map (fun record ->
-           Jv.to_list (fun x -> x) @@ Jv.get record "addedNodes")
-    |> List.flatten |> List.iter on_node
-  in
-  let mutation_observer = Jv.get Jv.global "MutationObserver" in
-  let observer = Jv.new' mutation_observer [| Jv.repr observer |] in
-  let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
-  ignore @@ Jv.call observer "observe" [| El.to_jv el; opts |]
+(* let observe_for_map el map =
+ *   let observer records _obs =
+ *     let on_node node =
+ *       match Jv.(to_option to_string @@ get node "id") with
+ *       | Some "map" -> Geopub_map.invalidate_size map
+ *       | _ -> ()
+ *     in
+ * 
+ *     records
+ *     |> Jv.to_list (fun x -> x)
+ *     |> List.map (fun record ->
+ *            Jv.to_list (fun x -> x) @@ Jv.get record "addedNodes")
+ *     |> List.flatten |> List.iter on_node
+ *   in
+ *   let mutation_observer = Jv.get Jv.global "MutationObserver" in
+ *   let observer = Jv.new' mutation_observer [| Jv.repr observer |] in
+ *   let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
+ *   ignore @@ Jv.call observer "observe" [| El.to_jv el; opts |] *)
 
 let system = System.make [ ("ui", Ui.component); ("db", Database.component) ]
 

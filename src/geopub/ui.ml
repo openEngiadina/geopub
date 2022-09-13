@@ -126,7 +126,7 @@ let start () router database xmpp_connection :
 
   (* Set the UI on the document body *)
   let body = Document.body G.document in
-  let* () = view model >|= S.map ~eq:( = ) (El.set_children body) >|= S.keep in
+  let* () = view model >|= Brr_react.Elr.def_children body >|= S.keep in
 
   return_ok model
 

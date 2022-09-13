@@ -1,0 +1,8 @@
+; SPDX-FileCopyrightText: 2022 pukkamustard <pukkamustard@posteo.net>
+;
+; SPDX-License-Identifier: CC0-1.0
+
+(library
+ (name brr_react)
+ (public_name geopub.brr_react)
+ (libraries brr react))

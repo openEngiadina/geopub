@@ -8,6 +8,7 @@
   js_of_ocaml
   js_of_ocaml-lwt
   lwt_react
+  geopub.brr_react
   geopub.loadable
   geopub.database
   geopub.xmpp
