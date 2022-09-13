@@ -104,6 +104,7 @@ let view t =
   t.router
   |> S.map_s ~eq:( = ) (function
        | Route.About -> return [ geopub_menu t; about ]
+       | Route.Map -> return [ geopub_menu t; Geopub_map.view t.map ]
        | route -> return @@ loading (route |> Route.to_jstr |> Jstr.to_string))
 
 (* match Router.current t.router with
@@ -120,9 +121,9 @@ let view t =
  * | Route.Inspect iri -> Inspect.view model iri
  * | Route.Settings -> Settings.view ~update model *)
 
-let start () router database xmpp_connection :
+let start () router database xmpp_connection map :
     (t, [ `Msg of string ]) Result.t Lwt.t =
-  let model : Model.t = { router; database; xmpp_connection } in
+  let model : Model.t = { router; database; xmpp_connection; map } in
 
   (* Set the UI on the document body *)
   let body = Document.body G.document in
@@ -135,4 +136,9 @@ let stop _ = return_unit
 let component =
   Component.using ~start ~stop
     ~dependencies:
-      [ Router.component; Database.component; Xmpp.Connection.component ]
+      [
+        Router.component;
+        Database.component;
+        Xmpp.Connection.component;
+        Geopub_map.component;
+      ]
