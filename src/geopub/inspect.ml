@@ -140,6 +140,12 @@ let description_list_of_description database description =
  *       return El.[ h2 [ txt' "Inferred types" ]; ul type_lis ]
  *   | None -> return_nil *)
 
+let submenu _model =
+  El.(
+    ul
+      ~at:At.[ class' @@ Jstr.v "uk-subnav" ]
+      [ li [ a [ txt' "Share" ] ]; li [ a [ txt' "Like" ] ] ])
+
 let view (model : Model.t) iri =
   let* description = Database.description model.database iri in
 
@@ -154,7 +160,9 @@ let view (model : Model.t) iri =
              div
                ~at:[ UIKit.container; UIKit.margin ]
                [
-                 article ~at:[ UIKit.article ]
+                 submenu model;
+                 article
+                   ~at:[ UIKit.article; UIKit.margin ]
                    ([
                       title_of_description description;
                       p ~at:[ UIKit.Article.meta ]
