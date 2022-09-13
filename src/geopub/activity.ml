@@ -28,7 +28,6 @@ let hash s =
   Rdf.Iri.of_string @@ Eris.Read_capability.to_urn read_cap
 
 module Geopub_namespace = Namespace
-module Xmpp = Geopub_xmpp
 module Database = Geopub_database
 
 (* Construct a note as RDF *)

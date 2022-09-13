@@ -2,12 +2,14 @@
  (name main)
  (libraries
   brr
+  note
   logs
   logs.browser
   js_of_ocaml
   js_of_ocaml-lwt
   lwt_react
-  loadable
+  geopub.brr_react
+  geopub.loadable
   geopub.database
   geopub.xmpp
   rdf

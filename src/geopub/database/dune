@@ -1,5 +1,5 @@
 (library
- (name geopub_database)
+ (name database)
  (public_name geopub.database)
  (libraries
   rdf
@@ -11,4 +11,5 @@
   datalogl
   lwt_react
   uuseg.string
-  geohash))
+  geohash
+  archi-lwt))

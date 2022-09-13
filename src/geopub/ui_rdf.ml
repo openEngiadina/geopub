@@ -6,8 +6,6 @@
 
 open Brr
 open Lwt
-open Lwt.Syntax
-module Database = Geopub_database
 
 let view_iri iri =
   El.(
@@ -18,8 +16,10 @@ let view_iri iri =
 let view_blank_node bnode = El.(txt' @@ "_:" ^ Rdf.Blank_node.identifier bnode)
 let view_literal literal = El.(txt' @@ Rdf.Literal.canonical literal)
 
-let view_pretty_iri database iri =
-  let* label_opt = Database.get_rdfs_label database iri in
+let view_pretty_iri _database iri =
+  (* let* label_opt = Database.get_rdfs_label database iri in *)
+  (* TODO WIP *)
+  let label_opt = None in
   match label_opt with
   | Some literal ->
       return

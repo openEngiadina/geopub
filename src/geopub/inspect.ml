@@ -7,13 +7,7 @@
 open Brr
 open Lwt
 open Lwt.Syntax
-
-(* Setup logging *)
-
-let src = Logs.Src.create "GeoPub"
-
-module Log = (val Logs.src_log src : Logs.LOG)
-module Database = Geopub_database
+open Lwt_react
 
 let title_decoder =
   Rdf.Decoder.(
@@ -74,83 +68,89 @@ let view_description_statements database description =
                   dd [ ul ~at:At.[ class' @@ Jstr.v "objects" ] objects_lis ];
                 ])
 
-let view_backlinks database description =
-  let subject_term =
-    Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
-  in
-  let* subject_id = Database.Store.Dictionary.lookup database subject_term in
-  match subject_id with
-  | Some subject_id ->
-      let query =
-        Database.Datalog.(
-          Atom.make "triple"
-            Term.
-              [
-                make_variable "s";
-                make_variable "p";
-                make_constant @@ Constant.Rdf subject_id;
-              ])
-      in
-      let backlink_triples = Database.query_triple database query in
-      let* backlink_dtdds =
-        backlink_triples |> Lwt_seq.to_list
-        >>= Lwt_list.map_s (fun (triple : Rdf.Triple.t) ->
-                let* predicate_el =
-                  Ui_rdf.view_predicate database triple.predicate
-                in
-                let* subject_el = Ui_rdf.view_subject database triple.subject in
-                return El.[ dt [ predicate_el ]; dd [ subject_el ] ])
-        >|= List.concat
-      in
-      return El.[ h2 [ txt' "Backlinks" ]; dl backlink_dtdds ]
-  | None -> return_nil
-
-let view_rhodf_types database description =
-  let subject_term =
-    Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
-  in
-  let* subject_id = Database.Store.Dictionary.lookup database subject_term in
-  let type_id =
-    Database.Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri
-    @@ Rdf.Namespace.rdf "type"
-    |> Option.value ~default:(-99)
-  in
-  match subject_id with
-  | Some subject_id ->
-      let query =
-        Database.Datalog.(
-          Atom.make "triple-rhodf"
-            Term.
-              [
-                make_constant @@ Constant.Rdf subject_id;
-                make_constant @@ Constant.Rdf type_id;
-                make_variable "o";
-              ])
-      in
-      let* type_triples =
-        Database.query_triple database query |> Lwt_seq.to_list
-      in
-      let* type_lis =
-        Lwt_list.map_s
-          (fun (triple : Rdf.Triple.t) ->
-            let* object_el = Ui_rdf.view_object database triple.object' in
-            return El.[ li [ object_el ] ])
-          type_triples
-        >|= List.concat
-      in
-      return El.[ h2 [ txt' "Inferred types" ]; ul type_lis ]
-  | None -> return_nil
+(* let view_backlinks database description =
+ *   let subject_term =
+ *     Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
+ *   in
+ *   let* subject_id = Database.Store.Dictionary.lookup database subject_term in
+ *   match subject_id with
+ *   | Some subject_id ->
+ *       let query =
+ *         Database.Datalog.(
+ *           Atom.make "triple"
+ *             Term.
+ *               [
+ *                 make_variable "s";
+ *                 make_variable "p";
+ *                 make_constant @@ Constant.Rdf subject_id;
+ *               ])
+ *       in
+ *       let backlink_triples = Database.query_triple database query in
+ *       let* backlink_dtdds =
+ *         backlink_triples |> Lwt_seq.to_list
+ *         >>= Lwt_list.map_s (fun (triple : Rdf.Triple.t) ->
+ *                 let* predicate_el =
+ *                   Ui_rdf.view_predicate database triple.predicate
+ *                 in
+ *                 let* subject_el = Ui_rdf.view_subject database triple.subject in
+ *                 return El.[ dt [ predicate_el ]; dd [ subject_el ] ])
+ *         >|= List.concat
+ *       in
+ *       return El.[ h2 [ txt' "Backlinks" ]; dl backlink_dtdds ]
+ *   | None -> return_nil
+ * 
+ * let view_rhodf_types database description =
+ *   let subject_term =
+ *     Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
+ *   in
+ *   let* subject_id = Database.Store.Dictionary.lookup database subject_term in
+ *   let type_id =
+ *     Database.Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri
+ *     @@ Rdf.Namespace.rdf "type"
+ *     |> Option.value ~default:(-99)
+ *   in
+ *   match subject_id with
+ *   | Some subject_id ->
+ *       let query =
+ *         Database.Datalog.(
+ *           Atom.make "triple-rhodf"
+ *             Term.
+ *               [
+ *                 make_constant @@ Constant.Rdf subject_id;
+ *                 make_constant @@ Constant.Rdf type_id;
+ *                 make_variable "o";
+ *               ])
+ *       in
+ *       let* type_triples =
+ *         Database.query_triple database query |> Lwt_seq.to_list
+ *       in
+ *       let* type_lis =
+ *         Lwt_list.map_s
+ *           (fun (triple : Rdf.Triple.t) ->
+ *             let* object_el = Ui_rdf.view_object database triple.object' in
+ *             return El.[ li [ object_el ] ])
+ *           type_triples
+ *         >|= List.concat
+ *       in
+ *       return El.[ h2 [ txt' "Inferred types" ]; ul type_lis ]
+ *   | None -> return_nil *)
 
 let view (model : Model.t) iri =
-  let* description = Database.get_description model.database iri in
-  let* statements = view_description_statements model.database description in
-  let* backlinks = view_backlinks model.database description in
-  let* rhodf_types = view_rhodf_types model.database description in
+  let* description = Database.description model.database iri in
+  let* statements =
+    S.map_s (view_description_statements model.database) description
+  in
+
+  (* let* backlinks = view_backlinks model.database description in *)
+  (* let* rhodf_types = view_rhodf_types model.database description in *)
   return
-    El.
-      [
-        Ui.geopub_menu model;
-        div
-          ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
-          ([ view_header description ] @ statements @ backlinks @ rhodf_types);
-      ]
+  @@ S.l2
+       (fun description statements ->
+         El.
+           [
+             div
+               ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
+               ([ view_header description ]
+               @ statements (* @ backlinks @ rhodf_types *));
+           ])
+       description statements

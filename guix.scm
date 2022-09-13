@@ -443,7 +443,7 @@ message report is decoupled from logging and is handled by a reporter.")
 (define-public ocaml-xmppl
   (package
     (name "ocaml-xmppl")
-    (version "1a5fe11ac13b706816c04447c58d1e2ef965ff23")
+    (version "d36b66d0778dfb2cc1c06d657ecd222cdb575acf")
     (home-page "https://codeberg.org/openEngiadina/ocaml-xmppl.git")
     (source
      (origin (method git-fetch)
@@ -452,7 +452,7 @@ message report is decoupled from logging and is handled by a reporter.")
                    (commit version)))
              (file-name (git-file-name name version))
              (sha256
-              (base32 "10nflskphfzwjswd6jamgyyhbsc7r52wp21ss6ymfhrkicf79paw"))))
+              (base32 "040vhm17r168pc9x4gmvy9bnbaiz0fhgsq0vww7mvd1arf1iryq0"))))
     ;; (arguments `(#:tests? #f))
     (build-system dune-build-system)
     (native-inputs
@@ -546,6 +546,67 @@ stubs in Javascript for use in Js_of_ocaml")
     (description #f)
     (license license:agpl3+)))
 
+(define-public ocaml-hmap
+  (package
+    (name "ocaml-hmap")
+    (version "0.8.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri "http://erratique.ch/software/hmap/releases/hmap-0.8.1.tbz")
+       (sha256
+	(base32 "10xyjy4ab87z7jnghy0wnla9wrmazgyhdwhr4hdmxxdn28dxn03a"))))
+    (build-system ocaml-build-system)
+    (arguments
+     `(#:build-flags
+       (list "build" "--tests" "true")
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure))))
+    (native-inputs (list ocaml-topkg ocamlbuild opam))
+    (home-page "http://erratique.ch/software/hmap")
+    (synopsis "Heterogeneous value maps for OCaml")
+    (description
+     "Hmap provides heterogeneous value maps for OCaml.  These maps bind keys to
+values with arbitrary types.  Keys witness the type of the value they are bound
+to which allows to add and lookup bindings in a type safe manner.
+
+Hmap has no dependency and is distributed under the ISC license.")
+    (license license:isc)))
+
+(define-public ocaml-archi
+  (package
+    (name "ocaml-archi")
+    (version "0.2.0")
+    (home-page "https://github.com/anmonteiro/archi")
+    (source
+     (origin
+      (method git-fetch)
+      (uri (git-reference
+	    (url home-page)
+	    (commit version)))
+      (file-name (git-file-name name version))
+      (sha256
+       (base32
+	"009rkx7qnwk9yqgmydsa5v8ram79lknzzy0vlw0rqa1i5mdx93gj"))))
+    (build-system dune-build-system)
+    (arguments `(#:package "archi"))
+    (propagated-inputs (list ocaml-hmap))
+    (native-inputs (list ocaml-alcotest))
+    (synopsis
+     "A library for managing the lifecycle of stateful components in OCaml")
+    (description
+     "Archi is an OCaml library for managing the lifecycle of stateful components and
+their dependencies.")
+    (license license:bsd-3)))
+
+(define-public ocaml-archi-lwt
+  (package
+    (inherit ocaml-archi)
+    (name "ocaml-archi-lwt")
+    (arguments `(#:package "archi-lwt"))
+    (propagated-inputs (list ocaml-archi ocaml-lwt))))
+
 (define-public geopub
   (package
     (name "geopub")
@@ -555,26 +616,37 @@ stubs in Javascript for use in Js_of_ocaml")
     (arguments '())
     (native-inputs
      (list
+
+      ;; web
+      js-of-ocaml
+      ocaml-brr
+      ocaml-zarith-stubs-js
+
       ocaml-react
       ocaml-lwt-react
-      ocaml-brr
+
+      ;; JS bindings
       ocaml-leaflet
 
-      ocaml-eris
-
+      ;; RDF
       ocaml-rdf
       ocaml-uri
-      ocaml-xmppl
-      ocaml-uuseg
-      ocaml-datalogl
-      ocaml-ptime
-      ocaml-base32
-      ocaml-zarith-stubs-js
-      js-of-ocaml
-      ocaml-merlin
-      ocaml-dot-merlin-reader
       raptor2
-      pv))
+
+      ;; Database
+      ocaml-datalogl
+      ocaml-uuseg
+
+      ;; XMPP
+      ocaml-xmppl
+
+      ;; Content-addressing
+      ocaml-eris
+
+      ;; General utils
+      ocaml-archi-lwt
+      ocaml-ptime
+      ocaml-base32))
     (home-page "https://gitlab.com/openengiadina/geopub")
     (synopsis #f)
     (description #f)
