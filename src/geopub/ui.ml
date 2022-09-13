@@ -77,7 +77,7 @@ let view (t : Model.t) =
       | Route.User -> User.view t.user >|= with_navbar
       | Route.Map -> return @@ with_navbar @@ S.const [ Geopub_map.view t.map ]
       | Route.Inspect iri -> Inspect.view t iri >|= with_navbar
-      | _ -> return @@ S.const @@ loading)
+      | _ -> return @@ with_navbar @@ S.const @@ loading)
 
 (* match Router.current t.router with
  * | Route.Activity latlng ->
