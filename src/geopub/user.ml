@@ -30,6 +30,13 @@ let component =
   Component.using ~start ~stop
     ~dependencies:[ Database.component; Xmpp.component; Router.component ]
 
+let jid t =
+  Xmpp.(Connection.client_signal @@ connection t.xmpp)
+  |> S.map Loadable.to_option
+  |> S.map_s (function
+       | Some client -> Xmpp.Client.jid client >|= Option.some
+       | None -> return_none)
+
 (* View *)
 
 let login ?error t =

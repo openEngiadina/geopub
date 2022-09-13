@@ -6,7 +6,7 @@
 
 open Brr
 
-let view current_route =
+let view jid_opt current_route =
   let entry name route =
     El.(
       li
@@ -45,7 +45,6 @@ let view current_route =
             ul
               ~at:At.[ class' @@ Jstr.v "uk-navbar-nav" ]
               [
-                entry "About" Route.About;
                 entry "Activity" (Route.Activity None);
                 entry "Map" Route.Map;
                 entry "Query" (Route.Query "triple-fts(?s,?p,?o, \"Hello\")");
@@ -55,8 +54,14 @@ let view current_route =
         div
           ~at:At.[ class' @@ Jstr.v "uk-navbar-right"; UIKit.Margin.right ]
           [
-            ul
-              ~at:At.[ class' @@ Jstr.v "uk-navbar-nav" ]
-              [ entry "User" Route.User ];
+            (match jid_opt with
+            | Some jid ->
+                ul
+                  ~at:At.[ class' @@ Jstr.v "uk-navbar-nav" ]
+                  [ entry Xmpp.Jid.(to_string @@ bare jid) Route.User ]
+            | None ->
+                ul
+                  ~at:At.[ class' @@ Jstr.v "uk-navbar-nav" ]
+                  [ entry "Login" Route.User ]);
           ];
       ])

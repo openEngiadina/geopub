@@ -70,8 +70,11 @@ let about =
 type t = Model.t
 
 let view (t : Model.t) =
+  let* jid = User.jid t.user in
   S.bind_s ~eq:( = ) t.router (fun current_route ->
-      let with_navbar = S.map (fun c -> Navbar.view current_route :: c) in
+      let with_navbar =
+        S.l2 (fun jid_opt c -> Navbar.view jid_opt current_route :: c) jid
+      in
       match current_route with
       | Route.About -> return @@ with_navbar @@ S.const [ about ]
       | Route.User -> User.view t.user >|= with_navbar
