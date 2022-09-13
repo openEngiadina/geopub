@@ -11,8 +11,6 @@
   xmppl.pubsub
   archi-lwt
   geopub.loadable
-  rdf
-  rdf_xml
   uuidm
   ptime
   ptime.clock.jsoo))

@@ -26,6 +26,10 @@ GeoPub is an Web application written in the [OCaml](https://ocaml.org/) programm
 
 #### `Xmpp.Entity_capabilities`
 
+### `Xmpp_rdf`
+
+Reads all incoming XMPP stanzas and attempts to parse RDF data from them. If some RDF data can be parsed it is added to the database.
+
 
 
 

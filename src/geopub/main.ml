@@ -37,7 +37,13 @@ module Log = (val Logs.src_log src : Logs.LOG)
  *   let opts = Jv.obj [| ("childList", Jv.true'); ("subtree", Jv.false') |] in
  *   ignore @@ Jv.call observer "observe" [| El.to_jv el; opts |] *)
 
-let system = System.make [ ("ui", Ui.component); ("db", Database.component) ]
+let system =
+  System.make
+    [
+      ("ui", Ui.component);
+      ("db", Database.component);
+      ("xmpp_rdf", Xmpp_rdf.component);
+    ]
 
 let main () =
   (* Setup logging *)
