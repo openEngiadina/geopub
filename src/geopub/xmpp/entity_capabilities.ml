@@ -22,12 +22,12 @@ module Log = (val Logs.src_log src : Logs.LOG)
 module Client = Xmppl_websocket.Client
 module Entity_capabilities = Xmppl_entity_capabilities.Make (Client)
 
-type t = unit event signal
+type t = unit event
 
 let start () (connection : Connection.t) =
   (* Initiate Entity Cababilities (XEP-0115) responder *)
-  connection |> Connection.client_signal
-  |> S.map_s (function
+  connection |> Connection.client_signal |> S.changes
+  |> E.map_s (function
        | Loadable.Loaded client ->
            Entity_capabilities.advertise ~category:"client" ~type':"web"
              ~name:"GeoPub" ~node:"https://codeberg.org/openEngiadina/geopub"
@@ -49,7 +49,7 @@ let start () (connection : Connection.t) =
                          jid_opt))
            >|= fun e -> E.stamp e ()
        | _ -> return @@ E.never)
-  >>= return_ok
+  |> E.switch E.never |> return_ok
 
 let stop _ = return_unit
 
