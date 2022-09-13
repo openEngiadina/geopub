@@ -48,29 +48,6 @@ let component =
 
 let connection t = t.connection
 
-(* Connection *)
-
-(* Parse Stanza as RDF *)
-
-(* let rdf_of_stanza (stanza : Stanza.t) =
- *   let rdf_parser =
- *     Xmlc.Parser.(
- *       element (Pubsub.Namespace.event "event") (fun _ ->
- *           element (Pubsub.Namespace.event "items") (fun _ ->
- *               element (Pubsub.Namespace.event "item") (fun _ ->
- *                   Xmlc.Tree.parser >>| Xmlc.Tree.to_seq
- *                   >>| Rdf_xml.parse_to_graph))))
- *   in
- *   match stanza with
- *   | Stanza.Message message ->
- *       Xmlc.Tree.parse_trees rdf_parser (List.to_seq message.payload)
- *       |> Lwt_result.catch >|= Result.to_option
- *   | _ -> return_none
- * 
- * let user_iri xmpp =
- *   let* jid = Client.jid xmpp.client in
- *   ("xmpp:" ^ Jid.(to_string @@ bare jid)) |> Rdf.Iri.of_string |> return *)
-
 (* Roster management *)
 
 (* let roster_add xmpp jid = Roster.add_update xmpp.client jid >|= fun _ -> `NoOp *)
