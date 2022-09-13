@@ -59,3 +59,12 @@ module Alert = struct
   let close = class' "uk-alert-close"
   let danger = class' "uk-alert-danger"
 end
+
+let article = class' "uk-article"
+
+module Article = struct
+  let title = class' "uk-article-title"
+  let meta = class' "uk-article-meta"
+end
+
+let description_list = class' "uk-description-list"

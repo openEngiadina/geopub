@@ -9,15 +9,21 @@ open Lwt
 open Lwt.Syntax
 open Lwt_react
 
-let title_decoder =
-  Rdf.Decoder.(
-    choice
-      [
-        functional_property
-          (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
-          any_literal;
-      ]
-    >>| Rdf.Literal.canonical)
+let title_of_description description =
+  let title_s =
+    match
+      Rdf.Description.functional_property
+        (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
+        description
+    with
+    | Some object' ->
+        Rdf.Triple.Object.map Rdf.Iri.to_string Rdf.Blank_node.identifier
+          Rdf.Literal.canonical object'
+    | None ->
+        Rdf.Triple.Subject.map Rdf.Iri.to_string Rdf.Blank_node.identifier
+          (Rdf.Description.subject description)
+  in
+  El.(h1 ~at:[ UIKit.Article.title ] [ txt' title_s ])
 
 let view_header description =
   let subject_title =
@@ -47,7 +53,7 @@ let view_header description =
           ];
       ])
 
-let view_description_statements database description =
+let description_list_of_description database description =
   Rdf.Description.to_nested_seq description
   |> List.of_seq
   |> Lwt_list.map_s
@@ -61,8 +67,7 @@ let view_description_statements database description =
                     return @@ li [ object_el ])
            in
            return
-           @@ dl
-                ~at:At.[ class' @@ Jstr.v "description" ]
+           @@ dl ~at:[ UIKit.description_list ]
                 [
                   dt [ predicate_el ];
                   dd [ ul ~at:At.[ class' @@ Jstr.v "objects" ] objects_lis ];
@@ -137,20 +142,30 @@ let view_description_statements database description =
 
 let view (model : Model.t) iri =
   let* description = Database.description model.database iri in
-  let* statements =
-    S.map_s (view_description_statements model.database) description
-  in
 
   (* let* backlinks = view_backlinks model.database description in *)
   (* let* rhodf_types = view_rhodf_types model.database description in *)
-  return
-  @@ S.l2
-       (fun description statements ->
-         El.
+  S.map_s
+    (fun description ->
+      let* ddl = description_list_of_description model.database description in
+      return
+      @@ El.
            [
              div
-               ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
-               ([ view_header description ]
-               @ statements (* @ backlinks @ rhodf_types *));
+               ~at:[ UIKit.container; UIKit.margin ]
+               [
+                 article ~at:[ UIKit.article ]
+                   ([
+                      title_of_description description;
+                      p ~at:[ UIKit.Article.meta ]
+                        [
+                          txt'
+                          @@ Rdf.Triple.Subject.map Rdf.Iri.to_string
+                               Rdf.Blank_node.identifier
+                               (Rdf.Description.subject description);
+                        ];
+                    ]
+                   @ ddl);
+               ];
            ])
-       description statements
+    description
