@@ -104,31 +104,34 @@ let login t =
               | _ -> failwith "We need better error handling"
             in
 
-            ignore @@ Xmpp.Connection.login t.xmpp.connection ~password jid)
+            ignore @@ Xmpp.(Connection.login (connection t.xmpp) ~password jid))
           login_form;
         p
           [
             Evf.on_el ~propagate:false Ev.click (fun _ev ->
-                ignore @@ Xmpp.Connection.login_anonymous_demo t.xmpp.connection)
+                ignore
+                @@ Xmpp.(Connection.login_anonymous_demo (connection t.xmpp)))
             @@ button [ txt' "Login anonymously with demo.opengiadina.net" ];
           ];
         p
           [
             Evf.on_el ~propagate:false Ev.click (fun _ev ->
                 ignore
-                @@ Xmpp.Connection.login t.xmpp.connection
-                     ~options:
-                       {
-                         ws_endpoint = Some "ws://localhost:5280/xmpp-websocket";
-                       }
-                     ~password:"pencil"
-                     (Xmpp.Jid.of_string_exn "user@strawberry.local"))
+                @@ Xmpp.(
+                     Connection.login (connection t.xmpp)
+                       ~options:
+                         {
+                           ws_endpoint =
+                             Some "ws://localhost:5280/xmpp-websocket";
+                         }
+                       ~password:"pencil"
+                       (Jid.of_string_exn "user@strawberry.local")))
             @@ button [ txt' "dev login" ];
           ];
       ])
 
 let view t =
-  Xmpp.Connection.client_signal t.xmpp.connection
+  Xmpp.(Connection.client_signal (connection t.xmpp))
   |> S.map_s (function
        | Loadable.Idle -> return @@ [ login t ]
        | Loadable.Loading -> return El.[ txt' "Connecting..." ]

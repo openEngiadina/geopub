@@ -22,7 +22,6 @@ module Client = Xmppl_websocket.Client
 
 (* XEPs *)
 
-module Entity_capabilities = Xmppl_entity_capabilities.Make (Client)
 module Roster = Xmppl_roster.Make (Client)
 module Pubsub = Xmppl_pubsub.Make (Client)
 
@@ -32,44 +31,24 @@ module Connection = Connection
 
 (* Main component *)
 
-type t = { connection : Connection.t }
+type t = {
+  connection : Connection.t;
+  entity_capabilities : Entity_capabilities.t;
+}
 
-let start () connection =
+let start () connection entity_capabilities =
   Log.info (fun m -> m "XMPP component started");
-  return_ok { connection }
+  return_ok { connection; entity_capabilities }
 
 let stop _ = return_unit
 
 let component =
-  Component.using ~start ~stop ~dependencies:[ Connection.component ]
+  Component.using ~start ~stop
+    ~dependencies:[ Connection.component; Entity_capabilities.component ]
+
+let connection t = t.connection
 
 (* Connection *)
-
-(* let start_ec_responder client =
- *   (\* Initiate Entity Cababilities (XEP-0115) responder *\)
- *   Entity_capabilities.advertise ~category:"client" ~type':"web" ~name:"GeoPub"
- *     ~node:"https://codeberg.org/openEngiadina/geopub"
- *     [
- *       "http://jabber.org/protocol/caps";
- *       (\* "urn:xmpp:microblog:0"; *\)
- *       (\* "urn:xmpp:microblog:0+notify"; *\)
- *       "net.openengiadina.xmpp.activitystreams";
- *       "net.openengiadina.xmpp.activitystreams+notify"
- *       (\* "http://jabber.org/protocol/geoloc"; *\)
- *       (\* "http://jabber.org/protocol/geoloc+notify"; *\);
- *     ]
- *     client
- *   (\* ignore the JIDs of who made queried our capabilities *\)
- *   >|= fun e -> E.stamp e ()
- * 
- * let connect client =
- *   Lwt_result.(
- *     catch @@ Client.connect client >>= fun _ ->
- *     let* ec_responder = start_ec_responder client in
- *     let stanza_forwarder = Client.stanzas client |> E.map push_stanza in
- *     let handler = E.select [ ec_responder; stanza_forwarder ] in
- * 
- *     return { client; handler }) *)
 
 (* Parse Stanza as RDF *)
 
