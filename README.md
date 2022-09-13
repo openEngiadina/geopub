@@ -30,9 +30,11 @@ You may want to start a small webserver for local development (e.g. `python3 -m 
 
 Note that this uses dependencies from Guix. You might have to run `guix pull` to get the lastest dependencies from Guix. To use a version of Guix that has been tested use: `guix time-machine -C channels.scm -- shell -D -f guix.scm`.
 
+See also some [notes on the architecture](./doc/arch.md).
+
 # Acknowledgments
 
-GeoPub is being developed for the [openEngiadina](https://openengiadina.net) project and has been supported by the [NLNet Foundation](https://nlnet.nl/) trough the [NGI0 Discovery Fund](https://nlnet.nl/discovery/).
+GeoPub is being developed for the [openEngiadina](https://openengiadina.net) project and has been supported by the [NLnet Foundation](https://nlnet.nl/) through the [NGI0 Discovery Fund](https://nlnet.nl/discovery/).
 
 # License
 
