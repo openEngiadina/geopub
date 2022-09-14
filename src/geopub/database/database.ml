@@ -28,23 +28,6 @@ let start () =
   let* triple_count = Store.triple_count db in
   Log.debug (fun m -> m "Triples in database: %d" triple_count);
 
-  (* Load some vocabularies if db is empty *)
-  (* let* () =
-   *   if triple_count = 0 then
-   *     let* () =
-   *       Vocabs.vocabs
-   *       |> Lwt_list.iter_s (fun vocab ->
-   *              Log.debug (fun m -> m "Loading vocabulary %s" vocab);
-   *              let* graph = Vocabs.fetch_vocab vocab in
-   *              Store.add_graph db graph)
-   *     in
-   *     Sample_data.sample_data
-   *     |> Lwt_list.iter_s (fun file ->
-   *            Log.debug (fun m -> m "Loading sample data %s" file);
-   *            let* graph = Sample_data.fetch file in
-   *            Store.add_graph db graph)
-   *   else return_unit
-   * in *)
   Log.info (fun m -> m "Database started.");
   return_ok db
 
@@ -189,3 +172,7 @@ let functional_property db subject predicate =
 
 let get_functional_property db subject predicate =
   functional_property db subject predicate >|= S.value
+
+(* Deleting Database *)
+
+let delete = Store.delete

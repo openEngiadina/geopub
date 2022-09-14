@@ -240,6 +240,40 @@ let view t =
                 [
                   div
                     ~at:[ UIKit.container; UIKit.margin; UIKit.Align.center ]
-                    [ p [ txt' @@ "Connected as " ^ Xmpp.Jid.to_string jid ] ];
+                    [
+                      h1 [ (txt' @@ Xmpp.Jid.(to_string @@ bare jid)) ];
+                      div
+                        [
+                          p
+                            [
+                              txt' @@ "Connected as "
+                              ^ Xmpp.Jid.(to_string @@ bare jid)
+                              ^ ".";
+                            ];
+                        ];
+                      h2 [ txt' "Logout" ];
+                      div
+                        ~at:[ UIKit.alert; UIKit.Alert.warning ]
+                        [
+                          p
+                            [
+                              txt'
+                                "Logout will cause all data in the database to \
+                                 be deleted.";
+                            ];
+                        ];
+                      Evf.on_el ~default:false Ev.click (fun _ev ->
+                          Log.info (fun m ->
+                              m "Reseting database and logging out.");
+
+                          ignore
+                            (let* () = Database.delete t.database in
+                             Storage.clear local_storage;
+                             Brr.Window.reload G.window;
+                             return_unit))
+                      @@ button
+                           ~at:[ UIKit.button; UIKit.Button.secondary ]
+                           [ txt' @@ "Logout" ];
+                    ];
                 ]
        | Loadable.Error exn -> return @@ [ login ~error:exn t ])

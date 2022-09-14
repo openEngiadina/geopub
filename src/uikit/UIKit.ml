@@ -41,6 +41,7 @@ let button = class' "uk-button"
 module Button = struct
   let default = class' "uk-button-default"
   let primary = class' "uk-button-primary"
+  let secondary = class' "uk-button-secondary"
   let link = class' "uk-button-link"
 end
 
@@ -58,6 +59,7 @@ let alert = At.true' @@ Jstr.v "uk-alert"
 module Alert = struct
   let close = class' "uk-alert-close"
   let danger = class' "uk-alert-danger"
+  let warning = class' "uk-alert-warning"
 end
 
 let article = class' "uk-article"

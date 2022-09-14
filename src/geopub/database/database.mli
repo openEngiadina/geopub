@@ -57,3 +57,7 @@ val get_functional_property :
   Rdf.Triple.Subject.t ->
   Rdf.Triple.Predicate.t ->
   Rdf.Triple.Object.t option Lwt.t
+
+(** {1 Deleting Database} *)
+
+val delete : t -> unit Lwt.t
