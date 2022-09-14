@@ -44,6 +44,8 @@ val description : t -> Rdf.Term.t -> Rdf.Description.t signal Lwt.t
 (* [description t iri] returns a signal carrying a RDF description for
    subject [iri]. *)
 
+val get_description : t -> Rdf.Term.t -> Rdf.Description.t Lwt.t
+
 val functional_property :
   t ->
   Rdf.Triple.Subject.t ->

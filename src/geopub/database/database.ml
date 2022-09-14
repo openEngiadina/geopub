@@ -168,6 +168,8 @@ let description db term =
 
   query_rdf db q >|= S.map (Rdf.Graph.description s)
 
+let get_description db term = description db term >|= S.value
+
 let functional_property db subject predicate =
   let q =
     Datalog.(
