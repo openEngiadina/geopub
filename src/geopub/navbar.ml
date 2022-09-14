@@ -19,9 +19,7 @@ let view jid_opt current_route =
       ~at:
         At.
           [
-            class' @@ Jstr.v "uk-navbar-container";
-            UIKit.Margin.left;
-            true' @@ Jstr.v "uk-navbar";
+            class' @@ Jstr.v "uk-navbar-container"; true' @@ Jstr.v "uk-navbar";
           ]
       [
         (* Logo *)
@@ -31,6 +29,7 @@ let view jid_opt current_route =
               [
                 class' @@ Jstr.v "uk-navbar-item";
                 class' @@ Jstr.v "uk-logo";
+                UIKit.Margin.left;
                 Route.(href About);
               ]
           [
