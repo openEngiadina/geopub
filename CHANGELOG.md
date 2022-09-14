@@ -3,6 +3,10 @@
 ## [UNRELEASED]
 
 - Use [ERIS](http://purl.org/eris) for content-addressing
+- Refactor UI with CSS library
+- Componentize application into smaller, state-full parts
+- Store XMPP credentials in local storage
+- Expose a Datalog interface that transparently does dictionary lookups
 
 ## [0.6.0] - 2022-07-01
 
