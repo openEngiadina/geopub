@@ -48,7 +48,8 @@ let sample_data =
     "rdfs.ttl";
     "owl.ttl";
     "geo.ttl";
-    (* "che.osm.surveillance.nt"; *)
+    "dublin_core_terms.ttl";
+    "foaf.ttl" (* "che.osm.surveillance.nt"; *);
   ]
 
 let fetch file =

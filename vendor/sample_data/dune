@@ -8,4 +8,6 @@
   (rdfs.ttl as sample_data/rdfs.ttl)
   (owl.ttl as sample_data/owl.ttl)
   (geo.ttl as sample_data/geo.ttl)
+  (dublin_core_terms.ttl as sample_data/dublin_core_terms.ttl)
+  (foaf.ttl as sample_data/foaf.ttl)
   (../../tools/osm_extractor/che.osm.surveillance.nt as sample_data/che.osm.surveillance.nt)))
