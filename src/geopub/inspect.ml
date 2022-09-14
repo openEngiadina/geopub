@@ -9,21 +9,11 @@ open Lwt
 open Lwt.Syntax
 open Lwt_react
 
-let title_of_description description =
-  let title_s =
-    match
-      Rdf.Description.functional_property
-        (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
-        description
-    with
-    | Some object' ->
-        Rdf.Triple.Object.map Rdf.Iri.to_string Rdf.Blank_node.identifier
-          Rdf.Literal.canonical object'
-    | None ->
-        Rdf.Triple.Subject.map Rdf.Iri.to_string Rdf.Blank_node.identifier
-          (Rdf.Description.subject description)
+let title_of_description database description =
+  let* title_s =
+    Ui_rdf.subject database @@ Rdf.Description.subject description
   in
-  El.(h1 ~at:[ UIKit.Article.title; UIKit.Text.truncate ] [ txt' title_s ])
+  return @@ El.(h1 ~at:[ UIKit.Article.title; UIKit.Text.truncate ] [ title_s ])
 
 let view_header description =
   let subject_title =
@@ -156,9 +146,7 @@ let view (model : Model.t) iri =
   S.map_s
     (fun description ->
       let* ddl = description_list_of_description model.database description in
-      let* subject =
-        Ui_rdf.subject model.database @@ Rdf.Description.subject description
-      in
+      let* title_el = title_of_description model.database description in
       return
       @@ El.
            [
@@ -169,8 +157,14 @@ let view (model : Model.t) iri =
                  article
                    ~at:[ UIKit.article; UIKit.margin ]
                    ([
-                      title_of_description description;
-                      p ~at:[ UIKit.Article.meta ] [ subject ];
+                      title_el;
+                      p ~at:[ UIKit.Article.meta ]
+                        [
+                          txt'
+                          @@ Rdf.Triple.Subject.map Rdf.Iri.to_string
+                               Rdf.Blank_node.identifier
+                               (Rdf.Description.subject description);
+                        ];
                     ]
                    @ ddl);
                ];
