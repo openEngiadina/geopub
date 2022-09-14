@@ -1,5 +1,9 @@
+html {
+    height: 100%;
+}
+
 body {
-    height: 100vh;
+    min-height: 100%;
 }
 
 .uk-navbar-container:not(.uk-navbar-transparent) {
@@ -15,7 +19,7 @@ body {
 }
 
 #map {
-    height: 100%;
+    height: 100vh;
     width: 100%;
 }
 
