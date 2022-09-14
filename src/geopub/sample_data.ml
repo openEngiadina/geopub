@@ -43,7 +43,7 @@ let sample_data =
   [
     "hello.ttl";
     "activitystreams2.ttl";
-    (* "musicontology.ttl"; *)
+    "musicontology.ttl";
     "rdfs.ttl";
     (* "owl.ttl"; *)
     "geo.ttl";
