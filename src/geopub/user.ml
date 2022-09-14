@@ -19,11 +19,45 @@ let src = Logs.Src.create "GeoPub.User"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+(* LocalStorage *)
+
+let local_storage = Storage.local G.window
+
+let get_stored_credentials () =
+  let storage_jid =
+    Storage.get_item local_storage (Jstr.v "GeoPub.jid") |> fun o ->
+    Option.bind o (fun s -> Jstr.to_string s |> Xmpp.Jid.of_string)
+  in
+
+  let storage_password =
+    Storage.get_item local_storage (Jstr.v "GeoPub.password")
+    |> Option.map (fun s -> Jstr.to_string s)
+  in
+
+  match (storage_jid, storage_password) with
+  | Some jid, Some password -> Some (jid, password)
+  | _ -> None
+
+let set_stored_credentials jid password =
+  ignore
+  @@ Storage.set_item local_storage (Jstr.v "GeoPub.jid")
+       (Xmpp.Jid.to_string jid |> Jstr.of_string);
+  ignore
+  @@ Storage.set_item local_storage (Jstr.v "GeoPub.password")
+       (Jstr.of_string password)
+
 (* Component *)
 
 type t = { database : Database.t; xmpp : Xmpp.t }
 
-let start () database xmpp _router = return_ok { xmpp; database }
+let start () database xmpp _router =
+  match get_stored_credentials () with
+  | Some (jid, password) ->
+      Xmpp.(Connection.login (connection xmpp) ~password jid)
+      |> Lwt_result.catch
+      >|= fun _ -> Ok { xmpp; database }
+  | None -> return_ok { xmpp; database }
+
 let stop _ = return_unit
 
 let component =
@@ -141,7 +175,13 @@ let login ?error t =
               | _ -> failwith "We need better error handling"
             in
 
-            ignore @@ Xmpp.(Connection.login (connection t.xmpp) ~password jid))
+            ignore
+            @@ Xmpp.(
+                 Connection.login (connection t.xmpp) ~password jid
+                 |> Lwt_result.catch
+                 >>= function
+                 | Ok () -> return @@ set_stored_credentials jid password
+                 | _ -> return_unit))
           login_form;
         div ~at:[ UIKit.margin ]
           [
