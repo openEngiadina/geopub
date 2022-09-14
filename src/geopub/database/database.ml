@@ -148,19 +148,23 @@ let query_rdf db q =
           |> Seq.filter_map triple_of_tuple
           |> Rdf.Graph.of_triples)
 
-let description db iri =
+let description db term =
   let q =
     Datalog.(
       Atom.make "triple"
         Term.
           [
-            make_constant @@ Constant.Rdf (Rdf.Term.of_iri iri);
+            make_constant @@ Constant.Rdf term;
             make_variable "p";
             make_variable "o";
           ])
   in
 
-  let s = Rdf.Triple.Subject.of_iri iri in
+  let s =
+    Rdf.Term.map Rdf.Triple.Subject.of_iri Rdf.Triple.Subject.of_blank_node
+      (fun _ -> failwith "term can not be an object")
+      term
+  in
 
   query_rdf db q >|= S.map (Rdf.Graph.description s)
 

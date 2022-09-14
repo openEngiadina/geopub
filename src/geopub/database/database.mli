@@ -40,7 +40,7 @@ val triple_of_tuple : Datalog.Tuple.t -> Rdf.Triple.t option
 tuple [tuple]. *)
 
 val query_rdf : t -> Datalog.query -> Rdf.Graph.t signal Lwt.t
-val description : t -> Rdf.Iri.t -> Rdf.Description.t signal Lwt.t
+val description : t -> Rdf.Term.t -> Rdf.Description.t signal Lwt.t
 (* [description t iri] returns a signal carrying a RDF description for
    subject [iri]. *)
 

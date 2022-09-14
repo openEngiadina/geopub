@@ -147,7 +147,9 @@ let submenu _model =
       [ li [ a [ txt' "Share" ] ]; li [ a [ txt' "Like" ] ] ])
 
 let view (model : Model.t) iri =
-  let* description = Database.description model.database iri in
+  let* description =
+    Database.description model.database @@ Rdf.Term.of_iri iri
+  in
 
   (* let* backlinks = view_backlinks model.database description in *)
   (* let* rhodf_types = view_rhodf_types model.database description in *)
