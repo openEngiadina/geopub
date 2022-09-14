@@ -112,7 +112,9 @@ let query db q =
 
   (* accumulate signal *)
   S.accum_s update_e (init_state, init_tx, init_tuples)
-  |> S.map (fun (_state, tx, tuples) -> (tx, tuples))
+  |> S.map
+       ~eq:(fun (_, a) (_, b) -> Datalog.Tuple.Set.equal a b)
+       (fun (_state, tx, tuples) -> (tx, tuples))
   |> return
 
 let triple_of_tuple = function
@@ -184,3 +186,6 @@ let functional_property db subject predicate =
   in
 
   query_rdf db q >|= S.map (Rdf.Graph.functional_property subject predicate)
+
+let get_functional_property db subject predicate =
+  functional_property db subject predicate >|= S.value

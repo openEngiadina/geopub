@@ -59,11 +59,11 @@ let description_list_of_description database description =
   |> Lwt_list.map_s
        El.(
          fun (predicate, objects_seq) ->
-           let* predicate_el = Ui_rdf.view_predicate database predicate in
+           let* predicate_el = Ui_rdf.predicate database predicate in
            let* objects_lis =
              objects_seq |> List.of_seq
              |> Lwt_list.map_s (fun o ->
-                    let* object_el = Ui_rdf.view_object database o in
+                    let* object_el = Ui_rdf.object' database o in
                     return @@ li [ object_el ])
            in
            return
@@ -156,6 +156,9 @@ let view (model : Model.t) iri =
   S.map_s
     (fun description ->
       let* ddl = description_list_of_description model.database description in
+      let* subject =
+        Ui_rdf.subject model.database @@ Rdf.Description.subject description
+      in
       return
       @@ El.
            [
@@ -167,13 +170,7 @@ let view (model : Model.t) iri =
                    ~at:[ UIKit.article; UIKit.margin ]
                    ([
                       title_of_description description;
-                      p ~at:[ UIKit.Article.meta ]
-                        [
-                          txt'
-                          @@ Rdf.Triple.Subject.map Rdf.Iri.to_string
-                               Rdf.Blank_node.identifier
-                               (Rdf.Description.subject description);
-                        ];
+                      p ~at:[ UIKit.Article.meta ] [ subject ];
                     ]
                    @ ddl);
                ];

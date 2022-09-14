@@ -153,7 +153,7 @@ let marker_of_description map description =
       latlng_of_description description )
   with
   | Some iri, Some latlng ->
-      let el = Ui_rdf.view_iri iri in
+      let el = Ui_rdf.iri_plain iri in
       let marker = Leaflet.Layer.create_marker latlng in
       Leaflet.Layer.bind_popup el marker;
       Leaflet.Layer.add_to map marker;

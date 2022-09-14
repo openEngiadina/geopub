@@ -51,3 +51,9 @@ val functional_property :
   Rdf.Triple.Subject.t ->
   Rdf.Triple.Predicate.t ->
   Rdf.Triple.Object.t option signal Lwt.t
+
+val get_functional_property :
+  t ->
+  Rdf.Triple.Subject.t ->
+  Rdf.Triple.Predicate.t ->
+  Rdf.Triple.Object.t option Lwt.t

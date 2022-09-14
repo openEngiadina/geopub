@@ -6,40 +6,44 @@
 
 open Brr
 open Lwt
+open Lwt.Syntax
 
-let view_iri iri =
-  El.(
-    a
-      ~at:At.[ href @@ Route.to_jstr @@ Route.Inspect iri ]
-      [ txt' @@ Rdf.Iri.to_string iri ])
+(* RDF Terms *)
 
-let view_blank_node bnode = El.(txt' @@ "_:" ^ Rdf.Blank_node.identifier bnode)
-let view_literal literal = El.(txt' @@ Rdf.Literal.canonical literal)
+let blank_node bnode = El.(txt' @@ "_:" ^ Rdf.Blank_node.identifier bnode)
+let literal literal = El.(div [ txt' @@ Rdf.Literal.canonical literal ])
 
-let view_pretty_iri _database iri =
-  (* let* label_opt = Database.get_rdfs_label database iri in *)
-  (* TODO WIP *)
-  let label_opt = None in
+let iri_plain iri =
+  match iri with
+  | iri when Rdf.Iri.equal iri (Rdf.Namespace.rdf "type") -> El.txt' "type"
+  | _ ->
+      El.(
+        a
+          ~at:[ Route.href @@ Route.Inspect iri ]
+          [ txt' @@ Rdf.Iri.to_string iri ])
+
+let iri database iri =
+  let* label_opt =
+    Database.get_functional_property database
+      (Rdf.Triple.Subject.of_iri iri)
+      (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
+    >|= fun o -> Option.bind o Rdf.Triple.Object.to_literal
+  in
   match label_opt with
-  | Some literal ->
-      return
-      @@ El.(
-           a
-             ~at:At.[ href @@ Route.to_jstr @@ Route.Inspect iri ]
-             [ view_literal literal ])
-  | None ->
-      if iri = Rdf.Namespace.rdf "type" then return @@ El.txt' "type"
-      else return @@ view_iri iri
+  | Some l ->
+      return @@ El.(a ~at:[ Route.href @@ Route.Inspect iri ] [ literal l ])
+  | None -> return @@ iri_plain iri
 
-let view_predicate database p =
-  view_pretty_iri database @@ Rdf.Triple.Predicate.to_iri p
+(* Triple *)
 
-let view_object database o =
-  Rdf.Triple.Object.map (view_pretty_iri database)
-    (fun bnode -> return @@ view_blank_node bnode)
-    (fun literal -> return @@ view_literal literal)
+let subject database =
+  Rdf.Triple.Subject.map (iri database) (fun bnode ->
+      return @@ blank_node bnode)
+
+let predicate database p = iri database @@ Rdf.Triple.Predicate.to_iri p
+
+let object' database o =
+  Rdf.Triple.Object.map (iri database)
+    (fun b -> return @@ blank_node b)
+    (fun l -> return @@ literal l)
     o
-
-let view_subject database =
-  Rdf.Triple.Subject.map (view_pretty_iri database) (fun bnode ->
-      return @@ view_blank_node bnode)
