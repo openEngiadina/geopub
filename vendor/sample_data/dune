@@ -1,16 +1,11 @@
-(rule
- (targets hello.nt)
- (deps hello.ttl)
- (action
-  (with-stdout-to
-   hello.nt
-   (run rapper -i turtle -o ntriples %{deps}))))
-
 (install
  (section share)
  (package geopub)
  (files
-  (hello.nt as sample_data/hello.nt)
-  (../../tools/osm_extractor/che.osm.surveillance.nt
-   as
-   sample_data/che.osm.surveillance.nt)))
+  (hello.ttl as sample_data/hello.ttl)
+  (activitystreams2.ttl as sample_data/activitystreams2.ttl)
+  (musicontology.ttl as sample_data/musicontology.ttl)
+  (rdfs.ttl as sample_data/rdfs.ttl)
+  (owl.ttl as sample_data/owl.ttl)
+  (geo.ttl as sample_data/geo.ttl)
+  (../../tools/osm_extractor/che.osm.surveillance.nt as sample_data/che.osm.surveillance.nt)))

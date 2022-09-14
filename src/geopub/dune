@@ -16,6 +16,7 @@
   rdf
   rdf_xml
   rdf_cbor
+  rdf_turtle
   eris
   eris.crypto-wasm
   base32

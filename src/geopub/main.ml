@@ -23,6 +23,7 @@ let system =
       ("ui", Ui.component);
       ("db", Database.component);
       ("xmpp_rdf", Xmpp_rdf.component);
+      ("sample_data", Sample_data.component);
     ]
 
 let main () =
