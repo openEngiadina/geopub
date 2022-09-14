@@ -132,15 +132,13 @@ let visible_descriptions db position =
           ])
   in
   Database.query db query
-  >>= S.map_s ~eq:Rdf.Graph.equal (fun (tx, tuples) ->
+  >|= S.map ~eq:Rdf.Graph.equal (fun (_tx, tuples) ->
           Database.Datalog.Tuple.Set.to_seq tuples
-          |> Lwt_seq.of_seq
-          |> Lwt_seq.filter_map_s (function
-               | [ s; p; o; _ ] -> Database.deref_triple db tx [ s; p; o ]
-               | _ -> return_none)
-          |> Lwt_seq.fold_left
-               (fun graph triple -> Rdf.Graph.add triple graph)
-               Rdf.Graph.empty)
+          |> Seq.filter_map (function
+               | [ s; p; o; _ ] -> Some [ s; p; o ]
+               | _ -> None)
+          |> Seq.filter_map Database.triple_of_tuple
+          |> Rdf.Graph.of_triples)
   >|= S.map ~eq:(SubjectMap.equal Rdf.Description.equal) (fun graph ->
           Rdf.Graph.descriptions graph
           |> Seq.map (fun description ->

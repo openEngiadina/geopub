@@ -26,20 +26,23 @@ val read_only : t -> transaction
 
 (** {2 Datalog} *)
 
-module Datalog = Datalog
+module Datalog = Dictionary_datalog
 
 val query :
   t -> Datalog.query -> (transaction * Datalog.Tuple.Set.t) signal Lwt.t
-(** [query databse query] runs the Datalog query [query] and returns a signal carrying the result tuples. *)
+(** [query databse query] runs the Datalog query [query] and returns a
+signal carrying the result tuples. *)
 
 (** {2 RDF queries} *)
 
-val deref_triple :
-  t -> transaction -> Datalog.Constant.t list -> Rdf.Triple.t option Lwt.t
+val triple_of_tuple : Datalog.Tuple.t -> Rdf.Triple.t option
+(** [triple_of_constant tuple] returns the triple of the three arity
+tuple [tuple]. *)
 
 val query_rdf : t -> Datalog.query -> Rdf.Graph.t signal Lwt.t
 val description : t -> Rdf.Iri.t -> Rdf.Description.t signal Lwt.t
-(* [description t iri] returns a signal carrying a RDF description for subject [iri]. *)
+(* [description t iri] returns a signal carrying a RDF description for
+   subject [iri]. *)
 
 val functional_property :
   t ->
