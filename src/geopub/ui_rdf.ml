@@ -22,16 +22,40 @@ let iri_plain iri =
           ~at:[ Route.href @@ Route.Inspect iri ]
           [ txt' @@ Rdf.Iri.to_string iri ])
 
+let get_label database iri =
+  Database.get_functional_property database
+    (Rdf.Triple.Subject.of_iri iri)
+    (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
+  >|= fun o -> Option.bind o Rdf.Triple.Object.to_literal
+
+let get_type database iri =
+  Database.get_functional_property database
+    (Rdf.Triple.Subject.of_iri iri)
+    (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
+  >|= fun o -> Option.bind o Rdf.Triple.Object.to_iri
+
+let get_type_label database iri =
+  let* type' = get_type database iri in
+  match type' with Some iri -> get_label database iri | None -> return_none
+
 let iri database iri =
   let* label_opt =
-    Database.get_functional_property database
-      (Rdf.Triple.Subject.of_iri iri)
-      (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
-    >|= fun o -> Option.bind o Rdf.Triple.Object.to_literal
+    get_label database iri >>= function
+    | None -> get_type_label database iri
+    | Some l -> return_some l
   in
+
   match label_opt with
   | Some l ->
-      return @@ El.(a ~at:[ Route.href @@ Route.Inspect iri ] [ literal l ])
+      return
+      @@ El.(
+           a
+             ~at:
+               [
+                 Route.href @@ Route.Inspect iri;
+                 At.title @@ Jstr.v @@ Rdf.Iri.to_string iri;
+               ]
+             [ literal l ])
   | None -> return @@ iri_plain iri
 
 (* Triple *)

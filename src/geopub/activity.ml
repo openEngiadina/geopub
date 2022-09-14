@@ -4,96 +4,20 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *)
 
-(* View recent activity as a timeline *)
-
-open Brr
-open Brr_io
 open Lwt
 open Lwt.Syntax
+open Lwt_react
+open Brr
 
 (* Setup logging *)
 
-let src = Logs.Src.create "GeoPub"
+let src = Logs.Src.create "GeoPub.Activity"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-(* Content-addressable RDF *)
+(* Component *)
 
-let hash s =
-  let _, read_cap =
-    Eris.(
-      encode_string ~convergence_secret:null_convergence_secret
-        ~block_size:`Small s)
-  in
-  Rdf.Iri.of_string @@ Eris.Read_capability.to_urn read_cap
-
-module Geopub_namespace = Namespace
-module Database = Geopub_database
-
-(* Construct a note as RDF *)
-
-let rdf_to_xml rdf =
-  let prefixes =
-    [ ("as", Namespace.activitystreams ""); ("geo", Namespace.geo "") ]
-  in
-  let signals = rdf |> Rdf_xml.to_signals ~prefixes in
-  let stream = Lwt_stream.of_seq signals in
-  Xmlc.Parser.parse_stream Xmlc.Tree.parser stream
-
-let make_note ?latlng content =
-  Rdf_cbor.Content_addressable.(
-    empty
-    |> add_statement
-         (Predicate.of_iri @@ Rdf.Namespace.rdf "type")
-         (Object.of_iri @@ Geopub_namespace.activitystreams "Note")
-    |> add_statement
-         (Predicate.of_iri @@ Geopub_namespace.activitystreams "content")
-         (Object.of_literal @@ Rdf.Literal.make_string content)
-    |> add_opt_statement
-         (Predicate.of_iri @@ Geopub_namespace.geo "lat")
-         (Option.map
-            (fun latlng ->
-              Object.of_literal @@ Rdf.Literal.make_string @@ Float.to_string
-              @@ Leaflet.Latlng.lat latlng)
-            latlng)
-    |> add_opt_statement
-         (Predicate.of_iri @@ Geopub_namespace.geo "long")
-         (Option.map
-            (fun latlng ->
-              Object.of_literal @@ Rdf.Literal.make_string @@ Float.to_string
-              @@ Leaflet.Latlng.lng latlng)
-            latlng))
-
-let make_create ~object' xmpp =
-  let* actor = Xmpp.user_iri xmpp in
-  let object_id = Rdf_cbor.Content_addressable.base_subject ~hash object' in
-  let create_activity =
-    Rdf_cbor.Content_addressable.(
-      empty
-      |> add_statement Namespace.a
-           (Object.of_iri @@ Geopub_namespace.activitystreams "Create")
-      |> add_statement
-           (Predicate.of_iri @@ Geopub_namespace.activitystreams "actor")
-           (Object.of_iri actor)
-      |> add_statement
-           (Predicate.of_iri @@ Geopub_namespace.activitystreams "object")
-           (Object.of_iri object_id)
-      |> add_statement
-           (Predicate.of_iri @@ Geopub_namespace.activitystreams "published")
-           (Object.of_literal
-           @@ Rdf.Literal.make
-                (Ptime.to_rfc3339 @@ Ptime_clock.now ())
-                (Rdf.Namespace.xsd "dateTime")))
-  in
-  return
-    ( Rdf_cbor.Content_addressable.base_subject ~hash create_activity,
-      Rdf.Graph.(
-        empty
-        |> add_seq (Rdf_cbor.Content_addressable.to_triples ~hash object')
-        |> add_seq
-             (Rdf_cbor.Content_addressable.to_triples ~hash create_activity)) )
-
-(* Get Activity from DB *)
+module TermSet = Set.Make (Rdf.Term)
 
 let sort_activities =
   let published activity =
@@ -104,246 +28,130 @@ let sort_activities =
   List.sort (fun a b ->
       Option.compare Rdf.Triple.Object.compare (published b) (published a))
 
-let get_activities db =
-  let type_id =
-    Database.Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri
-    @@ Rdf.Namespace.rdf "type"
-    |> Option.value ~default:(-99)
-  in
-
-  let* activity_id =
-    Database.Store.Dictionary.lookup db
-    @@ Rdf.Term.of_iri
-    @@ Namespace.activitystreams "Activity"
-    >|= Option.value ~default:(-99)
-  in
-
-  (* This uses rhodf type inference to figure out what all is an Activity. *)
+let activities db =
   let query =
     Database.Datalog.(
       Atom.make "triple-rhodf"
         Term.
           [
             make_variable "s";
-            make_constant @@ Constant.Rdf type_id;
-            make_constant @@ Constant.Rdf activity_id;
+            make_constant
+            @@ Constant.Rdf (Rdf.Term.of_iri @@ Rdf.Namespace.rdf "type");
+            make_constant
+            @@ Constant.Rdf
+                 (Rdf.Term.of_iri @@ Namespace.activitystreams "Activity");
           ])
   in
 
-  Database.query db query |> Lwt_seq.return_lwt
-  |> Lwt_seq.flat_map (fun set ->
-         Lwt_seq.of_seq @@ Database.Datalog.Tuple.Set.to_seq set)
-  |> Lwt_seq.filter_map_s (function
-       | [ Database.Datalog.Constant.Rdf s_id; _; _ ] -> (
-           let* term_opt = Database.Store.Dictionary.get db s_id in
-           match term_opt with
-           | Some term -> return @@ Rdf.Term.to_iri term
-           | None -> return_none)
-       | _ -> return_none)
-  |> Lwt_seq.map_s (Database.get_description db)
-  |> Lwt_seq.to_list >|= sort_activities
+  Database.query db query
+  >>= S.map_s ~eq:(List.equal Rdf.Description.equal) (fun (_tx, set) ->
+          Database.Datalog.Tuple.Set.to_seq set
+          |> Seq.filter_map (function
+               | [ Database.Datalog.Constant.Rdf s; _; _ ] -> Some s
+               | _ -> None)
+          |> Lwt_seq.of_seq
+          |> Lwt_seq.map_s (Database.get_description db)
+          |> Lwt_seq.to_list >|= sort_activities)
 
-(* UI *)
-
-let view_compose_note ~update ?latlng (model : Model.t) =
-  let compose_form =
-    El.(
-      form
-        ~at:At.[ class' @@ Jstr.v "post-compose" ]
-        [
-          ul
-            [
-              li
-                [
-                  label
-                    ~at:At.[ for' @@ Jstr.v "post-content" ]
-                    [ txt' "content" ];
-                  textarea
-                    ~at:
-                      At.
-                        [
-                          id @@ Jstr.v "post-content";
-                          type' @@ Jstr.v "text";
-                          name @@ Jstr.v "post-content";
-                        ]
-                    [];
-                ];
-              (match latlng with
-              | Some latlng ->
-                  li
-                    [
-                      label
-                        ~at:At.[ for' @@ Jstr.v "post-latlng" ]
-                        [ txt' "location" ];
-                      input
-                        ~at:
-                          At.
-                            [
-                              type' @@ Jstr.v "text";
-                              id @@ Jstr.v "post-latlng";
-                              name @@ Jstr.v "post-latlng";
-                              true' @@ Jstr.v "readonly";
-                              value
-                              @@ Jstr.v
-                                   ((Float.to_string
-                                   @@ Leaflet.Latlng.lat latlng)
-                                   ^ ", " ^ Float.to_string
-                                   @@ Leaflet.Latlng.lng latlng);
-                            ]
-                        ();
-                    ]
-              | _ -> txt' "");
-              li
-                [
-                  input
-                    ~at:At.[ type' @@ Jstr.v "submit"; value @@ Jstr.v "Post" ]
-                    ();
-                ];
-            ];
-        ])
+let view_activity db description =
+  let subject_iri =
+    Rdf.Description.subject description
+    |> Rdf.Triple.Subject.map (fun iri -> Some iri) (fun _ -> None)
   in
-  match model.xmpp with
-  | Loadable.Loaded xmpp ->
-      return
-      @@ Ui.on_el ~default:false Form.Ev.submit
-           (fun ev ->
-             let form = Ev.(target_to_jv @@ target ev) in
 
-             let form_data =
-               Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
-               @@ Ev.target ev
-             in
-
-             let post_content_value =
-               Form.Data.find form_data (Jstr.v "post-content") |> Option.get
-             in
-
-             let content =
-               match post_content_value with
-               | `String js -> Jstr.to_string js
-               | _ -> failwith "We need better error handling"
-             in
-
-             update (fun model ->
-                 let note = make_note ?latlng content in
-                 let* id, activity = make_create ~object':note xmpp in
-                 let* xml = rdf_to_xml activity in
-                 let* _response = Xmpp.publish_activitystreams xmpp id xml in
-                 ignore @@ Jv.call form "reset" [||];
-                 return model))
-           compose_form
-  | _ ->
-      return
-        El.(
-          p
-            ~at:At.[ class' @@ Jstr.v "meta" ]
-            [
-              a
-                ~at:At.[ href @@ Jstr.v "#settings" ]
-                [ txt' "Connect with XMPP" ];
-              txt' " to create new posts.";
-            ])
-
-let option_bind f opt = match opt with Some v -> f v | None -> None
-
-let functional_property_description database property description =
-  match
-    Rdf.Description.functional_property property description
-    |> option_bind Rdf.Triple.Object.to_iri
-  with
-  | Some iri -> Database.get_description database iri >|= Option.some
-  | None -> return_none
-
-let view_object db object' =
-  let type' =
-    Rdf.Description.functional_property
-      (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
-      object'
-    |> option_bind Rdf.Triple.Object.to_iri
-  in
-  match type' with
-  | Some type' when type' = Namespace.activitystreams "Note" ->
-      let content =
-        Rdf.Description.functional_property
-          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "content")
-          object'
-        |> Option.value
-             ~default:
-               (Rdf.Triple.Object.of_literal @@ Rdf.Literal.make_string "")
-      in
-      Ui_rdf.view_object db content
-  | _ -> Ui_rdf.view_subject db (Rdf.Description.subject object')
-
-let view_activity_object db activity =
-  let* object' =
-    functional_property_description db
-      (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "object")
-      activity
-  in
-  match object' with
-  | Some object' -> view_object db object'
-  | None -> return @@ El.txt' ""
-
-let view_activity db activity =
-  let iri = Rdf.Description.subject activity |> Rdf.Triple.Subject.to_iri in
-  match iri with
-  | Some iri ->
-      let* from =
-        Rdf.Description.functional_property
-          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "actor")
-          activity
-        |> Option.map (Ui_rdf.view_object db)
-        |> Option.value ~default:(return @@ El.txt' "")
-      in
-      let* published =
-        Rdf.Description.functional_property
-          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "published")
-          activity
-        |> Option.map (Ui_rdf.view_object db)
-        |> Option.value ~default:(return @@ El.txt' "")
-      in
-      let* object_el = view_activity_object db activity in
-      return_some
+  let inspect_el =
+    match subject_iri with
+    | Some iri ->
         El.(
           li
             [
-              article
-                ~at:At.[ class' @@ Jstr.v "activity" ]
-                [
-                  header
-                    [
-                      div ~at:At.[ class' @@ Jstr.v "post-from" ] [ from ];
-                      div ~at:At.[ class' @@ Jstr.v "post-date" ] [ published ];
-                    ];
-                  object_el;
-                  footer
-                    [
-                      div
-                        ~at:At.[ class' @@ Jstr.v "post-inspect" ]
-                        [
-                          a
-                            ~at:
-                              At.[ href @@ Route.to_jstr @@ Route.Inspect iri ]
-                            [ txt' "inspect activity" ];
-                        ];
-                    ];
-                ];
+              a
+                ~at:
+                  [
+                    Route.href @@ Route.Inspect iri;
+                    UIKit.Icon.code;
+                    At.title @@ Jstr.v @@ Rdf.Iri.to_string iri;
+                  ]
+                [];
             ])
-  | None -> return_none
-
-let view ?latlng ~update model =
-  let* compose_note = view_compose_note ?latlng ~update model in
-
-  let* activities_els =
-    Lwt_list.filter_map_s (view_activity model.database) model.activities
+    | None -> El.txt' ""
   in
 
-  let activities_ul =
-    El.ul ~at:At.[ class' @@ Jstr.v "activity" ] activities_els
+  let* from =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "actor")
+      description
+    |> Option.map (Ui_rdf.object' db)
+    |> Option.value ~default:(return @@ El.txt' "")
+  in
+  let* type_el =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
+      description
+    |> Option.map (Ui_rdf.object' db)
+    |> Option.value ~default:(return @@ El.txt' "")
+  in
+  let* published =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "published")
+      description
+    |> Option.map (Ui_rdf.object' db)
+    |> Option.value ~default:(return @@ El.txt' "")
+  in
+  let object_term =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "object")
+      description
+  in
+  let* object_el =
+    object_term
+    |> Option.map (Ui_rdf.object' db)
+    |> Option.value ~default:(return @@ El.txt' "")
+  in
+
+  let object_iri = Option.bind object_term Rdf.Triple.Object.to_iri in
+
+  let* content_el =
+    match object_iri with
+    | Some iri -> (
+        Database.get_functional_property db
+          (Rdf.Triple.Subject.of_iri iri)
+          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "content")
+        >>= function
+        | Some o -> Ui_rdf.object' db o
+        | None -> return @@ El.txt' "")
+    | None -> return @@ El.txt' ""
   in
 
   return
   @@ El.(
-       div
-         ~at:At.[ id @@ Jstr.v "main"; class' @@ Jstr.v "content" ]
-         [ h1 [ txt' "Activity" ]; compose_note; activities_ul ])
+       li
+         [
+           article
+             ~at:[ UIKit.comment; UIKit.Comment.primary; UIKit.margin ]
+             [
+               header ~at:[ UIKit.Comment.header ]
+                 [
+                   h4 ~at:[ UIKit.Comment.title ] [ from ];
+                   ul
+                     ~at:
+                       [
+                         UIKit.Comment.meta; UIKit.subnav; UIKit.Subnav.divider;
+                       ]
+                     [ li [ type_el ]; li [ object_el ]; li [ published ] ];
+                 ];
+               div ~at:[ UIKit.Comment.body ] [ content_el ];
+               ul ~at:[ UIKit.iconnav; UIKit.Align.right ] [ inspect_el ];
+             ];
+         ])
+
+let view db =
+  activities db
+  >>= S.map_s (Lwt_list.map_s @@ view_activity db)
+  >|= S.map (fun cs ->
+          El.
+            [
+              div
+                ~at:[ UIKit.container; UIKit.margin ]
+                [ h1 [ txt' "Activity" ]; ul ~at:[ UIKit.Comment.list ] cs ];
+            ])

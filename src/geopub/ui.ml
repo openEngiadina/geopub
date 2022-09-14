@@ -77,6 +77,7 @@ let view (t : Model.t) =
       in
       match current_route with
       | Route.About -> return @@ with_navbar @@ S.const [ about ]
+      | Route.Activity _latlng -> Activity.view t.database >|= with_navbar
       | Route.User -> User.view t.user >|= with_navbar
       | Route.Map -> return @@ with_navbar @@ S.const [ Geopub_map.view t.map ]
       | Route.Inspect iri -> Inspect.view t iri >|= with_navbar

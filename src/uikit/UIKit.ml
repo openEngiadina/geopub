@@ -68,3 +68,41 @@ module Article = struct
 end
 
 let description_list = class' "uk-description-list"
+let comment = class' "uk-comment"
+
+module Comment = struct
+  let header = class' "uk-comment-header"
+  let meta = class' "uk-comment-meta"
+  let body = class' "uk-comment-body"
+  let title = class' "uk-comment-title"
+  let list = class' "uk-comment-list"
+  let primary = class' "uk-comment-primary"
+end
+
+module Width = struct
+  let expand = class' "uk-width-expand"
+end
+
+let subnav = class' "uk-subnav"
+
+module Subnav = struct
+  let divider = class' "uk-subnav-divider"
+end
+
+let iconnav = class' "uk-iconnav"
+
+module Iconnav = struct
+  let vertical = class' "uk-iconnav-vertical"
+end
+
+module Icon = struct
+  let v name = At.v (Jstr.v "uk-icon") (Jstr.v name)
+  let code = v "code"
+  let star = v "star"
+  let comment = v "comment"
+  let forward = v "forward"
+end
+
+module Text = struct
+  let truncate = class' "uk-text-truncate"
+end

@@ -23,7 +23,7 @@ let title_of_description description =
         Rdf.Triple.Subject.map Rdf.Iri.to_string Rdf.Blank_node.identifier
           (Rdf.Description.subject description)
   in
-  El.(h1 ~at:[ UIKit.Article.title ] [ txt' title_s ])
+  El.(h1 ~at:[ UIKit.Article.title; UIKit.Text.truncate ] [ txt' title_s ])
 
 let view_header description =
   let subject_title =
