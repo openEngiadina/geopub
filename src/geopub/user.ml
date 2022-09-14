@@ -50,9 +50,10 @@ let set_stored_credentials jid password =
 
 type t = { database : Database.t; xmpp : Xmpp.t }
 
-let start () database xmpp _router =
+let start msg database xmpp _router =
   match get_stored_credentials () with
   | Some (jid, password) ->
+      msg "Logging in...";
       Xmpp.(Connection.login (connection xmpp) ~password jid)
       |> Lwt_result.catch
       >|= fun _ -> Ok { xmpp; database }

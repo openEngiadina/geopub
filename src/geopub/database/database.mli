@@ -11,7 +11,7 @@ open Lwt_react
 
 type t
 
-val component : (unit, t) Component.t
+val component : (string -> unit, t) Component.t
 
 (** {1 Insert data } *)
 

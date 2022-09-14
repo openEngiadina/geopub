@@ -14,7 +14,7 @@ open Archi_lwt
 
 type t = Route.t signal
 
-val component : (unit, t) Component.t
+val component : (string -> unit, t) Component.t
 (** The router component *)
 
 val current : t -> Route.t

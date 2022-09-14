@@ -8,7 +8,6 @@ open Lwt
 open Lwt.Syntax
 open Brr
 open Brr_io
-open Js_of_ocaml_lwt
 
 (* Setup logging *)
 let src = Logs.Src.create "GeoPub.Sample_data"
@@ -44,9 +43,9 @@ let sample_data =
   [
     "hello.ttl";
     "activitystreams2.ttl";
-    "musicontology.ttl";
+    (* "musicontology.ttl"; *)
     "rdfs.ttl";
-    "owl.ttl";
+    (* "owl.ttl"; *)
     "geo.ttl";
     "dublin_core_terms.ttl";
     "foaf.ttl" (* "che.osm.surveillance.nt"; *);
@@ -61,28 +60,24 @@ let fetch file =
   in
   s |> String.to_seq |> Rdf_turtle.parse_to_graph |> return
 
-let load_sample_data db =
-  Log.info (fun m -> m "Loading sample data ...");
-  sample_data
-  |> Lwt_list.iter_s (fun file ->
-         Log.debug (fun m -> m "Loading sample data from %s." file);
-         fetch file >>= Database.add_graph db >>= fun () ->
-         (* This is a hack to keep things from blocking *)
-         Lwt_js.sleep 0.5)
-  >|= fun () ->
-  Log.info (fun m -> m "Finished loading sample data.");
-  ignore @@ set_loaded ()
+let load_sample_data msg db =
+  let* () =
+    sample_data
+    |> Lwt_list.iter_s (fun file ->
+           msg (Format.sprintf "Loading sample data from %s ..." file);
+           fetch file >>= Database.add_graph db)
+  in
+  ignore @@ set_loaded ();
+  return_ok ()
 
 (* Component that loads sample data and vocabularies *)
 
 open Archi_lwt
 
-type t = { promise : unit Lwt.t }
+let start msg db =
+  if is_loaded () then return_ok () else load_sample_data msg db
 
-let start () db =
-  (if is_loaded () then return_unit else load_sample_data db) |> return_ok
-
-let stop _ = return_unit
+let stop () = return_unit
 
 let component =
   Component.using ~start ~stop ~dependencies:[ Database.component ]

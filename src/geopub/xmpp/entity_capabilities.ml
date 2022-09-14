@@ -24,7 +24,7 @@ module Entity_capabilities = Xmppl_entity_capabilities.Make (Client)
 
 type t = unit event
 
-let start () (connection : Connection.t) =
+let start _ (connection : Connection.t) =
   (* Initiate Entity Cababilities (XEP-0115) responder *)
   connection |> Connection.client_signal |> S.changes
   |> E.map_s (function

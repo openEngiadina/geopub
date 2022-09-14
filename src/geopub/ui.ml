@@ -10,7 +10,7 @@ open Lwt_react
 open Brr
 open Archi_lwt
 
-let loading =
+let loading msg =
   El.
     [
       div
@@ -25,7 +25,7 @@ let loading =
                   UIKit.Align.center;
                 ]
             ();
-          p [ txt' "Loading GeoPub..." ];
+          p [ txt' msg ];
         ];
     ]
 
@@ -81,7 +81,7 @@ let view (t : Model.t) =
       | Route.User -> User.view t.user >|= with_navbar
       | Route.Map -> return @@ with_navbar @@ S.const [ Geopub_map.view t.map ]
       | Route.Inspect iri -> Inspect.view t iri >|= with_navbar
-      | _ -> return @@ with_navbar @@ S.const @@ loading)
+      | _ -> return @@ with_navbar @@ S.const @@ El.[ txt' "TODO" ])
 
 (* match Router.current t.router with
  * | Route.Activity latlng ->
@@ -92,7 +92,7 @@ let view (t : Model.t) =
  *     return [ Ui.geopub_menu model; query_view ]
  * | Route.Settings -> Settings.view ~update model *)
 
-let start () router database user map : (t, [ `Msg of string ]) Result.t Lwt.t =
+let start _ router database user map : (t, [ `Msg of string ]) Result.t Lwt.t =
   let model : Model.t = { router; database; user; map } in
 
   (* Set the UI on the document body *)

@@ -21,7 +21,7 @@ module Connection : sig
   type t
   (** Component state *)
 
-  val component : (unit, t) Component.t
+  val component : (string -> unit, t) Component.t
   (** Connection component *)
 
   val client_signal : t -> (Client.t, exn) Loadable.t signal
@@ -42,5 +42,5 @@ end
 
 type t
 
-val component : (unit, t) Component.t
+val component : (string -> unit, t) Component.t
 val connection : t -> Connection.t

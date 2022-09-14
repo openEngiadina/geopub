@@ -26,7 +26,7 @@ open Archi_lwt
 type loadable_client = (Client.t, exn) Loadable.t
 type t = loadable_client signal * (?step:React.step -> loadable_client -> unit)
 
-let start () : (t, [ `Msg of string ]) Result.t Lwt.t =
+let start (_msg : string -> unit) : (t, [ `Msg of string ]) Result.t Lwt.t =
   S.create ~eq:( == ) Loadable.Idle |> return_ok
 
 let stop (state, set_state) =

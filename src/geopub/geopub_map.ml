@@ -256,7 +256,7 @@ type t = {
   marker_updates : unit event;
 }
 
-let start () database router =
+let start _ database router =
   (* initialize the Leaflet map *)
   let leaflet = init_leaflet router () in
 

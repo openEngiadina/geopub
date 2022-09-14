@@ -7,6 +7,7 @@
 open Brr
 open Lwt
 open Lwt.Syntax
+open Lwt_react
 open Archi_lwt
 
 (* Setup logging *)
@@ -37,14 +38,21 @@ let main () =
   (* Initialize the application *)
   let () = Log.app (fun m -> m "Initializing GeoPub.") in
 
+  (* Loading message signal *)
+  let loading_msg, set_loading_msg =
+    S.create ~eq:String.equal "Loading GeoPub..."
+  in
+
   (* Show a loading screen *)
   let body = Document.body G.document in
-  El.set_children body @@ Ui.loading;
 
-  (* Initialize random generator *) Random.self_init ();
+  Brr_react.Elr.def_children body (S.map Ui.loading loading_msg) |> S.keep;
+
+  (* Initialize random generator *)
+  Random.self_init ();
 
   (* Start the app *)
-  let* system = System.start () system in
+  let* system = System.start (fun msg -> set_loading_msg msg) system in
 
   (match system with
   | Ok _ -> Log.info (fun m -> m "GeoPub started.")

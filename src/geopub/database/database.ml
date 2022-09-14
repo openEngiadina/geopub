@@ -22,7 +22,7 @@ module Store = Store
 
 open Archi_lwt
 
-let start () =
+let start _ =
   let* db = Store.init () in
 
   let* triple_count = Store.triple_count db in

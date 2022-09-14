@@ -38,7 +38,7 @@ let rdf_of_stanza (stanza : Stanza.t) =
       |> Lwt_result.catch >|= Result.to_option
   | _ -> return_none
 
-let start () database connection =
+let start (_ : string -> unit) database connection =
   connection |> Xmpp.Connection.client_signal |> S.changes
   |> E.fmap (function
        | Loadable.Loaded client ->

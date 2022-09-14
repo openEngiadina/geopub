@@ -36,7 +36,7 @@ type t = {
   entity_capabilities : Entity_capabilities.t;
 }
 
-let start () connection entity_capabilities =
+let start _ connection entity_capabilities =
   Log.info (fun m -> m "XMPP component started");
   return_ok { connection; entity_capabilities }
 

@@ -23,7 +23,7 @@ let get_location () =
   Window.location G.window |> Uri.to_jstr |> Jstr.to_string |> Rdf.Iri.of_string
   |> Route.parser
 
-let start () =
+let start _ =
   let s, push_state = S.create @@ get_location () in
   Ev.listen Window.History.Ev.popstate
     (fun _ ->
