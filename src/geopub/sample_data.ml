@@ -43,7 +43,7 @@ let sample_data =
   [
     "hello.ttl";
     "activitystreams2.ttl";
-    "musicontology.ttl";
+    (* "musicontology.ttl"; *)
     "rdfs.ttl";
     (* "owl.ttl"; *)
     "geo.ttl";
@@ -60,11 +60,11 @@ let fetch file =
   in
   s |> String.to_seq |> Rdf_turtle.parse_to_graph |> return
 
-let load_sample_data msg db =
+let load_sample_data status db =
   let* () =
     sample_data
     |> Lwt_list.iter_s (fun file ->
-           msg (Format.sprintf "Loading sample data from %s ..." file);
+           status (Format.sprintf "Loading data from %s ..." file);
            fetch file >>= Database.add_graph db)
   in
   ignore @@ set_loaded ();

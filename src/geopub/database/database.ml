@@ -22,7 +22,8 @@ module Store = Store
 
 open Archi_lwt
 
-let start _ =
+let start status =
+  status "Initializing Database...";
   let* db = Store.init () in
 
   let* triple_count = Store.triple_count db in
