@@ -52,21 +52,6 @@ let connection t = t.connection
 
 (* let roster_add xmpp jid = Roster.add_update xmpp.client jid >|= fun _ -> `NoOp *)
 
-(* PubSub *)
-
-(* let publish_activitystreams xmpp id xml =
- *   let* jid = Client.jid xmpp.client in
- *   let item =
- *     Xmlc.Tree.make_element
- *       ~attributes:[ (("", "id"), Rdf.Iri.to_string id) ]
- *       ~children:[ xml ]
- *       (Pubsub.Namespace.pubsub "item")
- *   in
- *   Pubsub.publish ~to':(Jid.bare jid)
- *     ~node:"net.openengiadina.xmpp.activitystreams" xmpp.client (Some item)
- * 
- * (\* Presence subscription management *\) *)
-
 (* let presence_subscribe xmpp jid =
  *   Roster.presence_subscribe xmpp.client jid >|= fun _ -> `NoOp
  * 
