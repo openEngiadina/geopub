@@ -129,6 +129,11 @@ module Publish = struct
     Pubsub.publish ~to':(Xmpp.Jid.bare jid)
       ~node:"net.openengiadina.xmpp.activitystreams" client (Some item)
 
+  let create xmpp object' =
+    let* actor = actor xmpp in
+    let* id, graph = Create.make ~object' actor in
+    to_activitystreams_pep xmpp id graph
+
   let like xmpp iri =
     let* actor = actor xmpp in
     let* id, graph = Like.make ~actor iri in
@@ -162,94 +167,81 @@ module Note = struct
                 @@ Leaflet.Latlng.lng latlng)
               latlng))
 
-  let view post =
-    S.map (fun busy ->
-        El.(
-          Evf.on_el ~default:false Form.Ev.submit (fun ev ->
-              (* let form = Ev.(target_to_jv @@ target ev) in *)
-              let form_data =
-                Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv
-                @@ Ev.target ev
-              in
+  let view xmpp =
+    El.(
+      Evf.on_el ~default:false Form.Ev.submit (fun ev ->
+          let form = Ev.(target_to_jv @@ target ev) in
+          let form_data =
+            Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
+          in
 
-              Console.log [ form_data ];
+          Console.log [ form_data ];
 
-              let content_value =
-                Form.Data.find form_data (Jstr.v "content") |> Option.get
-              in
+          let content_value =
+            Form.Data.find form_data (Jstr.v "content") |> Option.get
+          in
 
-              let content =
-                match content_value with
-                | `String js -> Jstr.to_string js
-                | _ -> failwith "We need better error handling"
-              in
+          let content =
+            match content_value with
+            | `String js -> Jstr.to_string js
+            | _ -> failwith "We need better error handling"
+          in
 
-              let note = make content in
-              ignore @@ post note)
-          @@ form
-               ~at:[ UIKit.Form.stacked; UIKit.margin ]
+          let note = make content in
+
+          ignore @@ Jv.call form "reset" [||];
+          ignore @@ Publish.create xmpp note)
+      @@ form
+           ~at:[ UIKit.Form.stacked; UIKit.margin ]
+           [
+             (* Content *)
+             textarea
+               ~at:
+                 At.
+                   [
+                     UIKit.Form.textarea;
+                     UIKit.Form.controls;
+                     id @@ Jstr.v "content";
+                     name @@ Jstr.v "content";
+                   ]
+               [];
+             (* Post *)
+             div ~at:[ UIKit.margin ]
                [
-                 (* Content *)
-                 textarea
+                 input
                    ~at:
                      At.
                        [
-                         UIKit.Form.textarea;
-                         UIKit.Form.controls;
-                         id @@ Jstr.v "content";
-                         name @@ Jstr.v "content";
+                         UIKit.Form.input;
+                         UIKit.Button.primary;
+                         id @@ Jstr.v "submit";
+                         type' @@ Jstr.v "submit";
+                         value @@ Jstr.v "Post";
                        ]
-                   [];
-                 (* Post *)
-                 div ~at:[ UIKit.margin ]
-                   [
-                     input
-                       ~at:
-                         At.(
-                           add_if busy disabled
-                             [
-                               UIKit.Form.input;
-                               UIKit.Button.primary;
-                               id @@ Jstr.v "submit";
-                               type' @@ Jstr.v "submit";
-                               value @@ Jstr.v "Post";
-                             ])
-                       ();
-                   ];
-               ]))
+                   ();
+               ];
+           ])
 end
+
+module Turtle = struct end
 
 module Compose = struct
   let view xmpp =
-    let busy_s, set_busy = S.create false in
-
-    let* actor = Publish.actor xmpp in
-
-    let post object' =
-      let* id, graph = Create.make ~object' actor in
-      set_busy true;
-      Publish.to_activitystreams_pep xmpp id graph >|= fun _ -> set_busy false
-    in
-
     return
-    @@ S.map
-         (fun compose_el ->
-           El.
-             [
-               div ~at:[ UIKit.container ]
-                 [
-                   h3 [ txt' "New Post" ];
-                   ul ~at:[ UIKit.subnav ]
-                     [
-                       li ~at:[ UIKit.active ]
-                         [ a [ txt' "ActivityStreams Note" ] ];
-                       li [ a [ txt' "ValueFlows Proposal" ] ];
-                       li [ a [ txt' "RDF" ] ];
-                     ];
-                   compose_el;
-                 ];
-             ])
-         (Note.view post busy_s)
+      El.
+        [
+          div ~at:[ UIKit.container ]
+            [
+              h3 [ txt' "New Post" ];
+              ul ~at:[ UIKit.subnav ]
+                [
+                  li ~at:[ UIKit.active ] [ a [ txt' "ActivityStreams Note" ] ];
+                  li [ a [ txt' "ValueFlows Proposal" ] ];
+                  li [ a [ txt' "RDF" ] ];
+                ];
+              Note.view xmpp;
+            ];
+        ]
 end
 
 (* Query for Activities *)
@@ -386,7 +378,7 @@ let view xmpp db =
     S.bind_s xmpp_client (fun xmpp_client ->
         match xmpp_client with
         | Some _xmpp_client ->
-            Compose.view xmpp
+            Compose.view xmpp >|= S.const
             >|= S.map (fun els ->
                     El.
                       [
