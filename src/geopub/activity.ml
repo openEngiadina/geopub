@@ -386,8 +386,17 @@ let view xmpp db =
     S.bind_s xmpp_client (fun xmpp_client ->
         match xmpp_client with
         | Some _xmpp_client ->
-            (* div ~at:[ UIKit.section; UIKit.Section.muted; UIKit.padding ] *)
             Compose.view xmpp
+            >|= S.map (fun els ->
+                    El.
+                      [
+                        div
+                          ~at:
+                            [
+                              UIKit.section; UIKit.Section.muted; UIKit.padding;
+                            ]
+                          els;
+                      ])
         | None ->
             return @@ S.const
             @@ El.
