@@ -62,7 +62,7 @@ type t = { database : Database.t; xmpp : Xmpp.t }
 
 let start msg database xmpp _router =
   (* Automatically login when in dev mode *)
-  dev_login xmpp;
+  (* dev_login xmpp; *)
   match get_stored_credentials () with
   | Some (jid, password) ->
       msg "Logging in...";
