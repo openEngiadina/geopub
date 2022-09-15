@@ -145,13 +145,40 @@ let view_activity db description =
              ];
          ])
 
-let view db =
+let view xmpp xmpp_rdf db =
+  let xmpp_client =
+    Xmpp.(Connection.client_signal @@ connection xmpp)
+    |> S.map Loadable.to_option
+  in
+
+  let* new_post_view =
+    S.bind_s xmpp_client (fun xmpp_client ->
+        match xmpp_client with
+        | Some xmpp_client ->
+            (* div ~at:[ UIKit.section; UIKit.Section.muted; UIKit.padding ] *)
+            New_post.view xmpp_client xmpp_rdf
+        | None ->
+            return @@ S.const
+            @@ El.
+                 [
+                   div ~at:[ UIKit.alert ]
+                     [ p [ txt' "Login to post content" ] ];
+                 ])
+  in
+
   activities db
   >>= S.map_s (Lwt_list.map_s @@ view_activity db)
-  >|= S.map (fun cs ->
+  >|= S.l2
+        (fun new_post_el cs ->
           El.
             [
               div
                 ~at:[ UIKit.container; UIKit.margin ]
-                [ h1 [ txt' "Activity" ]; ul ~at:[ UIKit.Comment.list ] cs ];
+                [
+                  h1 [ txt' "Activity" ];
+                  div @@ new_post_el;
+                  hr ();
+                  ul ~at:[ UIKit.Comment.list ] cs;
+                ];
             ])
+        new_post_view

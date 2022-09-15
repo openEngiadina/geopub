@@ -77,7 +77,8 @@ let view (t : Model.t) =
       in
       match current_route with
       | Route.About -> return @@ with_navbar @@ S.const [ about ]
-      | Route.Activity _latlng -> Activity.view t.database >|= with_navbar
+      | Route.Activity _latlng ->
+          Activity.view t.xmpp t.xmpp_rdf t.database >|= with_navbar
       | Route.User -> User.view t.user >|= with_navbar
       | Route.Map -> return @@ with_navbar @@ S.const [ Geopub_map.view t.map ]
       | Route.Inspect iri -> Inspect.view t iri >|= with_navbar
@@ -92,8 +93,9 @@ let view (t : Model.t) =
  *     return [ Ui.geopub_menu model; query_view ]
  * | Route.Settings -> Settings.view ~update model *)
 
-let start _ router database user map : (t, [ `Msg of string ]) Result.t Lwt.t =
-  let model : Model.t = { router; database; user; map } in
+let start _ router xmpp xmpp_rdf database user map :
+    (t, [ `Msg of string ]) Result.t Lwt.t =
+  let model : Model.t = { router; xmpp; xmpp_rdf; database; user; map } in
 
   (* Set the UI on the document body *)
   let body = Document.body G.document in
@@ -108,6 +110,8 @@ let component =
     ~dependencies:
       [
         Router.component;
+        Xmpp.component;
+        Xmpp_rdf.component;
         Database.component;
         User.component;
         Geopub_map.component;

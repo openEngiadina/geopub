@@ -32,6 +32,8 @@ module Margin = struct
   let right = class' "uk-margin-right"
 end
 
+let padding = class' "uk-padding"
+
 module Position = struct
   let center = class' "uk-position-center"
 end
@@ -45,9 +47,19 @@ module Button = struct
   let link = class' "uk-button-link"
 end
 
+let section = class' "uk-section"
+
+module Section = struct
+  let default = class' "uk-section-default"
+  let muted = class' "uk-section-muted"
+  let primary = class' "uk-section-primary"
+  let secondary = class' "uk-section-secondary"
+end
+
 module Form = struct
   let stacked = class' "uk-form-stacked"
   let input = class' "uk-input"
+  let textarea = class' "uk-textarea"
   let label = class' "uk-form-label"
   let controls = class' "uk-form-controls"
 end
@@ -81,11 +93,15 @@ module Comment = struct
   let primary = class' "uk-comment-primary"
 end
 
+let width n d =
+  At.class' @@ Jstr.v @@ "uk-width-" ^ string_of_int n ^ "-" ^ string_of_int d
+
 module Width = struct
   let expand = class' "uk-width-expand"
 end
 
 let subnav = class' "uk-subnav"
+let active = class' "uk-active"
 
 module Subnav = struct
   let divider = class' "uk-subnav-divider"
@@ -101,6 +117,7 @@ module Icon = struct
   let v name = At.v (Jstr.v "uk-icon") (Jstr.v name)
   let code = v "code"
   let star = v "star"
+  let plus = v "plus"
   let comment = v "comment"
   let forward = v "forward"
 end
