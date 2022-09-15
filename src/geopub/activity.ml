@@ -59,24 +59,6 @@ let view_activity db description =
     |> Rdf.Triple.Subject.map (fun iri -> Some iri) (fun _ -> None)
   in
 
-  let inspect_el =
-    match subject_iri with
-    | Some iri ->
-        El.(
-          li
-            [
-              a
-                ~at:
-                  [
-                    Route.href @@ Route.Inspect iri;
-                    UIKit.Icon.code;
-                    At.title @@ Jstr.v @@ Rdf.Iri.to_string iri;
-                  ]
-                [];
-            ])
-    | None -> El.txt' ""
-  in
-
   let* from =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "actor")
@@ -88,7 +70,7 @@ let view_activity db description =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
       description
-    |> Option.map (Ui_rdf.object' db)
+    |> Option.map (Ui_rdf.object' ?href:subject_iri db)
     |> Option.value ~default:(return @@ El.txt' "")
   in
   let* published =
@@ -138,10 +120,16 @@ let view_activity db description =
                        [
                          UIKit.Comment.meta; UIKit.subnav; UIKit.Subnav.divider;
                        ]
-                     [ li [ type_el ]; li [ object_el ]; li [ published ] ];
+                     [
+                       li [ type_el ];
+                       li [ object_el ];
+                       li [ published ];
+                       li ~at:[ UIKit.Width.expand ] [];
+                       li [ a ~at:[ UIKit.Icon.comment ] [] ];
+                       (* li [ a ~at:[] [ txt' "Like" ] ]; *)
+                     ];
                  ];
                div ~at:[ UIKit.Comment.body ] [ content_el ];
-               ul ~at:[ UIKit.iconnav; UIKit.Align.right ] [ inspect_el ];
              ];
          ])
 

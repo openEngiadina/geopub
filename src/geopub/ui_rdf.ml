@@ -38,7 +38,7 @@ let get_type_label database iri =
   let* type' = get_type database iri in
   match type' with Some iri -> get_label database iri | None -> return_none
 
-let iri database iri =
+let iri ?href database iri =
   let* label_opt =
     get_label database iri >>= function
     | None -> get_type_label database iri
@@ -51,10 +51,17 @@ let iri database iri =
       @@ El.(
            a
              ~at:
-               [
-                 Route.href @@ Route.Inspect iri;
-                 At.title @@ Jstr.v @@ Rdf.Iri.to_string iri;
-               ]
+               (match href with
+               | Some href ->
+                   [
+                     Route.href @@ Route.Inspect href;
+                     At.title @@ Jstr.v @@ Rdf.Iri.to_string href;
+                   ]
+               | None ->
+                   [
+                     Route.href @@ Route.Inspect iri;
+                     At.title @@ Jstr.v @@ Rdf.Iri.to_string iri;
+                   ])
              [ literal l ])
   | None -> return @@ iri_plain iri
 
@@ -66,8 +73,8 @@ let subject database =
 
 let predicate database p = iri database @@ Rdf.Triple.Predicate.to_iri p
 
-let object' database o =
-  Rdf.Triple.Object.map (iri database)
+let object' ?href database o =
+  Rdf.Triple.Object.map (iri ?href database)
     (fun b -> return @@ blank_node b)
     (fun l -> return @@ literal l)
     o
