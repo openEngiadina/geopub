@@ -34,8 +34,10 @@ let hash s =
 (* Activity types *)
 
 module Create = struct
-  let make ~object' actor =
-    let object_id = Rdf_cbor.Content_addressable.base_subject ~hash object' in
+  let make os actor =
+    let object_ids =
+      List.map (Rdf_cbor.Content_addressable.base_subject ~hash) os
+    in
     let create_activity =
       Rdf_cbor.Content_addressable.(
         empty
@@ -44,20 +46,27 @@ module Create = struct
              (Predicate.of_iri @@ activitystreams "actor")
              (Object.of_iri actor)
         |> add_statement
-             (Predicate.of_iri @@ activitystreams "object")
-             (Object.of_iri object_id)
-        |> add_statement
              (Predicate.of_iri @@ activitystreams "published")
              (Object.of_literal
              @@ Rdf.Literal.make
                   (Ptime.to_rfc3339 @@ Ptime_clock.now ())
-                  (Rdf.Namespace.xsd "dateTime")))
+                  (Rdf.Namespace.xsd "dateTime"))
+        |> fun fragment ->
+        List.fold_left
+          (fun fragment object_id ->
+            add_statement
+              (Predicate.of_iri @@ activitystreams "object")
+              (Object.of_iri object_id) fragment)
+          fragment object_ids)
     in
     return
       ( Rdf_cbor.Content_addressable.base_subject ~hash create_activity,
         Rdf.Graph.(
           empty
-          |> add_seq (Rdf_cbor.Content_addressable.to_triples ~hash object')
+          |> add_seq
+               (os |> List.to_seq
+               |> Seq.concat_map (Rdf_cbor.Content_addressable.to_triples ~hash)
+               )
           |> add_seq
                (Rdf_cbor.Content_addressable.to_triples ~hash create_activity))
       )
@@ -129,9 +138,9 @@ module Publish = struct
     Pubsub.publish ~to':(Xmpp.Jid.bare jid)
       ~node:"net.openengiadina.xmpp.activitystreams" client (Some item)
 
-  let create xmpp object' =
+  let create xmpp objects =
     let* actor = actor xmpp in
-    let* id, graph = Create.make ~object' actor in
+    let* id, graph = Create.make objects actor in
     to_activitystreams_pep xmpp id graph
 
   let like xmpp iri =
@@ -190,7 +199,7 @@ module Note = struct
           let note = make content in
 
           ignore @@ Jv.call form "reset" [||];
-          ignore @@ Publish.create xmpp note)
+          ignore @@ Publish.create xmpp [ note ])
       @@ form
            ~at:[ UIKit.Form.stacked; UIKit.margin ]
            [
@@ -223,25 +232,130 @@ module Note = struct
            ])
 end
 
-module Turtle = struct end
+module Turtle = struct
+  let default =
+    {rdf|@prefix as: <https://www.w3.org/ns/activitystreams#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+
+<>
+  a as:Note ;
+  geo:lat "46.7970040956";
+  geo:long "10.2982868244";
+  as:content "Hi!"@en;
+  as:content "Hello!"@de;
+  as:content "Salut!"@fr;
+  as:content "Grüezi!"@gsw;
+  as:content "Allegra!"@rm .
+|rdf}
+
+  let view xmpp =
+    El.(
+      Evf.on_el ~default:false Form.Ev.submit (fun ev ->
+          let form = Ev.(target_to_jv @@ target ev) in
+          let form_data =
+            Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
+          in
+
+          Console.log [ form_data ];
+
+          let content_value =
+            Form.Data.find form_data (Jstr.v "turtle-content") |> Option.get
+          in
+
+          let content =
+            match content_value with
+            | `String js -> Jstr.to_string js
+            | _ -> failwith "We need better error handling"
+          in
+
+          let objects =
+            content |> String.to_seq |> Rdf_turtle.parse_to_graph
+            |> Rdf.Graph.to_triples |> Rdf_cbor.Content_addressable.of_triples
+            |> Seq.map snd |> List.of_seq
+          in
+
+          ignore @@ Jv.call form "reset" [||];
+          ignore @@ Publish.create xmpp objects)
+      @@ form
+           ~at:[ UIKit.Form.stacked; UIKit.margin ]
+           [
+             (* Content *)
+             div
+               [
+                 label
+                   ~at:At.[ UIKit.Form.label; for' @@ Jstr.v "turtle-content" ]
+                   [ txt' "RDF/Turtle" ];
+                 textarea
+                   ~at:
+                     At.
+                       [
+                         UIKit.Form.textarea;
+                         UIKit.Form.controls;
+                         UIKit.Height.medium;
+                         id @@ Jstr.v "turtle-content";
+                         name @@ Jstr.v "turtle-content";
+                       ]
+                   [ txt' default ];
+               ];
+             (* Post *)
+             div ~at:[ UIKit.margin ]
+               [
+                 input
+                   ~at:
+                     At.
+                       [
+                         UIKit.Form.input;
+                         UIKit.Button.primary;
+                         id @@ Jstr.v "submit";
+                         type' @@ Jstr.v "submit";
+                         value @@ Jstr.v "Post";
+                       ]
+                   ();
+               ];
+           ])
+end
 
 module Compose = struct
   let view xmpp =
-    return
-      El.
-        [
-          div ~at:[ UIKit.container ]
-            [
-              h3 [ txt' "New Post" ];
-              ul ~at:[ UIKit.subnav ]
-                [
-                  li ~at:[ UIKit.active ] [ a [ txt' "ActivityStreams Note" ] ];
-                  li [ a [ txt' "ValueFlows Proposal" ] ];
-                  li [ a [ txt' "RDF" ] ];
-                ];
-              Note.view xmpp;
-            ];
-        ]
+    let input_type_s, set_input_type = S.create `Note in
+
+    input_type_s
+    |> S.map (fun input_type ->
+           El.
+             [
+               div ~at:[ UIKit.container ]
+                 [
+                   h3 [ txt' "New Post" ];
+                   ul ~at:[ UIKit.subnav ]
+                     [
+                       li
+                         ~at:At.(add_if (input_type = `Note) UIKit.active [])
+                         [
+                           Evf.on_el Ev.click (fun _ -> set_input_type `Note)
+                           @@ a [ txt' "ActivityStreams Note" ];
+                         ];
+                       li
+                         ~at:
+                           At.(add_if (input_type = `Proposal) UIKit.active [])
+                         [
+                           Evf.on_el Ev.click (fun _ ->
+                               set_input_type `Proposal)
+                           @@ a [ txt' "ValueFlows Proposal" ];
+                         ];
+                       li
+                         ~at:At.(add_if (input_type = `Turtle) UIKit.active [])
+                         [
+                           Evf.on_el Ev.click (fun _ -> set_input_type `Turtle)
+                           @@ a [ txt' "RDF/Turtle" ];
+                         ];
+                     ];
+                   (match input_type with
+                   | `Note -> Note.view xmpp
+                   | `Proposal -> txt' "TODO"
+                   | `Turtle -> Turtle.view xmpp);
+                 ];
+             ])
 end
 
 (* Query for Activities *)
@@ -378,7 +492,7 @@ let view xmpp db =
     S.bind_s xmpp_client (fun xmpp_client ->
         match xmpp_client with
         | Some _xmpp_client ->
-            Compose.view xmpp >|= S.const
+            Compose.view xmpp |> return
             >|= S.map (fun els ->
                     El.
                       [

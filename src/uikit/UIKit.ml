@@ -100,6 +100,11 @@ module Width = struct
   let expand = class' "uk-width-expand"
 end
 
+module Height = struct
+  let medium = class' "uk-height-medium"
+  let large = class' "uk-height-large"
+end
+
 let subnav = class' "uk-subnav"
 let active = class' "uk-active"
 
