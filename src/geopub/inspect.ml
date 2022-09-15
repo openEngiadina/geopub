@@ -5,6 +5,7 @@
  *)
 
 open Brr
+open Brr_react
 open Lwt
 open Lwt.Syntax
 open Lwt_react
@@ -130,11 +131,19 @@ let description_list_of_description database description =
  *       return El.[ h2 [ txt' "Inferred types" ]; ul type_lis ]
  *   | None -> return_nil *)
 
-let submenu _model =
+let submenu xmpp iri =
   El.(
     ul
       ~at:At.[ class' @@ Jstr.v "uk-subnav" ]
-      [ li [ a [ txt' "Share" ] ]; li [ a [ txt' "Like" ] ] ])
+      [
+        li ~at:[ UIKit.Width.expand ] [];
+        li
+          [
+            Evf.on_el Ev.click (fun _ ->
+                ignore @@ Activity.Publish.like xmpp iri)
+            @@ a ~at:[ UIKit.Icon.star ] [];
+          ];
+      ])
 
 let view (model : Model.t) iri =
   let* description =
@@ -153,11 +162,11 @@ let view (model : Model.t) iri =
              div
                ~at:[ UIKit.container; UIKit.margin ]
                [
-                 submenu model;
                  article
                    ~at:[ UIKit.article; UIKit.margin ]
                    ([
                       title_el;
+                      submenu model.xmpp iri;
                       p ~at:[ UIKit.Article.meta ]
                         [
                           txt'
