@@ -34,6 +34,10 @@ Store RDF data in an IndexedDB database.
 
 Provides a Dataog interface for querying the database. Results are returned as signals (see section on functional reactive programming above).
 
+### [`Sample_data`](../src/geopub/sample_data.ml)
+
+Loads initial sample data.
+
 ### [`User`](../src/geopub/user.ml)
 
 Manages the user session, i.e. an user interface for an XMPP connection.
