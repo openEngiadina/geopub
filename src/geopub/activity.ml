@@ -93,9 +93,44 @@ end
 (* Publish Activities *)
 
 module Publish = struct
-  let actor xmpp_client =
-    Xmpp.Client.jid xmpp_client >|= fun jid ->
-    ("xmpp:" ^ Xmpp.Jid.(to_string @@ bare jid)) |> Rdf.Iri.of_string
+  module Client = Xmppl_websocket.Client
+  module Pubsub = Xmppl_pubsub.Make (Client)
+
+  (* State required to publish *)
+  type t = Xmpp.t
+
+  let actor xmpp =
+    let xmpp_client = Xmpp.(Connection.client @@ connection xmpp) in
+    match xmpp_client with
+    | Ok xmpp_client ->
+        Xmpp.Client.jid xmpp_client >|= fun jid ->
+        ("xmpp:" ^ Xmpp.Jid.(to_string @@ bare jid)) |> Rdf.Iri.of_string
+    | Error _ -> return @@ Rdf.Iri.of_string "urn:not-connected"
+
+  let rdf_to_xml rdf =
+    let prefixes =
+      [ ("as", Namespace.activitystreams ""); ("geo", Namespace.geo "") ]
+    in
+    let signals = rdf |> Rdf_xml.to_signals ~prefixes in
+    let stream = Lwt_stream.of_seq signals in
+    Xmlc.Parser.parse_stream Xmlc.Tree.parser stream
+
+  let to_activitystreams_pep t id graph =
+    let* client =
+      Xmpp.connection t |> Xmpp.Connection.client |> function
+      | Ok client -> return client
+      | _ -> fail_with "no XMPP client"
+    in
+    let* jid = Xmpp.Client.jid client in
+    let* xml = rdf_to_xml graph in
+    let item =
+      Xmlc.Tree.make_element
+        ~attributes:[ (("", "id"), Rdf.Iri.to_string id) ]
+        ~children:[ xml ]
+        (Pubsub.Namespace.pubsub "item")
+    in
+    Pubsub.publish ~to':(Xmpp.Jid.bare jid)
+      ~node:"net.openengiadina.xmpp.activitystreams" client (Some item)
 end
 
 (* Object types *)
@@ -183,16 +218,15 @@ module Note = struct
 end
 
 module Compose = struct
-  let view xmpp_client xmpp_rdf =
+  let view xmpp =
     let busy_s, set_busy = S.create false in
 
-    let* actor = Publish.actor xmpp_client in
+    let* actor = Publish.actor xmpp in
 
     let post object' =
       let* id, graph = Create.make ~object' actor in
       set_busy true;
-      Xmpp_rdf.Publish.to_activitystreams_pep xmpp_rdf id graph >|= fun _ ->
-      set_busy false
+      Publish.to_activitystreams_pep xmpp id graph >|= fun _ -> set_busy false
     in
 
     return
@@ -334,7 +368,7 @@ let view_activity db description =
              ];
          ])
 
-let view xmpp xmpp_rdf db =
+let view xmpp db =
   let xmpp_client =
     Xmpp.(Connection.client_signal @@ connection xmpp)
     |> S.map Loadable.to_option
@@ -343,9 +377,9 @@ let view xmpp xmpp_rdf db =
   let* new_post_view =
     S.bind_s xmpp_client (fun xmpp_client ->
         match xmpp_client with
-        | Some xmpp_client ->
+        | Some _xmpp_client ->
             (* div ~at:[ UIKit.section; UIKit.Section.muted; UIKit.padding ] *)
-            Compose.view xmpp_client xmpp_rdf
+            Compose.view xmpp
         | None ->
             return @@ S.const
             @@ El.

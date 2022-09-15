@@ -7,7 +7,6 @@
 type t = {
   router : Router.t;
   xmpp : Xmpp.t;
-  xmpp_rdf : Xmpp_rdf.t;
   database : Database.t;
   user : User.t;
   map : Geopub_map.t;
