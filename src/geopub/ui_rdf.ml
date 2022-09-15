@@ -11,7 +11,15 @@ open Lwt.Syntax
 (* RDF Terms *)
 
 let blank_node bnode = El.(txt' @@ "_:" ^ Rdf.Blank_node.identifier bnode)
-let literal literal = El.(div [ txt' @@ Rdf.Literal.canonical literal ])
+
+let literal ?(with_lang = true) literal =
+  match Rdf.Literal.language literal with
+  | None -> El.(div [ txt' @@ Rdf.Literal.canonical literal ])
+  | Some language ->
+      El.(
+        div
+          ~at:At.(add_if with_lang (title @@ Jstr.v language) [])
+          [ txt' @@ Rdf.Literal.canonical literal ])
 
 let iri_plain iri =
   match iri with
@@ -62,7 +70,7 @@ let iri ?href database iri =
                      Route.href @@ Route.Inspect iri;
                      At.title @@ Jstr.v @@ Rdf.Iri.to_string iri;
                    ])
-             [ literal l ])
+             [ literal ~with_lang:false l ])
   | None -> return @@ iri_plain iri
 
 (* Triple *)
