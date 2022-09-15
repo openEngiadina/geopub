@@ -7,6 +7,8 @@
 - Componentize application into smaller, state-full parts
 - Store XMPP credentials in local storage
 - Expose a Datalog interface that transparently does dictionary lookups
+- Like any RDF content
+- Publish any RDF data as RDF/Turtle
 
 ## [0.6.0] - 2022-07-01
 
