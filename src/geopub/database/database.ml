@@ -83,14 +83,25 @@ let query db q =
   let update_e =
     E.map
       (fun () (state, _tx, _tuples) ->
+        (* A fresh tx *)
         let tx = read_only db in
-        let* state', etuples' =
-          EDatalog.(query_with_state ~database:(edb tx) ~state eq)
+
+        (* FIXME: incremental evaluation seems to be broken *)
+        (* let* state', etuples' =
+         *   EDatalog.(query_with_state ~database:(edb tx) ~state eq)
+         * in *)
+        let* etuples' =
+          EDatalog.(query ~database:(edb tx) ~program:geopub_datalog_program eq)
         in
 
         let* tuples' = Datalog.Dictionary.get_tuple_set db ~tx etuples' in
 
-        return (state', tx, tuples'))
+        Log.debug (fun m ->
+            m "%d tuples for query %a"
+              (Datalog.Tuple.Set.cardinal tuples')
+              Datalog.Atom.pp q);
+
+        return (state, tx, tuples'))
       Store.on_update
   in
 
