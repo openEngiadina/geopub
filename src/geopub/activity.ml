@@ -64,7 +64,7 @@ module Create = struct
 end
 
 module Like = struct
-  let make object_id actor =
+  let make ~actor iri =
     let like_activity =
       Rdf_cbor.Content_addressable.(
         empty
@@ -74,7 +74,7 @@ module Like = struct
              (Object.of_iri actor)
         |> add_statement
              (Predicate.of_iri @@ activitystreams "object")
-             (Object.of_iri object_id)
+             (Object.of_iri iri)
         |> add_statement
              (Predicate.of_iri @@ activitystreams "published")
              (Object.of_literal
@@ -95,9 +95,6 @@ end
 module Publish = struct
   module Client = Xmppl_websocket.Client
   module Pubsub = Xmppl_pubsub.Make (Client)
-
-  (* State required to publish *)
-  type t = Xmpp.t
 
   let actor xmpp =
     let xmpp_client = Xmpp.(Connection.client @@ connection xmpp) in
@@ -131,6 +128,11 @@ module Publish = struct
     in
     Pubsub.publish ~to':(Xmpp.Jid.bare jid)
       ~node:"net.openengiadina.xmpp.activitystreams" client (Some item)
+
+  let like xmpp iri =
+    let* actor = actor xmpp in
+    let* id, graph = Like.make ~actor iri in
+    to_activitystreams_pep xmpp id graph
 end
 
 (* Object types *)
@@ -288,7 +290,7 @@ let activities db =
           |> Lwt_seq.map_s (Database.get_description db)
           |> Lwt_seq.to_list >|= sort_activities)
 
-let view_activity db description =
+let view_activity xmpp db description =
   let subject_iri =
     Rdf.Description.subject description
     |> Rdf.Triple.Subject.map (fun iri -> Some iri) (fun _ -> None)
@@ -360,8 +362,14 @@ let view_activity db description =
                        li [ object_el ];
                        li [ published ];
                        li ~at:[ UIKit.Width.expand ] [];
-                       li [ a ~at:[ UIKit.Icon.star ] [] ];
-                       (* li [ a ~at:[] [ txt' "Like" ] ]; *)
+                       li
+                         [
+                           Evf.on_el Ev.click (fun _ ->
+                               match subject_iri with
+                               | Some iri -> ignore @@ Publish.like xmpp iri
+                               | None -> ())
+                           @@ a ~at:[ UIKit.Icon.star ] [];
+                         ];
                      ];
                  ];
                div ~at:[ UIKit.Comment.body ] [ content_el ];
@@ -390,7 +398,7 @@ let view xmpp db =
   in
 
   activities db
-  >>= S.map_s (Lwt_list.map_s @@ view_activity db)
+  >>= S.map_s (Lwt_list.map_s @@ view_activity xmpp db)
   >|= S.l2
         (fun new_post_el cs ->
           El.
