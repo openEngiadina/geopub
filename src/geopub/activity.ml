@@ -232,20 +232,34 @@ end
 
 module Turtle = struct
   let default =
-    {rdf|@prefix as: <https://www.w3.org/ns/activitystreams#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+    {rdf|@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix vf: <https://w3id.org/valueflows#> .
+@prefix om2:   <http://www.ontology-of-units-of-measure.org/resource/om-2/> .
 
 <>
-  a as:Note ;
-  geo:lat "46.7970040956";
-  geo:long "10.2982868244";
-  as:content "Hi!"@en;
-  as:content "Hello!"@de;
-  as:content "Salut!"@fr;
-  as:content "Grüezi!"@gsw;
-  as:content "Allegra!"@rm .
-|rdf}
+   a vf:ProposedIntent ;
+   vf:publishedIn <#proposal> ;
+   vf:publishes <#offer> .
+
+<#proposal>
+   a vf:Proposal ;
+   vf:name "Offer something for 10 euro" .
+
+<#offer>
+   a vf:Intent ;
+   vf:name "Something" ;
+   vf:action vf:Transfer ;
+   vf:provider <xmpp:pukkamustard@posteo.net> .
+
+<#payment>
+  a vf:Intent ;
+  vf:receiver <xmpp:pukkamustard@posteo.net> ;
+  vf:resourceQuantity <#paymentMeasure> .
+
+<#paymentMeasure>
+  a om2:Measure ;
+  om2:hasUnit om2:euro ;
+  om2:hasNumericalValue 10 .|rdf}
 
   let view xmpp =
     El.(
