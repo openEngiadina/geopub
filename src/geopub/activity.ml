@@ -239,7 +239,8 @@ module Turtle = struct
 <>
    a vf:ProposedIntent ;
    vf:publishedIn <#proposal> ;
-   vf:publishes <#offer> .
+   vf:publishes <#offer> ;
+   vf:publishes <#payment> .
 
 <#proposal>
    a vf:Proposal ;
