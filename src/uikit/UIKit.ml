@@ -81,6 +81,12 @@ module Article = struct
   let meta = class' "uk-article-meta"
 end
 
+let list = class' "uk-list"
+
+module List = struct
+  let large = class' "uk-list-large"
+end
+
 let description_list = class' "uk-description-list"
 let comment = class' "uk-comment"
 
@@ -130,4 +136,5 @@ end
 
 module Text = struct
   let truncate = class' "uk-text-truncate"
+  let break = class' "uk-text-break"
 end

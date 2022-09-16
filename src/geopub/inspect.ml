@@ -16,34 +16,6 @@ let title_of_description database description =
   in
   return @@ El.(h1 ~at:[ UIKit.Article.title; UIKit.Text.truncate ] [ title_s ])
 
-let view_header description =
-  let subject_title =
-    match
-      Rdf.Description.functional_property
-        (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdfs "label")
-        description
-    with
-    | Some object' ->
-        Rdf.Triple.Object.map Rdf.Iri.to_string Rdf.Blank_node.identifier
-          Rdf.Literal.canonical object'
-    | None ->
-        Rdf.Triple.Subject.map Rdf.Iri.to_string Rdf.Blank_node.identifier
-          (Rdf.Description.subject description)
-  in
-  El.(
-    header
-      [
-        h1 [ txt' subject_title ];
-        p
-          ~at:At.[ class' @@ Jstr.v "iri"; class' @@ Jstr.v "meta" ]
-          [
-            txt'
-            @@ Rdf.Triple.Subject.map Rdf.Iri.to_string
-                 Rdf.Blank_node.identifier
-                 (Rdf.Description.subject description);
-          ];
-      ])
-
 let description_list_of_description database description =
   Rdf.Description.to_nested_seq description
   |> List.of_seq
@@ -61,7 +33,7 @@ let description_list_of_description database description =
            @@ dl ~at:[ UIKit.description_list ]
                 [
                   dt [ predicate_el ];
-                  dd [ ul ~at:At.[ class' @@ Jstr.v "objects" ] objects_lis ];
+                  dd [ ul ~at:[ UIKit.list; UIKit.Margin.left ] objects_lis ];
                 ])
 
 (* let view_backlinks database description =
@@ -167,7 +139,8 @@ let view (model : Model.t) iri =
                    ([
                       title_el;
                       submenu model.xmpp iri;
-                      p ~at:[ UIKit.Article.meta ]
+                      p
+                        ~at:[ UIKit.Article.meta; UIKit.Text.break ]
                         [
                           txt'
                           @@ Rdf.Triple.Subject.map Rdf.Iri.to_string
