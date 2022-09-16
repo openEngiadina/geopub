@@ -17,6 +17,15 @@ module Container = struct
   let expand = class' "uk-container-expand"
 end
 
+let open' = class' "uk-open"
+let accordion = At.true' @@ Jstr.v "uk-accordion"
+
+module Accordion = struct
+  let multiple = At.v (Jstr.v "uk-accordion") (Jstr.v "multiple: true")
+  let title = class' "uk-accordion-title"
+  let content = class' "uk-accordion-content"
+end
+
 module Align = struct
   let left = class' "uk-align-left"
   let right = class' "uk-align-right"
