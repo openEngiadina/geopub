@@ -184,8 +184,6 @@ module Note = struct
             Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
           in
 
-          Console.log [ form_data ];
-
           let content_value =
             Form.Data.find form_data (Jstr.v "content") |> Option.get
           in
@@ -256,8 +254,6 @@ module Turtle = struct
           let form_data =
             Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
           in
-
-          Console.log [ form_data ];
 
           let content_value =
             Form.Data.find form_data (Jstr.v "turtle-content") |> Option.get
