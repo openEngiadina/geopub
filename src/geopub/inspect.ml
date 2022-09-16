@@ -50,10 +50,7 @@ let view_backlinks database backlinks =
                 dt [ predicate_el ]; dd ~at:[ UIKit.Margin.left ] [ subject_el ];
               ])
   >|= List.concat
-  >|= fun els ->
-  El.(
-    div ~at:[ UIKit.section ]
-      [ h3 [ txt' "Backlinks" ]; dl ~at:[ UIKit.description_list ] els ])
+  >|= fun els -> El.(dl ~at:[ UIKit.description_list ] els)
 
 let backlinks database subject =
   let query =
@@ -127,8 +124,8 @@ let view (model : Model.t) iri =
                                (Rdf.Description.subject description);
                         ];
                     ]
-                   @ ddl);
-                 backlinks_el;
+                   @ (h3 [ txt' "Predicates" ] :: ddl)
+                   @ [ h3 [ txt' "Backlinks" ]; backlinks_el ]);
                ];
            ])
     description backlinks
