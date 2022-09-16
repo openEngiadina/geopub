@@ -4,7 +4,7 @@
  (files
   (hello.ttl as sample_data/hello.ttl)
   (activitystreams2.ttl as sample_data/activitystreams2.ttl)
-  (musicontology.ttl as sample_data/musicontology.ttl)
+  (musicontology.xml as sample_data/musicontology.xml)
   (rdfs.ttl as sample_data/rdfs.ttl)
   (owl.ttl as sample_data/owl.ttl)
   (geo.ttl as sample_data/geo.ttl)

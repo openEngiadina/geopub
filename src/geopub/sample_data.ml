@@ -41,32 +41,36 @@ let promise_of_fut_or_error fut =
 
 let sample_data =
   [
-    "hello.ttl";
-    "activitystreams2.ttl";
-    (* "musicontology.ttl"; *)
-    "rdfs.ttl";
+    (`Turtle, "hello.ttl");
+    (`Turtle, "activitystreams2.ttl");
+    (`Xml, "musicontology.xml");
+    (`Turtle, "rdfs.ttl");
     (* "owl.ttl"; *)
-    "geo.ttl";
-    "dublin_core_terms.ttl";
-    "foaf.ttl" (* "che.osm.surveillance.nt"; *);
-    "vf.ttl";
+    (`Turtle, "geo.ttl");
+    (`Turtle, "dublin_core_terms.ttl");
+    (`Turtle, "foaf.ttl") (* "che.osm.surveillance.nt"; *);
+    (`Turtle, "vf.ttl");
   ]
 
 let fetch file =
-  let* s =
-    Fetch.url (Jstr.v @@ "sample_data/" ^ file)
-    |> promise_of_fut_or_error >|= Fetch.Response.as_body
-    >>= fun body ->
-    promise_of_fut_or_error @@ Fetch.Body.text body >|= Jstr.to_string
-  in
-  s |> String.to_seq |> Rdf_turtle.parse_to_graph |> return
+  Fetch.url (Jstr.v @@ "sample_data/" ^ file)
+  |> promise_of_fut_or_error >|= Fetch.Response.as_body
+  >>= fun body ->
+  promise_of_fut_or_error @@ Fetch.Body.text body >|= Jstr.to_string
+
+let parse format s =
+  match format with
+  | `Turtle -> s |> String.to_seq |> Rdf_turtle.parse_to_graph
+  | `Xml ->
+      Xmlm.make_input ~strip:true (`String (0, s))
+      |> Rdf_xml.xmlm_input_to_seq |> Rdf_xml.parse_to_graph
 
 let load_sample_data status db =
   let* () =
     sample_data
-    |> Lwt_list.iter_s (fun file ->
+    |> Lwt_list.iter_s (fun (format, file) ->
            status (Format.sprintf "Loading data from %s ..." file);
-           fetch file >>= Database.add_graph db)
+           fetch file >|= parse format >>= Database.add_graph db)
   in
   ignore @@ set_loaded ();
   return_ok ()
