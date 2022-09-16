@@ -171,7 +171,7 @@ and parse.  This package provides an OCaml implementation of CBOR.")
 (define-public ocaml-rdf
   (package
     (name "ocaml-rdf")
-    (version "76bcc116e9eb0bc42c2743f4a57335a803b03fd3")
+    (version "19033af69fe700c75c55b3fd3c61d4b8bdb2c62d")
     (home-page "https://codeberg.org/openEngiadina/ocaml-rdf.git")
     (source
      (origin
@@ -181,7 +181,7 @@ and parse.  This package provides an OCaml implementation of CBOR.")
             (commit version)))
       (file-name (git-file-name name version))
       (sha256
-       (base32 "0y7hn4m0a0v4knygrdan6s4fcjzm6ifq7bywp2ji5kgxbkhaamp8"))))
+       (base32 "182zhdp2fcnsvg0sdba5whkh8db1dmzdj9grqf94337fwn9cd2ss"))))
     (build-system dune-build-system)
     (arguments `(#:tests? #f))
     (native-inputs
