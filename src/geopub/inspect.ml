@@ -36,72 +36,44 @@ let description_list_of_description database description =
                   dd [ ul ~at:[ UIKit.list; UIKit.Margin.left ] objects_lis ];
                 ])
 
-(* let view_backlinks database description =
- *   let subject_term =
- *     Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
- *   in
- *   let* subject_id = Database.Store.Dictionary.lookup database subject_term in
- *   match subject_id with
- *   | Some subject_id ->
- *       let query =
- *         Database.Datalog.(
- *           Atom.make "triple"
- *             Term.
- *               [
- *                 make_variable "s";
- *                 make_variable "p";
- *                 make_constant @@ Constant.Rdf subject_id;
- *               ])
- *       in
- *       let backlink_triples = Database.query_triple database query in
- *       let* backlink_dtdds =
- *         backlink_triples |> Lwt_seq.to_list
- *         >>= Lwt_list.map_s (fun (triple : Rdf.Triple.t) ->
- *                 let* predicate_el =
- *                   Ui_rdf.view_predicate database triple.predicate
- *                 in
- *                 let* subject_el = Ui_rdf.view_subject database triple.subject in
- *                 return El.[ dt [ predicate_el ]; dd [ subject_el ] ])
- *         >|= List.concat
- *       in
- *       return El.[ h2 [ txt' "Backlinks" ]; dl backlink_dtdds ]
- *   | None -> return_nil
- * 
- * let view_rhodf_types database description =
- *   let subject_term =
- *     Rdf.Triple.Subject.to_term @@ Rdf.Description.subject description
- *   in
- *   let* subject_id = Database.Store.Dictionary.lookup database subject_term in
- *   let type_id =
- *     Database.Store.Dictionary.constant_lookup @@ Rdf.Term.of_iri
- *     @@ Rdf.Namespace.rdf "type"
- *     |> Option.value ~default:(-99)
- *   in
- *   match subject_id with
- *   | Some subject_id ->
- *       let query =
- *         Database.Datalog.(
- *           Atom.make "triple-rhodf"
- *             Term.
- *               [
- *                 make_constant @@ Constant.Rdf subject_id;
- *                 make_constant @@ Constant.Rdf type_id;
- *                 make_variable "o";
- *               ])
- *       in
- *       let* type_triples =
- *         Database.query_triple database query |> Lwt_seq.to_list
- *       in
- *       let* type_lis =
- *         Lwt_list.map_s
- *           (fun (triple : Rdf.Triple.t) ->
- *             let* object_el = Ui_rdf.view_object database triple.object' in
- *             return El.[ li [ object_el ] ])
- *           type_triples
- *         >|= List.concat
- *       in
- *       return El.[ h2 [ txt' "Inferred types" ]; ul type_lis ]
- *   | None -> return_nil *)
+(* Backlinks *)
+
+let view_backlinks database backlinks =
+  backlinks
+  |> Lwt_list.map_s (fun (s, p) ->
+         let* subject_el = Ui_rdf.term database s in
+         let* predicate_el = Ui_rdf.term database p in
+
+         return
+         @@ El.
+              [
+                dt [ predicate_el ]; dd ~at:[ UIKit.Margin.left ] [ subject_el ];
+              ])
+  >|= List.concat
+  >|= fun els ->
+  El.(
+    div ~at:[ UIKit.section ]
+      [ h3 [ txt' "Backlinks" ]; dl ~at:[ UIKit.description_list ] els ])
+
+let backlinks database subject =
+  let query =
+    Database.Datalog.(
+      Atom.make "triple"
+        Term.
+          [
+            make_variable "s";
+            make_variable "p";
+            make_constant @@ Constant.Rdf subject;
+          ])
+  in
+
+  Database.query database query
+  >>= S.map_s (fun (_tx, set) ->
+          Database.Datalog.Tuple.Set.to_seq set
+          |> Seq.filter_map (function
+               | Database.Datalog.Constant.[ Rdf s; Rdf p; _ ] -> Some (s, p)
+               | _ -> None)
+          |> Lwt_seq.of_seq |> Lwt_seq.to_list)
 
 let submenu xmpp iri =
   El.(
@@ -122,11 +94,18 @@ let view (model : Model.t) iri =
     Database.description model.database @@ Rdf.Term.of_iri iri
   in
 
-  (* let* backlinks = view_backlinks model.database description in *)
+  let* backlinks =
+    S.bind_s description (fun description ->
+        let subject =
+          Rdf.Description.subject description |> Rdf.Triple.Subject.to_term
+        in
+        backlinks model.database subject)
+  in
   (* let* rhodf_types = view_rhodf_types model.database description in *)
-  S.map_s
-    (fun description ->
+  S.l2_s
+    (fun description backlinks ->
       let* ddl = description_list_of_description model.database description in
+      let* backlinks_el = view_backlinks model.database backlinks in
       let* title_el = title_of_description model.database description in
       return
       @@ El.
@@ -149,6 +128,7 @@ let view (model : Model.t) iri =
                         ];
                     ]
                    @ ddl);
+                 backlinks_el;
                ];
            ])
-    description
+    description backlinks

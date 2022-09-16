@@ -73,6 +73,11 @@ let iri ?href database iri =
              [ literal ~with_lang:false l ])
   | None -> return @@ iri_plain iri
 
+let term ?href database =
+  Rdf.Term.map (iri ?href database)
+    (fun b -> return @@ blank_node b)
+    (fun l -> return @@ literal l)
+
 (* Triple *)
 
 let subject database =
@@ -82,7 +87,4 @@ let subject database =
 let predicate database p = iri database @@ Rdf.Triple.Predicate.to_iri p
 
 let object' ?href database o =
-  Rdf.Triple.Object.map (iri ?href database)
-    (fun b -> return @@ blank_node b)
-    (fun l -> return @@ literal l)
-    o
+  Rdf.Triple.Object.to_term o |> term ?href database
