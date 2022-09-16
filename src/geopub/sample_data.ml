@@ -49,6 +49,7 @@ let sample_data =
     "geo.ttl";
     "dublin_core_terms.ttl";
     "foaf.ttl" (* "che.osm.surveillance.nt"; *);
+    "vf.ttl";
   ]
 
 let fetch file =
