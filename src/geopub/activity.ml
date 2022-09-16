@@ -409,6 +409,19 @@ let view_activity xmpp db description =
     |> Option.map (Ui_rdf.object' db)
     |> Option.value ~default:(return @@ El.txt' "")
   in
+
+  let from_iri =
+    Rdf.Description.functional_property
+      (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "actor")
+      description
+    |> fun o ->
+    Option.bind o
+      (Rdf.Triple.Object.map
+         (fun iri -> Some iri)
+         (fun _ -> None)
+         (fun _ -> None))
+  in
+
   let* type_el =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
@@ -468,13 +481,31 @@ let view_activity xmpp db description =
                        li [ object_el ];
                        li [ published ];
                        li ~at:[ UIKit.Width.expand ] [];
+                       (match from_iri with
+                       | Some iri ->
+                           li
+                             [
+                               a
+                                 ~at:
+                                   At.
+                                     [
+                                       title @@ Jstr.v "Send direct message";
+                                       href @@ Jstr.v @@ Rdf.Iri.to_string iri;
+                                       UIKit.Icon.mail;
+                                     ]
+                                 [];
+                             ]
+                       | None -> txt' "");
                        li
                          [
                            Evf.on_el Ev.click (fun _ ->
                                match subject_iri with
                                | Some iri -> ignore @@ Publish.like xmpp iri
                                | None -> ())
-                           @@ a ~at:[ UIKit.Icon.star ] [];
+                           @@ a
+                                ~at:
+                                  [ At.title @@ Jstr.v "Like"; UIKit.Icon.star ]
+                                [];
                          ];
                      ];
                  ];

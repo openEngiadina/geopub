@@ -123,6 +123,7 @@ module Icon = struct
   let code = v "code"
   let star = v "star"
   let plus = v "plus"
+  let mail = v "mail"
   let comment = v "comment"
   let forward = v "forward"
 end
