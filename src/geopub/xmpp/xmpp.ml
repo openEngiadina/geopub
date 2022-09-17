@@ -22,12 +22,12 @@ module Client = Xmppl_websocket.Client
 
 (* XEPs *)
 
-module Roster = Xmppl_roster.Make (Client)
 module Pubsub = Xmppl_pubsub.Make (Client)
 
 (* Sub-Components *)
 
 module Connection = Connection
+module Roster = Roster
 
 (* Main component *)
 

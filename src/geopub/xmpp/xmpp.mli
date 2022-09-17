@@ -40,6 +40,16 @@ module Connection : sig
   val login_anonymous_demo : t -> unit Lwt.t
 end
 
+module Roster : sig
+  include module type of struct
+    include Xmppl_roster.Make (Client)
+  end
+
+  type t = roster signal
+
+  val component : (string -> unit, t) Component.t
+end
+
 type t
 
 val component : (string -> unit, t) Component.t

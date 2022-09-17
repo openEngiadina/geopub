@@ -18,6 +18,7 @@ module Container = struct
 end
 
 let open' = class' "uk-open"
+let grid = At.true' @@ Jstr.v "uk-grid"
 let accordion = At.true' @@ Jstr.v "uk-accordion"
 
 module Accordion = struct
