@@ -49,6 +49,7 @@
   index.html
   style.css
   sgraffito.svg
+  favicon.ico
 
   ; GeoPub JS application 
   (main.bc.js as geopub.js)))
