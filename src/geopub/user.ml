@@ -58,9 +58,14 @@ let dev_login xmpp =
 
 (* Component *)
 
-type t = { database : Database.t; xmpp : Xmpp.t; roster : Xmpp.Roster.t }
+type t = {
+  database : Database.t;
+  xmpp : Xmpp.t;
+  roster : Xmpp.Roster.t;
+  router : Router.t;
+}
 
-let start msg database xmpp roster =
+let start msg database xmpp roster router =
   (* Automatically login when in dev mode *)
   (* dev_login xmpp; *)
   match get_stored_credentials () with
@@ -68,14 +73,20 @@ let start msg database xmpp roster =
       msg "Logging in...";
       Xmpp.(Connection.login (connection xmpp) ~password jid)
       |> Lwt_result.catch
-      >|= fun _ -> Ok { xmpp; database; roster }
-  | None -> return_ok { xmpp; database; roster }
+      >|= fun _ -> Ok { xmpp; database; roster; router }
+  | None -> return_ok { xmpp; database; roster; router }
 
 let stop _ = return_unit
 
 let component =
   Component.using ~start ~stop
-    ~dependencies:[ Database.component; Xmpp.component; Xmpp.Roster.component ]
+    ~dependencies:
+      [
+        Database.component;
+        Xmpp.component;
+        Xmpp.Roster.component;
+        Router.component;
+      ]
 
 let jid t =
   Xmpp.(Connection.client_signal @@ connection t.xmpp)
@@ -361,7 +372,10 @@ let login ?error t =
                  Connection.login (connection t.xmpp) ~password jid
                  |> Lwt_result.catch
                  >>= function
-                 | Ok () -> return @@ set_stored_credentials jid password
+                 | Ok () ->
+                     set_stored_credentials jid password;
+                     Router.set_route t.router (Route.Activity None);
+                     return_unit
                  | _ -> return_unit))
           login_form;
         div ~at:[ UIKit.margin ]
