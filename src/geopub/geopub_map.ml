@@ -153,9 +153,9 @@ let marker_of_description inspect map description =
       latlng_of_description description )
   with
   | Some iri, Some latlng ->
-      let el = Ui_rdf.iri_plain inspect iri in
       let marker = Leaflet.Layer.create_marker latlng in
-      Leaflet.Layer.bind_popup el marker;
+      let target = Ev.target_of_jv @@ Leaflet.Layer.to_jv marker in
+      Ev.listen Ev.click (fun _ -> inspect iri) target;
       Leaflet.Layer.add_to map marker;
       Some marker
   | _ -> None
