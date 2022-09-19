@@ -274,8 +274,8 @@ module ValueFlows = struct
   let dc = Namespace.dc
 
   module Offer = struct
-    let make proposal_title proposal_description intent_title intent_description
-        actor =
+    let make ?latlng proposal_title proposal_description intent_title
+        intent_description actor =
       Rdf_cbor.Content_addressable.(
         empty
         |> add_statement Namespace.a (Object.of_iri @@ vf "Proposal")
@@ -299,9 +299,24 @@ module ValueFlows = struct
              (Option.map Object.of_literal intent_description)
         |> add_fragment_statement "intent"
              (Predicate.of_iri @@ vf "provider")
-             (Object.of_iri actor))
+             (Object.of_iri actor)
+           (* Lat/Long *)
+        |> add_opt_statement
+             (Predicate.of_iri @@ geo "lat")
+             (Option.map
+                (fun latlng ->
+                  Object.of_literal @@ Rdf.Literal.make_string
+                  @@ Float.to_string @@ Leaflet.Latlng.lat latlng)
+                latlng)
+        |> add_opt_statement
+             (Predicate.of_iri @@ geo "long")
+             (Option.map
+                (fun latlng ->
+                  Object.of_literal @@ Rdf.Literal.make_string
+                  @@ Float.to_string @@ Leaflet.Latlng.lng latlng)
+                latlng))
 
-    let view xmpp =
+    let view xmpp latlng =
       El.(
         Evf.on_el ~default:false Form.Ev.submit (fun ev ->
             let form = Ev.(target_to_jv @@ target ev) in
@@ -322,7 +337,7 @@ module ValueFlows = struct
             in
 
             let proposal =
-              make proposal_title proposal_description intent_title
+              make ?latlng proposal_title proposal_description intent_title
                 intent_description
             in
 
@@ -375,6 +390,35 @@ module ValueFlows = struct
                          ]
                      [];
                  ];
+               (* Location *)
+               div ~at:[ UIKit.margin ]
+                 (match latlng with
+                 | Some latlng ->
+                     [
+                       label
+                         ~at:
+                           At.[ UIKit.Form.label; for' @@ Jstr.v "post-latlng" ]
+                         [ txt' "Location" ];
+                       input
+                         ~at:
+                           At.
+                             [
+                               UIKit.Form.input;
+                               UIKit.Form.controls;
+                               type' @@ Jstr.v "text";
+                               id @@ Jstr.v "post-latlng";
+                               name @@ Jstr.v "post-latlng";
+                               true' @@ Jstr.v "readonly";
+                               value
+                               @@ Jstr.v
+                                    ((Float.to_string
+                                    @@ Leaflet.Latlng.lat latlng)
+                                    ^ ", " ^ Float.to_string
+                                    @@ Leaflet.Latlng.lng latlng);
+                             ]
+                         ();
+                     ]
+                 | _ -> [ txt' "" ]);
                (* Intent *)
                (* Intent title *)
                div ~at:[ UIKit.margin ]
@@ -566,7 +610,7 @@ module Compose = struct
                      ];
                    (match input_type with
                    | `Note -> Note.view xmpp latlng
-                   | `Offer -> ValueFlows.Offer.view xmpp
+                   | `Offer -> ValueFlows.Offer.view xmpp latlng
                    | `Turtle -> Turtle.view xmpp);
                  ];
              ])
