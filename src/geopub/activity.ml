@@ -541,17 +541,41 @@ module Turtle = struct
 
 # the intent to provide fresh cider
 <#freshCider>
-  a vf:Intent ;
-  dc:title "fresh cider" ;
-  vf:provider <xmpp:carol@example.com> ;
-  vf:resourceQuantity <#ciderMeasure> .
+   a vf:Intent ;
+   dc:title "fresh cider" ;
+   vf:provider <xmpp:carol@example.com> ;
+   vf:resourceQuantity <#ciderMeasure> .
 
 # A more precise definition of how much cider will be provided:
 <#ciderMeasure>
-  a om2:Measure ;
-  om2:hasUnit om2:litre ;
-  om2:hasNumericalValue 5 .
-     |rdf}
+   a om2:Measure ;
+   om2:hasUnit om2:litre ;
+   om2:hasNumericalValue 5 .
+|rdf}
+
+  let example_hospitality_exchange =
+    {rdf|
+@prefix vf: <https://w3id.org/valueflows#> .
+@prefix hospex: <https://example.com/hospitality-exchange#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+
+<>
+     a vf:Proposal ;
+     dc:title "Hosting offer"@en ;
+     dc:description "I can host you if you're in the area."@en ;
+     geo:lat "46.6980816642" ;
+     geo:long "10.1130867004" ;
+     vf:intent <#host> .
+
+<#host>
+   a vf:Intent ;
+     # we use the fictious hospex:Host action to describe that the intended action is to host somebody
+   vf:action hospex:Host ;
+   dc:description "You can sleep on the sofa in the living room or pitch your tent in the garden. At most 4 people. Bicyclists very welcome!" ;
+   vf:provider <xmpp:lena@example.ch> .
+
+|rdf}
 
   let view ~load_example default xmpp =
     let example_li label_text ttl =
@@ -599,9 +623,10 @@ module Turtle = struct
              ul
                ~at:[ UIKit.list; UIKit.List.disc ]
                [
-                 example_li "A multilingual note" example_multilingual_note;
-                 example_li "A ValueFlows proposal with a reciprocal intent"
+                 example_li "Multilingual note" example_multilingual_note;
+                 example_li "ValueFlows proposal with a reciprocal intent"
                    example_vf_cider;
+                 example_li "Hospility offer" example_hospitality_exchange;
                ];
              (* Content *)
              textarea
