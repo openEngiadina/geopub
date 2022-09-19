@@ -107,10 +107,10 @@ let help =
         ul
           ~at:[ UIKit.list; UIKit.List.disc; UIKit.margin ]
           [
-            example_li "ActitivytStream Notes"
+            example_li "ActivityStream Notes"
               "triple(?s,type,<https://www.w3.org/ns/activitystreams#Note>)";
             example_li
-              "ActivityStreams activities using RFDS for type inferrence"
+              "ActivityStream activities using RFDS for type inferrence"
               "triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)";
             example_li "Anything that contains the word \"Hello\""
               "triple-fts(?s,?p,?o, \"Hello\")";
