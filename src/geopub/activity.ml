@@ -481,35 +481,54 @@ end
 
 module Turtle = struct
   let default =
-    {rdf|@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+    {rdf|
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix vf: <https://w3id.org/valueflows#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
 @prefix om2:   <http://www.ontology-of-units-of-measure.org/resource/om-2/> .
 
+# This is a more complex example of a ValueFlows Proposal
+
 <>
-   a vf:ProposedIntent ;
-   vf:publishedIn <#proposal> ;
-   vf:publishes <#offer> ;
-   vf:publishes <#payment> .
-
-<#proposal>
    a vf:Proposal ;
-   vf:name "Offer something for 10 euro" .
+   # A proposal can have a title and a description
+   dc:title "Cider press for fresh cider"@en ;
+   dc:description "I'd like to borrow a cider press in exchange for some freshly pressed cider."@en ;
+   # This can be in any language (or multiple!)
+   dc:title "Saftpresse gegen frischen Apfelsaft"@de ;
+   dc:description "Ich möchte eine Saftpresse ausleihen. Im Austausch biete ich frisch gepressten Apfelsaft an."@de ;
 
-<#offer>
+   # You can add a location to a proposal:
+   geo:lat "46.7525643934" ;
+   geo:long "10.0792694092" ;
+
+   # Intents describe proposed economic flows. For this proposal we have two:
+   vf:intent <#usePress> ; # that we want to use a cider press
+   vf:reciprocalIntent <#freshCider> . # and that we will ofer fresh cider. Note that this is marked as a reciprocal intent.
+
+# The intent to use the press:
+<#usePress>
    a vf:Intent ;
-   vf:name "Something" ;
-   vf:action vf:Transfer ;
-   vf:provider <xmpp:pukkamustard@posteo.net> .
+   dc:title "use cider press" ;
+   dc:description "I can pick up the press at your place and will return it after use." ;
+   vf:action vf:Use ;
+   vf:receiver <xmpp:carol@example.com> .
 
-<#payment>
+# the intent to provide fresh cider
+<#freshCider>
   a vf:Intent ;
-  vf:receiver <xmpp:pukkamustard@posteo.net> ;
-  vf:resourceQuantity <#paymentMeasure> .
+  dc:title "fresh cider" ;
+  vf:provider <xmpp:carol@example.com> ;
+  vf:resourceQuantity <#ciderMeasure> .
 
-<#paymentMeasure>
+# A more precise definition of how much cider will be provided:
+<#ciderMeasure>
   a om2:Measure ;
-  om2:hasUnit om2:euro ;
-  om2:hasNumericalValue 10 .|rdf}
+  om2:hasUnit om2:litre ;
+  om2:hasNumericalValue 5 .
+
+     |rdf}
 
   let view xmpp =
     El.(
@@ -540,6 +559,12 @@ module Turtle = struct
       @@ form
            ~at:[ UIKit.Form.stacked; UIKit.margin ]
            [
+             p
+               [
+                 txt'
+                   "Here you can post any RDF content using the RDF/Turtle \
+                    syntax.";
+               ];
              (* Content *)
              div
                [
@@ -552,7 +577,7 @@ module Turtle = struct
                        [
                          UIKit.Form.textarea;
                          UIKit.Form.controls;
-                         UIKit.Height.medium;
+                         UIKit.Height.large;
                          id @@ Jstr.v "turtle-content";
                          name @@ Jstr.v "turtle-content";
                        ]
