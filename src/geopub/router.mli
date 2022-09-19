@@ -12,10 +12,11 @@ current route. *)
 open Lwt_react
 open Archi_lwt
 
-type t = Route.t signal
+type t
 
 val component : (string -> unit, t) Component.t
 (** The router component *)
 
+val route : t -> Route.t signal
 val current : t -> Route.t
 val set_route : t -> Route.t -> unit

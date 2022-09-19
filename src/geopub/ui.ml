@@ -71,14 +71,14 @@ type t = Model.t
 
 let view (t : Model.t) =
   let* jid = User.jid t.user in
-  S.bind_s ~eq:( = ) t.router (fun current_route ->
+  S.bind_s ~eq:( = ) (Router.route t.router) (fun current_route ->
       let with_navbar =
         S.l2 (fun jid_opt c -> Navbar.view jid_opt current_route :: c) jid
       in
       match current_route with
       | Route.About -> return @@ with_navbar @@ S.const [ about ]
-      | Route.Activity _latlng ->
-          Activity.view t.xmpp t.database >|= with_navbar
+      | Route.Activity latlng ->
+          Activity.view t.xmpp t.database latlng >|= with_navbar
       | Route.User -> User.view t.user >|= with_navbar
       | Route.Map -> return @@ with_navbar @@ S.const [ Geopub_map.view t.map ]
       | Route.Inspect iri -> Inspect.view t iri >|= with_navbar

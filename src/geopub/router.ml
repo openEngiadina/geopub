@@ -17,7 +17,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 let history = Window.history G.window
 
-type t = Route.t signal
+type t = Route.t signal * (Route.t -> unit)
 
 let get_location () =
   Window.location G.window |> Uri.to_jstr |> Jstr.to_string |> Rdf.Iri.of_string
@@ -34,11 +34,13 @@ let start _ =
            route)
       |> push_state)
     (Window.as_target G.window);
-  s |> return_ok
+  (s, fun route -> push_state route) |> return_ok
 
 let stop _ = return_unit
 let component = Component.make ~start ~stop
-let current t = S.value t
+let route (s, _) = s
+let current (s, _) = S.value s
 
-let set_route _t route =
+let set_route (_, push_state) route =
+  push_state route;
   Window.History.push_state ~uri:(Route.to_uri route) history
