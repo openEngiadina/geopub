@@ -34,32 +34,22 @@ module Roster = Roster
 type t = {
   connection : Connection.t;
   entity_capabilities : Entity_capabilities.t;
+  setup_pep_node : Setup_pep_node.t;
 }
 
-let start _ connection entity_capabilities =
+let start _ connection entity_capabilities setup_pep_node =
   Log.info (fun m -> m "XMPP component started");
-  return_ok { connection; entity_capabilities }
+  return_ok { connection; entity_capabilities; setup_pep_node }
 
 let stop _ = return_unit
 
 let component =
   Component.using ~start ~stop
-    ~dependencies:[ Connection.component; Entity_capabilities.component ]
+    ~dependencies:
+      [
+        Connection.component;
+        Entity_capabilities.component;
+        Setup_pep_node.component;
+      ]
 
 let connection t = t.connection
-
-(* Roster management *)
-
-(* let roster_add xmpp jid = Roster.add_update xmpp.client jid >|= fun _ -> `NoOp *)
-
-(* let presence_subscribe xmpp jid =
- *   Roster.presence_subscribe xmpp.client jid >|= fun _ -> `NoOp
- * 
- * let presence_unsubscribe xmpp jid =
- *   Roster.presence_unsubscribe xmpp.client jid >|= fun _ -> `NoOp
- * 
- * let approve_presence_subscription xmpp jid =
- *   Roster.approve_presence_subscription xmpp.client jid >|= fun _ -> `NoOp
- * 
- * let deny_presence_subscription xmpp jid =
- *   Roster.deny_presence_subscription xmpp.client jid >|= fun _ -> `NoOp *)
