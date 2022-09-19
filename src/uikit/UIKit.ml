@@ -11,6 +11,10 @@ let class' name = At.class' @@ Jstr.v name
 
 (* UIKit stuff *)
 
+let uikit = Jv.(get global "UIkit")
+
+(* Components *)
+
 let container = class' "uk-container"
 
 module Container = struct
@@ -148,4 +152,17 @@ end
 module Text = struct
   let truncate = class' "uk-text-truncate"
   let break = class' "uk-text-break"
+end
+
+let offcanvas = At.true' @@ Jstr.v "uk-offcanvas"
+
+module Offcanvas = struct
+  let bar = class' "uk-offcanvas-bar"
+  let close = class' "uk-offcanvas-close"
+
+  let show el =
+    ignore @@ Jv.(call (call uikit "offcanvas" [| El.to_jv el |]) "show" [||])
+
+  let hide el =
+    ignore @@ Jv.(call (call uikit "offcanvas" [| El.to_jv el |]) "hide" [||])
 end

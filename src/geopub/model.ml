@@ -10,4 +10,5 @@ type t = {
   database : Database.t;
   user : User.t;
   map : Geopub_map.t;
+  inspector : Inspector.t;
 }

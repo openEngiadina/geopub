@@ -147,13 +147,13 @@ let visible_descriptions db position =
 
 (* Markers *)
 
-let marker_of_description map description =
+let marker_of_description inspect map description =
   match
     ( Rdf.Triple.Subject.to_iri @@ Rdf.Description.subject description,
       latlng_of_description description )
   with
   | Some iri, Some latlng ->
-      let el = Ui_rdf.iri_plain iri in
+      let el = Ui_rdf.iri_plain inspect iri in
       let marker = Leaflet.Layer.create_marker latlng in
       Leaflet.Layer.bind_popup el marker;
       Leaflet.Layer.add_to map marker;
@@ -161,7 +161,7 @@ let marker_of_description map description =
   | _ -> None
 
 (* Bind markers for all visible descriptions *)
-let marker_updates map visible =
+let marker_updates inspect map visible =
   E.fold
     (fun map_subjects visible_descriptions ->
       SubjectMap.merge
@@ -171,13 +171,14 @@ let marker_updates map visible =
           | Some marker, None ->
               Leaflet.Layer.remove marker;
               None
-          | None, Some description -> marker_of_description map description
+          | None, Some description ->
+              marker_of_description inspect map description
           | None, None -> None)
         map_subjects visible_descriptions)
     (* Initialize markers *)
     (S.value visible
     |> SubjectMap.filter_map (fun _subject description ->
-           marker_of_description map description))
+           marker_of_description inspect map description))
     (S.changes visible)
   |> E.map (fun _ -> ())
 
@@ -256,7 +257,7 @@ type t = {
   marker_updates : unit event;
 }
 
-let start _ database router =
+let start _ database router inspector =
   (* initialize the Leaflet map *)
   let leaflet = init_leaflet router () in
 
@@ -269,6 +270,8 @@ let start _ database router =
                  position.longitude position.zoom);
            position)
   in
+
+  let inspect = Inspector.show inspector in
 
   (* query for visible things *)
   let* visible =
@@ -284,7 +287,7 @@ let start _ database router =
   in
 
   (* set markers for visible things *)
-  let marker_updates = marker_updates leaflet visible in
+  let marker_updates = marker_updates inspect leaflet visible in
 
   return_ok { leaflet; position; marker_updates }
 
@@ -292,7 +295,7 @@ let stop _ = return_unit
 
 let component =
   Component.using ~start ~stop
-    ~dependencies:[ Database.component; Router.component ]
+    ~dependencies:[ Database.component; Router.component; Inspector.component ]
 
 (* View *)
 

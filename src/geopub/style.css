@@ -10,6 +10,10 @@ body {
     /* background: #4782a7; */
 }
 
+.uk-offcanvas-bar {
+    width: 800px;
+}
+
 #sgraffito {
     max-height: 30px;
 }

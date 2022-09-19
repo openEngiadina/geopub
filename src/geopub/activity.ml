@@ -610,7 +610,7 @@ let activities db =
           |> Lwt_seq.map_s (Database.get_description db)
           |> Lwt_seq.to_list >|= sort_activities)
 
-let view_activity xmpp db description =
+let view_activity inspect xmpp db description =
   let subject_iri =
     Rdf.Description.subject description
     |> Rdf.Triple.Subject.map (fun iri -> Some iri) (fun _ -> None)
@@ -620,7 +620,7 @@ let view_activity xmpp db description =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "actor")
       description
-    |> Option.map (Ui_rdf.object' db)
+    |> Option.map (Ui_rdf.object' inspect db)
     |> Option.value ~default:(return @@ El.txt' "")
   in
 
@@ -640,14 +640,14 @@ let view_activity xmpp db description =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
       description
-    |> Option.map (Ui_rdf.object' ?href:subject_iri db)
+    |> Option.map (Ui_rdf.object' ?href:subject_iri inspect db)
     |> Option.value ~default:(return @@ El.txt' "")
   in
   let* published =
     Rdf.Description.functional_property
       (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "published")
       description
-    |> Option.map (Ui_rdf.object' db)
+    |> Option.map (Ui_rdf.object' inspect db)
     |> Option.value ~default:(return @@ El.txt' "")
   in
   let object_term =
@@ -657,7 +657,7 @@ let view_activity xmpp db description =
   in
   let* object_el =
     object_term
-    |> Option.map (Ui_rdf.object' db)
+    |> Option.map (Ui_rdf.object' inspect db)
     |> Option.value ~default:(return @@ El.txt' "")
   in
 
@@ -679,8 +679,8 @@ let view_activity xmpp db description =
     match object_iri with
     | Some iri -> (
         as_content iri >>= function
-        | Some o -> Ui_rdf.object' db o
-        | None -> dc_description iri >>= Ui_rdf.object_option db)
+        | Some o -> Ui_rdf.object' inspect db o
+        | None -> dc_description iri >>= Ui_rdf.object_option inspect db)
     | None -> return @@ El.txt' ""
   in
 
@@ -736,11 +736,13 @@ let view_activity xmpp db description =
              ];
          ])
 
-let view xmpp db latlng =
+let view inspector xmpp db latlng =
   let xmpp_client =
     Xmpp.(Connection.client_signal @@ connection xmpp)
     |> S.map Loadable.to_option
   in
+
+  let inspect iri = Inspector.show inspector iri in
 
   let* new_post_view =
     S.bind_s xmpp_client (fun xmpp_client ->
@@ -767,7 +769,7 @@ let view xmpp db latlng =
   in
 
   activities db
-  >>= S.map_s (Lwt_list.map_s @@ view_activity xmpp db)
+  >>= S.map_s (Lwt_list.map_s @@ view_activity inspect xmpp db)
   >|= S.l2
         (fun new_post_el cs ->
           El.

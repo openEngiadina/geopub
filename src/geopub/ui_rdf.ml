@@ -5,6 +5,7 @@
  *)
 
 open Brr
+open Brr_react
 open Lwt
 open Lwt.Syntax
 
@@ -21,14 +22,13 @@ let literal ?(with_lang = true) literal =
           ~at:At.(add_if with_lang (title @@ Jstr.v language) [])
           [ txt' @@ Rdf.Literal.canonical literal ])
 
-let iri_plain iri =
+let iri_plain inspector iri =
   match iri with
   | iri when Rdf.Iri.equal iri (Rdf.Namespace.rdf "type") -> El.txt' "type"
   | _ ->
       El.(
-        a
-          ~at:[ Route.href @@ Route.Inspect iri ]
-          [ txt' @@ Rdf.Iri.to_string iri ])
+        Evf.on_el Ev.click (fun _ -> inspector iri)
+        @@ a ~at:[] [ txt' @@ Rdf.Iri.to_string iri ])
 
 let get_label database iri =
   Database.get_functional_property database
@@ -52,7 +52,7 @@ let get_type_label database iri =
   let* type' = get_type database iri in
   match type' with Some iri -> get_label database iri | None -> return_none
 
-let iri ?href database iri =
+let iri inspector ?href database iri =
   let* label_opt =
     get_label database iri >>= function
     | None -> (
@@ -66,38 +66,37 @@ let iri ?href database iri =
   | Some l ->
       return
       @@ El.(
-           a
-             ~at:
-               (match href with
-               | Some href ->
-                   [
-                     Route.href @@ Route.Inspect href;
-                     At.title @@ Jstr.v @@ Rdf.Iri.to_string href;
-                   ]
-               | None ->
-                   [
-                     Route.href @@ Route.Inspect iri;
-                     At.title @@ Jstr.v @@ Rdf.Iri.to_string iri;
-                   ])
-             [ literal ~with_lang:false l ])
-  | None -> return @@ iri_plain iri
+           Evf.on_el Ev.click (fun _ ->
+               match href with
+               | Some href -> inspector href
+               | None -> inspector iri)
+           @@ a
+                ~at:
+                  (match href with
+                  | Some href ->
+                      [ At.title @@ Jstr.v @@ Rdf.Iri.to_string href ]
+                  | None -> [ At.title @@ Jstr.v @@ Rdf.Iri.to_string iri ])
+                [ literal ~with_lang:false l ])
+  | None -> return @@ iri_plain inspector iri
 
-let term ?href database =
-  Rdf.Term.map (iri ?href database)
+let term ?href inspector database =
+  Rdf.Term.map
+    (iri ?href inspector database)
     (fun b -> return @@ blank_node b)
     (fun l -> return @@ literal l)
 
 (* Triple *)
 
-let subject database =
-  Rdf.Triple.Subject.map (iri database) (fun bnode ->
+let subject inspector database =
+  Rdf.Triple.Subject.map (iri inspector database) (fun bnode ->
       return @@ blank_node bnode)
 
-let predicate database p = iri database @@ Rdf.Triple.Predicate.to_iri p
+let predicate inspector database p =
+  iri inspector database @@ Rdf.Triple.Predicate.to_iri p
 
-let object' ?href database o =
-  Rdf.Triple.Object.to_term o |> term ?href database
+let object' ?href inspector database o =
+  Rdf.Triple.Object.to_term o |> term inspector ?href database
 
-let object_option ?href database = function
-  | Some o -> object' ?href database o
+let object_option ?href inspector database = function
+  | Some o -> object' ?href inspector database o
   | None -> return @@ El.txt' ""
