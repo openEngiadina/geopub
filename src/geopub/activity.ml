@@ -339,7 +339,9 @@ module ValueFlows = struct
                            UIKit.Form.label;
                            for' @@ Jstr.v "proposal-description";
                          ]
-                     [ txt' "Why are you offering this resource?" ];
+                     [
+                       txt' "Short description of what you are offering and why";
+                     ];
                    textarea
                      ~at:
                        At.
@@ -380,7 +382,7 @@ module ValueFlows = struct
                          [
                            UIKit.Form.label; for' @@ Jstr.v "intent-description";
                          ]
-                     [ txt' "Description of resource you are offerng" ];
+                     [ txt' "Description of the resource you are offerng" ];
                    textarea
                      ~at:
                        At.
@@ -409,10 +411,6 @@ module ValueFlows = struct
                      ();
                  ];
              ])
-  end
-
-  module Request = struct
-    let view _xmpp = El.txt' "want something?"
   end
 end
 
@@ -539,12 +537,6 @@ module Compose = struct
                            @@ a [ txt' "ValueFlows Offer" ];
                          ];
                        li
-                         ~at:At.(add_if (input_type = `Request) UIKit.active [])
-                         [
-                           Evf.on_el Ev.click (fun _ -> set_input_type `Request)
-                           @@ a [ txt' "ValueFlows Request" ];
-                         ];
-                       li
                          ~at:At.(add_if (input_type = `Turtle) UIKit.active [])
                          [
                            Evf.on_el Ev.click (fun _ -> set_input_type `Turtle)
@@ -554,7 +546,6 @@ module Compose = struct
                    (match input_type with
                    | `Note -> Note.view xmpp
                    | `Offer -> ValueFlows.Offer.view xmpp
-                   | `Request -> ValueFlows.Request.view xmpp
                    | `Turtle -> Turtle.view xmpp);
                  ];
              ])
@@ -657,17 +648,18 @@ let view_activity xmpp db description =
         (Rdf.Triple.Subject.of_iri iri)
         (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "content")
     in
-    let dc_title iri =
+
+    let dc_description iri =
       Database.get_functional_property db
         (Rdf.Triple.Subject.of_iri iri)
-        (Rdf.Triple.Predicate.of_iri @@ Namespace.dc "title")
+        (Rdf.Triple.Predicate.of_iri @@ Namespace.dc "description")
     in
 
     match object_iri with
     | Some iri -> (
         as_content iri >>= function
         | Some o -> Ui_rdf.object' db o
-        | None -> dc_title iri >>= Ui_rdf.object_option db)
+        | None -> dc_description iri >>= Ui_rdf.object_option db)
     | None -> return @@ El.txt' ""
   in
 

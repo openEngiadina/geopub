@@ -42,6 +42,12 @@ let get_type database iri =
     (Rdf.Triple.Predicate.of_iri @@ Rdf.Namespace.rdf "type")
   >|= fun o -> Option.bind o Rdf.Triple.Object.to_iri
 
+let get_dc_title database iri =
+  Database.get_functional_property database
+    (Rdf.Triple.Subject.of_iri iri)
+    (Rdf.Triple.Predicate.of_iri @@ Namespace.dc "title")
+  >|= fun o -> Option.bind o Rdf.Triple.Object.to_literal
+
 let get_type_label database iri =
   let* type' = get_type database iri in
   match type' with Some iri -> get_label database iri | None -> return_none
@@ -49,7 +55,10 @@ let get_type_label database iri =
 let iri ?href database iri =
   let* label_opt =
     get_label database iri >>= function
-    | None -> get_type_label database iri
+    | None -> (
+        get_dc_title database iri >>= function
+        | None -> get_type_label database iri
+        | Some l -> return_some l)
     | Some l -> return_some l
   in
 
