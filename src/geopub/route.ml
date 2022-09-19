@@ -33,12 +33,8 @@ let to_uri route =
   | About -> Uri.with_uri location ~fragment:(Jstr.v "about")
   | User -> Uri.with_uri location ~fragment:(Jstr.v "user")
   | Activity None -> Uri.with_uri location ~fragment:(Jstr.v "activity")
-  | Activity (Some latlng) ->
-      let latlng_s =
-        (string_of_float @@ Leaflet.Latlng.lat latlng)
-        ^ "/" ^ string_of_float @@ Leaflet.Latlng.lng latlng
-      in
-      Uri.with_uri location ~fragment:(Jstr.v @@ "activity" ^ "=" ^ latlng_s)
+  | Activity (Some _latlng) ->
+      Uri.with_uri location ~fragment:(Jstr.v @@ "activity")
   | Map -> Uri.with_uri location ~fragment:(Jstr.v "map")
   | Query query ->
       Uri.with_uri location
