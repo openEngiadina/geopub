@@ -385,7 +385,13 @@ let login ?error t =
                 Evf.on_el ~propagate:false Ev.click (fun _ev ->
                     ignore
                     @@ Xmpp.(
-                         Connection.login_anonymous_demo (connection t.xmpp)))
+                         Connection.login_anonymous_demo (connection t.xmpp)
+                         |> Lwt_result.catch
+                         >>= function
+                         | Ok () ->
+                             return
+                             @@ Router.set_route t.router (Route.Activity None)
+                         | _ -> return_unit))
                 @@ button
                      ~at:[ UIKit.Align.right; UIKit.button; UIKit.Button.link ]
                      [ txt' "Demo (anonymous login)" ];
