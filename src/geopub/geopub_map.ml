@@ -128,7 +128,7 @@ let visible_descriptions db position =
             make_variable "p";
             make_variable "o";
             make_constant
-            @@ Constant.GeoQuery (position.latitude, position.longitude, 4);
+            @@ Constant.GeoQuery (position.latitude, position.longitude, 3);
           ])
   in
   Database.query db query
