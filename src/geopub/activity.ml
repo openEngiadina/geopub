@@ -480,9 +480,33 @@ module ValueFlows = struct
 end
 
 module Turtle = struct
-  let default =
+  let default_prefixes =
     {rdf|
+@prefix as: <https://www.w3.org/ns/activitystreams#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+     |rdf}
+
+  let example_multilingual_note =
+    {rdf|
+@prefix as: <https://www.w3.org/ns/activitystreams#> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+
+<> a as:Note ;
+  geo:lat "46.7970040956";
+  geo:long "10.2982868244";
+  as:content "Hi!"@en;
+  as:content "Hello!"@de;
+  as:content "Salut!"@fr;
+  as:content "Grüezi!"@gsw;
+  as:content "Allegra!"@rm .
+|rdf}
+
+  let example_vf_cider =
+    {rdf|@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix vf: <https://w3id.org/valueflows#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
@@ -527,10 +551,17 @@ module Turtle = struct
   a om2:Measure ;
   om2:hasUnit om2:litre ;
   om2:hasNumericalValue 5 .
-
      |rdf}
 
-  let view xmpp =
+  let view ~load_example default xmpp =
+    let example_li label_text ttl =
+      El.(
+        li
+          [
+            Evf.on_el Ev.click (fun _ -> load_example ttl)
+            @@ a [ txt' label_text ];
+          ])
+    in
     El.(
       Evf.on_el ~default:false Form.Ev.submit (fun ev ->
           let form = Ev.(target_to_jv @@ target ev) in
@@ -563,26 +594,27 @@ module Turtle = struct
                [
                  txt'
                    "Here you can post any RDF content using the RDF/Turtle \
-                    syntax.";
+                    syntax. Some examples:";
+               ];
+             ul
+               ~at:[ UIKit.list; UIKit.List.disc ]
+               [
+                 example_li "A multilingual note" example_multilingual_note;
+                 example_li "A ValueFlows proposal with a reciprocal intent"
+                   example_vf_cider;
                ];
              (* Content *)
-             div
-               [
-                 label
-                   ~at:At.[ UIKit.Form.label; for' @@ Jstr.v "turtle-content" ]
-                   [ txt' "RDF/Turtle" ];
-                 textarea
-                   ~at:
-                     At.
-                       [
-                         UIKit.Form.textarea;
-                         UIKit.Form.controls;
-                         UIKit.Height.large;
-                         id @@ Jstr.v "turtle-content";
-                         name @@ Jstr.v "turtle-content";
-                       ]
-                   [ txt' default ];
-               ];
+             textarea
+               ~at:
+                 At.
+                   [
+                     UIKit.Form.textarea;
+                     UIKit.Form.controls;
+                     UIKit.Height.large;
+                     id @@ Jstr.v "turtle-content";
+                     name @@ Jstr.v "turtle-content";
+                   ]
+               [ txt' default ];
              (* Post *)
              div ~at:[ UIKit.margin ]
                [
@@ -627,16 +659,27 @@ module Compose = struct
                            @@ a [ txt' "ValueFlows Offer" ];
                          ];
                        li
-                         ~at:At.(add_if (input_type = `Turtle) UIKit.active [])
+                         ~at:
+                           At.(
+                             add_if
+                               (match input_type with
+                               | `Turtle _ -> true
+                               | _ -> false)
+                               UIKit.active [])
                          [
-                           Evf.on_el Ev.click (fun _ -> set_input_type `Turtle)
+                           Evf.on_el Ev.click (fun _ ->
+                               set_input_type (`Turtle Turtle.default_prefixes))
                            @@ a [ txt' "RDF/Turtle" ];
                          ];
                      ];
                    (match input_type with
                    | `Note -> Note.view xmpp latlng
                    | `Offer -> ValueFlows.Offer.view xmpp latlng
-                   | `Turtle -> Turtle.view xmpp);
+                   | `Turtle ttl ->
+                       Turtle.(
+                         view
+                           ~load_example:(fun ex -> set_input_type (`Turtle ex))
+                           ttl xmpp));
                  ];
              ])
 end
