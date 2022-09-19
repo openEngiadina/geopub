@@ -171,4 +171,6 @@ end
 
 let table = class' "uk-table"
 
-module Table = struct end
+module Table = struct
+  let divider = class' "uk-table-divider"
+end

@@ -36,27 +36,28 @@ let view_results inspect db query results =
     |> Lwt_seq.to_list
   in
 
-  return @@ El.table ~at:[ UIKit.table ] (header :: results)
+  return
+  @@ El.table
+       ~at:[ UIKit.table; UIKit.Table.divider; UIKit.Margin.bottom ]
+       (header :: results)
 
 let query_string_form query_string =
   let query_string_s, update_query_string = S.create query_string in
   let form_el =
     El.(
       form
-        ~at:[ UIKit.grid; UIKit.margin ]
+        ~at:[ UIKit.Form.stacked; UIKit.margin ]
         [
-          input
+          textarea
             ~at:
               At.
                 [
                   UIKit.Form.input;
-                  type' @@ Jstr.v "search";
+                  UIKit.Height.medium;
                   name @@ Jstr.v "query-string";
                   id @@ Jstr.v "query-string-input";
-                  value @@ Jstr.v query_string;
-                  UIKit.width 4 5;
                 ]
-            ();
+            [ txt' query_string ];
           input
             ~at:
               At.
@@ -65,7 +66,6 @@ let query_string_form query_string =
                   value @@ Jstr.v "Query";
                   UIKit.Button.primary;
                   UIKit.Form.input;
-                  UIKit.width 1 5;
                 ]
             ();
         ])
@@ -108,15 +108,22 @@ let help =
           ~at:[ UIKit.list; UIKit.List.disc; UIKit.margin ]
           [
             example_li "ActivityStream Notes"
-              "triple(?s,type,<https://www.w3.org/ns/activitystreams#Note>)";
+              {datalog|# We define a predicate `note` with a single variable
+
+# This is a clause that defines when the predicate `note` holds:
+note(?s) :- triple(?s,type,<https://www.w3.org/ns/activitystreams#Note>).
+
+# We formulate a query - what are the values for ?s such that note(?s) holds:
+note(?s)?
+ |datalog};
             example_li
               "ActivityStream activities using RFDS for type inferrence"
-              "triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)";
+              "triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)?";
             example_li "Anything that contains the word \"Hello\""
-              "triple-fts(?s,?p,?o, \"Hello\")";
+              "triple-fts(?s,?p,?o, \"Hello\")?";
             example_li
               "For resources in the lower Engadin valley (geo-spatial search)"
-              "geo(GeoHash(46.7965,10.2965,4), ?s)";
+              "geo(GeoHash(46.7965,10.2965,4), ?s)?";
           ];
         p
           [
@@ -132,29 +139,40 @@ let help =
             code [ txt' "precision" ];
             txt' " is the precision in number of GeoHash digits.";
           ];
-        p
-          [
-            txt'
-              "Note that this interface does currently not allow defining of \
-               your own Datalog program. In the future this will be added to \
-               allow the definition of custom predicates that can be queried.";
-          ];
       ])
 
+module Parser = struct
+  let comment = Angstrom.(char '#' *> many_till any_char (char '\n') >>| ignore)
+  let space = Angstrom.(many @@ char ' ' >>| ignore)
+
+  let whitespace =
+    Angstrom.(
+      many @@ choice [ char ' ' >>| ignore; char '\n' >>| ignore; comment ]
+      >>| ignore)
+
+  let query = Angstrom.(Datalog.Atom.parser <* space <* char '?')
+  let clauses = Angstrom.(whitespace *> sep_by whitespace Datalog.Clause.parser)
+
+  let program_query =
+    Angstrom.(
+      (fun clauses query -> (clauses, query))
+      <$> whitespace *> sep_by whitespace Datalog.Clause.parser
+      <* whitespace <*> query <* whitespace)
+end
+
 let parse query_string =
-  return
-  @@ Angstrom.parse_string ~consume:Angstrom.Consume.All Datalog.Atom.parser
-       query_string
+  Angstrom.parse_string ~consume:Angstrom.Consume.Prefix Parser.program_query
+    query_string
 
 let view inspector database query_string =
   let query_string_s, query_string_form = query_string_form query_string in
 
-  let* query_s = S.map_s (fun q -> parse q) query_string_s in
+  let query_s = S.map (fun q -> parse q) query_string_s in
 
   let* results_s =
     S.bind_s query_s (function
-      | Ok query ->
-          Database.query database query
+      | Ok (clauses, query) ->
+          Database.query database ~clauses query
           >|= S.map (fun (_tx, tuples) -> Ok tuples)
       | Error msg -> return @@ S.const (Error msg))
   in
@@ -164,9 +182,14 @@ let view inspector database query_string =
   S.l2_s
     (fun results query ->
       match (results, query) with
-      | Ok results, Ok query -> view_results inspect database query results
-      | Error msg, _ -> return @@ El.txt' msg
-      | _, Error msg -> return @@ El.txt' msg)
+      | Ok results, Ok (_, query) -> view_results inspect database query results
+      | Error msg, _ ->
+          return
+          @@ El.(
+               div ~at:[ UIKit.Alert.danger ]
+                 [ txt' @@ "Error while parsing query: " ^ msg ])
+      | _, Error msg ->
+          return @@ El.(div ~at:[ UIKit.Alert.danger ] [ txt' msg ]))
     results_s query_s
   >|= S.map (fun result_table ->
           El.

@@ -55,7 +55,7 @@ let add_graph = Store.add_graph
 module EDatalog = Datalog
 module Datalog = Dictionary_datalog
 
-let query db q =
+let query db ?(clauses = []) q =
   (* start an initial read only transaction *)
   let init_tx = read_only db in
 
@@ -67,11 +67,19 @@ let query db q =
   (* translate RDF terms to dictionary identifiers *)
   let* eq = Datalog.Dictionary.lookup_atom db ~tx:init_tx q in
 
+  (* lookup constants in extra clauses *)
+  let* eclauses =
+    clauses
+    (* I look forward to OCaml 5. The monads must stop. *)
+    |> Lwt_list.map_s (Datalog.Dictionary.lookup_clause db ~tx:init_tx)
+    >|= List.to_seq
+  in
+
   (* run an initial datalog query *)
   let* init_state, init_etuples =
     EDatalog.(
       query_with_state ~database:(edb init_tx)
-        ~state:(init geopub_datalog_program)
+        ~state:(init @@ EDatalog.Program.add_seq eclauses geopub_datalog_program)
         eq)
   in
 

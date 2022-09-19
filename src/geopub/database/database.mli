@@ -29,7 +29,10 @@ val read_only : t -> transaction
 module Datalog = Dictionary_datalog
 
 val query :
-  t -> Datalog.query -> (transaction * Datalog.Tuple.Set.t) signal Lwt.t
+  t ->
+  ?clauses:Datalog.Clause.t list ->
+  Datalog.query ->
+  (transaction * Datalog.Tuple.Set.t) signal Lwt.t
 (** [query databse query] runs the Datalog query [query] and returns a
 signal carrying the result tuples. *)
 

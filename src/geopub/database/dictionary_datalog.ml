@@ -94,6 +94,30 @@ module Dictionary = struct
     let* eterms = Lwt_list.map_s (lookup_term db ?tx) @@ Atom.terms atom in
     return @@ EDatalog.Atom.make predicate_symbol eterms
 
+  let lookup_literal db ?tx literal =
+    let predicate_symbol = Literal.predicate literal in
+    let* eterms =
+      Lwt_list.map_s (lookup_term db ?tx) @@ Literal.terms literal
+    in
+    if Literal.is_positive literal then
+      return
+      @@ EDatalog.(Literal.make_positive @@ Atom.make predicate_symbol eterms)
+    else
+      return
+      @@ EDatalog.(Literal.make_negative @@ Atom.make predicate_symbol eterms)
+
+  let lookup_clause db ?tx clause =
+    let head = Clause.head clause in
+    let* ehead = lookup_atom db ?tx head in
+    let literals = Clause.body clause in
+    let* eliterals =
+      Literal.Set.to_seq literals
+      |> List.of_seq
+      |> Lwt_list.map_s (lookup_literal db ?tx)
+      >|= EDatalog.Literal.Set.of_list
+    in
+    return @@ EDatalog.Clause.make ehead eliterals
+
   let get_constant db ?tx ec =
     match ec with
     | EDatalog.Constant.Rdf id ->
