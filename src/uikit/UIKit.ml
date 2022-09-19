@@ -72,6 +72,7 @@ end
 
 module Form = struct
   let stacked = class' "uk-form-stacked"
+  let horizontal = class' "uk-form-horizontal"
   let input = class' "uk-input"
   let textarea = class' "uk-textarea"
   let label = class' "uk-form-label"
@@ -99,6 +100,7 @@ let list = class' "uk-list"
 
 module List = struct
   let large = class' "uk-list-large"
+  let disc = class' "uk-list-disc"
 end
 
 let description_list = class' "uk-description-list"
@@ -166,3 +168,7 @@ module Offcanvas = struct
   let hide el =
     ignore @@ Jv.(call (call uikit "offcanvas" [| El.to_jv el |]) "hide" [||])
 end
+
+let table = class' "uk-table"
+
+module Table = struct end

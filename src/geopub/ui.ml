@@ -84,6 +84,7 @@ let view (t : Model.t) =
           Activity.view t.inspector t.xmpp t.database latlng >|= with_navbar
       | Route.User -> User.view t.user >|= with_navbar
       | Route.Map -> return @@ with_navbar @@ S.const [ Geopub_map.view t.map ]
+      | Route.Query q -> Query.view t.inspector t.database q >|= with_navbar
       | _ -> return @@ with_navbar @@ S.const @@ El.[ txt' "TODO" ])
 
 (* match Router.current t.router with
