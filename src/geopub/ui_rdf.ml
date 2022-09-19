@@ -24,7 +24,9 @@ let literal ?(with_lang = true) literal =
 
 let iri_plain inspector iri =
   match iri with
-  | iri when Rdf.Iri.equal iri (Rdf.Namespace.rdf "type") -> El.txt' "type"
+  | iri when Rdf.Iri.equal iri (Rdf.Namespace.rdf "type") ->
+      Evf.on_el Ev.click (fun _ -> inspector iri)
+      @@ El.a ~at:[] [ El.txt' "type" ]
   | _ ->
       El.(
         Evf.on_el Ev.click (fun _ -> inspector iri)
