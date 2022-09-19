@@ -39,6 +39,21 @@ let about =
         p [ txt' "GeoPub is an experimental XMPP client for geospatial data." ];
         p
           [
+            txt'
+              "This software is beta quality. The only browser currently \
+               supported is Firefox. See also the ";
+            a
+              ~at:
+                At.
+                  [
+                    href
+                    @@ Jstr.v "https://codeberg.org/openEngiadina/geopub/issues";
+                  ]
+              [ txt' "issue tracker" ];
+            txt' ".";
+          ];
+        p
+          [
             txt' "For more information see ";
             a
               ~at:At.[ href @@ Jstr.v "https://openengiadina.net/" ]
