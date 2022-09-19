@@ -134,7 +134,7 @@ module Roster = struct
 
               ignore @@ Xmpp.Roster.add_update client jid)
           @@ form
-               ~at:[ UIKit.grid; UIKit.margin; UIKit.width 1 2 ]
+               ~at:[ UIKit.grid; UIKit.margin ]
                [
                  input
                    ~at:
