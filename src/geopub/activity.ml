@@ -626,7 +626,8 @@ module Turtle = struct
                  example_li "Multilingual note" example_multilingual_note;
                  example_li "ValueFlows proposal with a reciprocal intent"
                    example_vf_cider;
-                 example_li "Hospility offer" example_hospitality_exchange;
+                 example_li "Hospitality exchange offer"
+                   example_hospitality_exchange;
                ];
              (* Content *)
              textarea
