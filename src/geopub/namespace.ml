@@ -9,3 +9,5 @@ let activitystreams =
 
 let geo =
   Rdf.Namespace.make_namespace "http://www.w3.org/2003/01/geo/wgs84_pos#"
+
+let dc = Rdf.Namespace.make_namespace "http://purl.org/dc/terms/"

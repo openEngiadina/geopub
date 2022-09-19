@@ -117,6 +117,7 @@ module Width = struct
 end
 
 module Height = struct
+  let small = class' "uk-height-small"
   let medium = class' "uk-height-medium"
   let large = class' "uk-height-large"
 end

@@ -88,3 +88,7 @@ let predicate database p = iri database @@ Rdf.Triple.Predicate.to_iri p
 
 let object' ?href database o =
   Rdf.Triple.Object.to_term o |> term ?href database
+
+let object_option ?href database = function
+  | Some o -> object' ?href database o
+  | None -> return @@ El.txt' ""

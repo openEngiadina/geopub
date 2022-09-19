@@ -143,6 +143,12 @@ module Publish = struct
     let* id, graph = Create.make objects actor in
     to_activitystreams_pep xmpp id graph
 
+  let create_with_actor xmpp objects_f =
+    let* actor = actor xmpp in
+    let object' = objects_f actor in
+    let* id, graph = Create.make [ object' ] actor in
+    to_activitystreams_pep xmpp id graph
+
   let like xmpp iri =
     let* actor = actor xmpp in
     let* id, graph = Like.make ~actor iri in
@@ -206,7 +212,9 @@ module Note = struct
                ~at:
                  At.
                    [
+                     UIKit.Form.input;
                      UIKit.Form.textarea;
+                     UIKit.Height.small;
                      UIKit.Form.controls;
                      id @@ Jstr.v "content";
                      name @@ Jstr.v "content";
@@ -228,6 +236,184 @@ module Note = struct
                    ();
                ];
            ])
+end
+
+module Fd = struct
+  let get_string form_data field_name =
+    Option.bind
+      (Form.Data.find form_data (Jstr.v field_name))
+      (function `String js -> Option.some @@ Jstr.to_string js | _ -> None)
+
+  let get_string_literal form_data field_name =
+    Option.map Rdf.Literal.make_string (get_string form_data field_name)
+end
+
+module ValueFlows = struct
+  let vf = Rdf.Namespace.make_namespace "https://w3id.org/valueflows#"
+  let dc = Namespace.dc
+
+  module Offer = struct
+    let make proposal_title proposal_description intent_title intent_description
+        actor =
+      Rdf_cbor.Content_addressable.(
+        empty
+        |> add_statement Namespace.a (Object.of_iri @@ vf "Proposal")
+        |> add_opt_statement
+             (Predicate.of_iri @@ dc "title")
+             (Option.map Object.of_literal proposal_title)
+        |> add_opt_statement
+             (Predicate.of_iri @@ dc "description")
+             (Option.map Object.of_literal proposal_description)
+        |> add_statement
+             (Predicate.of_iri @@ vf "intent")
+             (Object.make_fragment_reference "intent")
+        (* Intent *)
+        |> add_fragment_statement "intent" Namespace.a
+             (Object.of_iri @@ vf "Intent")
+        |> add_opt_fragment_statement "intent"
+             (Predicate.of_iri @@ dc "title")
+             (Option.map Object.of_literal intent_title)
+        |> add_opt_fragment_statement "intent"
+             (Predicate.of_iri @@ dc "description")
+             (Option.map Object.of_literal intent_description)
+        |> add_fragment_statement "intent"
+             (Predicate.of_iri @@ vf "provider")
+             (Object.of_iri actor))
+
+    let view xmpp =
+      El.(
+        Evf.on_el ~default:false Form.Ev.submit (fun ev ->
+            let form = Ev.(target_to_jv @@ target ev) in
+            let form_data =
+              Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
+            in
+
+            let proposal_title =
+              Fd.get_string_literal form_data "proposal-title"
+            in
+            let proposal_description =
+              Fd.get_string_literal form_data "proposal-description"
+            in
+
+            let intent_title = Fd.get_string_literal form_data "intent-title" in
+            let intent_description =
+              Fd.get_string_literal form_data "intent-description"
+            in
+
+            let proposal =
+              make proposal_title proposal_description intent_title
+                intent_description
+            in
+
+            ignore @@ Jv.call form "reset" [||];
+            ignore @@ Publish.create_with_actor xmpp proposal)
+        @@ form
+             ~at:[ UIKit.Form.stacked; UIKit.margin ]
+             [
+               (* title *)
+               div ~at:[ UIKit.margin ]
+                 [
+                   label
+                     ~at:
+                       At.[ UIKit.Form.label; for' @@ Jstr.v "proposal-title" ]
+                     [ txt' "Title" ];
+                   input
+                     ~at:
+                       At.
+                         [
+                           UIKit.Form.input;
+                           UIKit.Form.controls;
+                           id @@ Jstr.v "proposal-title";
+                           name @@ Jstr.v "proposal-title";
+                           type' @@ Jstr.v "text";
+                         ]
+                     ();
+                 ];
+               (* description *)
+               div ~at:[ UIKit.margin ]
+                 [
+                   label
+                     ~at:
+                       At.
+                         [
+                           UIKit.Form.label;
+                           for' @@ Jstr.v "proposal-description";
+                         ]
+                     [ txt' "Why are you offering this resource?" ];
+                   textarea
+                     ~at:
+                       At.
+                         [
+                           UIKit.Form.input;
+                           UIKit.Height.small;
+                           UIKit.Form.controls;
+                           id @@ Jstr.v "proposal-descriptoin";
+                           name @@ Jstr.v "proposal-description";
+                         ]
+                     [];
+                 ];
+               (* Intent *)
+               (* Intent title *)
+               div ~at:[ UIKit.margin ]
+                 [
+                   label
+                     ~at:At.[ UIKit.Form.label; for' @@ Jstr.v "intent-title" ]
+                     [ txt' "Short title of the ressource you are offering" ];
+                   input
+                     ~at:
+                       At.
+                         [
+                           UIKit.Form.input;
+                           UIKit.Form.controls;
+                           id @@ Jstr.v "intent-title";
+                           name @@ Jstr.v "intent-title";
+                           type' @@ Jstr.v "text";
+                         ]
+                     ();
+                 ];
+               (* intent-description *)
+               div ~at:[ UIKit.margin ]
+                 [
+                   label
+                     ~at:
+                       At.
+                         [
+                           UIKit.Form.label; for' @@ Jstr.v "intent-description";
+                         ]
+                     [ txt' "Description of resource you are offerng" ];
+                   textarea
+                     ~at:
+                       At.
+                         [
+                           UIKit.Form.controls;
+                           UIKit.Height.medium;
+                           UIKit.Form.input;
+                           id @@ Jstr.v "intent-descripiton";
+                           name @@ Jstr.v "intent-description";
+                         ]
+                     [];
+                 ];
+               (* Post *)
+               div ~at:[ UIKit.margin ]
+                 [
+                   input
+                     ~at:
+                       At.
+                         [
+                           UIKit.Form.input;
+                           UIKit.Button.primary;
+                           id @@ Jstr.v "submit";
+                           type' @@ Jstr.v "submit";
+                           value @@ Jstr.v "Post";
+                         ]
+                     ();
+                 ];
+             ])
+  end
+
+  module Request = struct
+    let view _xmpp = El.txt' "want something?"
+  end
 end
 
 module Turtle = struct
@@ -347,12 +533,16 @@ module Compose = struct
                            @@ a [ txt' "ActivityStreams Note" ];
                          ];
                        li
-                         ~at:
-                           At.(add_if (input_type = `Proposal) UIKit.active [])
+                         ~at:At.(add_if (input_type = `Offer) UIKit.active [])
                          [
-                           Evf.on_el Ev.click (fun _ ->
-                               set_input_type `Proposal)
-                           @@ a [ txt' "ValueFlows Proposal" ];
+                           Evf.on_el Ev.click (fun _ -> set_input_type `Offer)
+                           @@ a [ txt' "ValueFlows Offer" ];
+                         ];
+                       li
+                         ~at:At.(add_if (input_type = `Request) UIKit.active [])
+                         [
+                           Evf.on_el Ev.click (fun _ -> set_input_type `Request)
+                           @@ a [ txt' "ValueFlows Request" ];
                          ];
                        li
                          ~at:At.(add_if (input_type = `Turtle) UIKit.active [])
@@ -363,7 +553,8 @@ module Compose = struct
                      ];
                    (match input_type with
                    | `Note -> Note.view xmpp
-                   | `Proposal -> txt' "TODO"
+                   | `Offer -> ValueFlows.Offer.view xmpp
+                   | `Request -> ValueFlows.Request.view xmpp
                    | `Turtle -> Turtle.view xmpp);
                  ];
              ])
@@ -461,14 +652,22 @@ let view_activity xmpp db description =
   let object_iri = Option.bind object_term Rdf.Triple.Object.to_iri in
 
   let* content_el =
+    let as_content iri =
+      Database.get_functional_property db
+        (Rdf.Triple.Subject.of_iri iri)
+        (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "content")
+    in
+    let dc_title iri =
+      Database.get_functional_property db
+        (Rdf.Triple.Subject.of_iri iri)
+        (Rdf.Triple.Predicate.of_iri @@ Namespace.dc "title")
+    in
+
     match object_iri with
     | Some iri -> (
-        Database.get_functional_property db
-          (Rdf.Triple.Subject.of_iri iri)
-          (Rdf.Triple.Predicate.of_iri @@ Namespace.activitystreams "content")
-        >>= function
+        as_content iri >>= function
         | Some o -> Ui_rdf.object' db o
-        | None -> return @@ El.txt' "")
+        | None -> dc_title iri >>= Ui_rdf.object_option db)
     | None -> return @@ El.txt' ""
   in
 
