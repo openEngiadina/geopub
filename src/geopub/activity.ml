@@ -155,6 +155,17 @@ module Publish = struct
     to_activitystreams_pep xmpp id graph
 end
 
+(* Helpers to get data from forms *)
+module Fd = struct
+  let get_string form_data field_name =
+    Option.bind
+      (Form.Data.find form_data (Jstr.v field_name))
+      (function `String js -> Option.some @@ Jstr.to_string js | _ -> None)
+
+  let get_string_literal form_data field_name =
+    Option.map Rdf.Literal.make_string (get_string form_data field_name)
+end
+
 (* Object types *)
 
 module Note = struct
@@ -182,7 +193,7 @@ module Note = struct
                 @@ Leaflet.Latlng.lng latlng)
               latlng))
 
-  let view xmpp =
+  let view xmpp latlng =
     El.(
       Evf.on_el ~default:false Form.Ev.submit (fun ev ->
           let form = Ev.(target_to_jv @@ target ev) in
@@ -190,20 +201,15 @@ module Note = struct
             Form.Data.of_form @@ Form.of_jv @@ Ev.target_to_jv @@ Ev.target ev
           in
 
-          let content_value =
-            Form.Data.find form_data (Jstr.v "content") |> Option.get
-          in
+          let content = Fd.get_string form_data "content" in
 
-          let content =
-            match content_value with
-            | `String js -> Jstr.to_string js
-            | _ -> failwith "We need better error handling"
-          in
+          match content with
+          | Some content ->
+              let note = make ?latlng content in
 
-          let note = make content in
-
-          ignore @@ Jv.call form "reset" [||];
-          ignore @@ Publish.create xmpp [ note ])
+              ignore @@ Jv.call form "reset" [||];
+              ignore @@ Publish.create xmpp [ note ]
+          | None -> ())
       @@ form
            ~at:[ UIKit.Form.stacked; UIKit.margin ]
            [
@@ -215,11 +221,36 @@ module Note = struct
                      UIKit.Form.input;
                      UIKit.Form.textarea;
                      UIKit.Height.small;
-                     UIKit.Form.controls;
                      id @@ Jstr.v "content";
                      name @@ Jstr.v "content";
                    ]
                [];
+             div ~at:[ UIKit.margin ]
+               (match latlng with
+               | Some latlng ->
+                   [
+                     label
+                       ~at:At.[ UIKit.Form.label; for' @@ Jstr.v "post-latlng" ]
+                       [ txt' "Location" ];
+                     input
+                       ~at:
+                         At.
+                           [
+                             UIKit.Form.input;
+                             UIKit.Form.controls;
+                             type' @@ Jstr.v "text";
+                             id @@ Jstr.v "post-latlng";
+                             name @@ Jstr.v "post-latlng";
+                             true' @@ Jstr.v "readonly";
+                             value
+                             @@ Jstr.v
+                                  ((Float.to_string @@ Leaflet.Latlng.lat latlng)
+                                  ^ ", " ^ Float.to_string
+                                  @@ Leaflet.Latlng.lng latlng);
+                           ]
+                       ();
+                   ]
+               | _ -> [ txt' "" ]);
              (* Post *)
              div ~at:[ UIKit.margin ]
                [
@@ -236,16 +267,6 @@ module Note = struct
                    ();
                ];
            ])
-end
-
-module Fd = struct
-  let get_string form_data field_name =
-    Option.bind
-      (Form.Data.find form_data (Jstr.v field_name))
-      (function `String js -> Option.some @@ Jstr.to_string js | _ -> None)
-
-  let get_string_literal form_data field_name =
-    Option.map Rdf.Literal.make_string (get_string form_data field_name)
 end
 
 module ValueFlows = struct
@@ -512,7 +533,7 @@ module Turtle = struct
 end
 
 module Compose = struct
-  let view xmpp =
+  let view xmpp latlng =
     let input_type_s, set_input_type = S.create `Note in
 
     input_type_s
@@ -544,7 +565,7 @@ module Compose = struct
                          ];
                      ];
                    (match input_type with
-                   | `Note -> Note.view xmpp
+                   | `Note -> Note.view xmpp latlng
                    | `Offer -> ValueFlows.Offer.view xmpp
                    | `Turtle -> Turtle.view xmpp);
                  ];
@@ -715,7 +736,7 @@ let view_activity xmpp db description =
              ];
          ])
 
-let view xmpp db =
+let view xmpp db latlng =
   let xmpp_client =
     Xmpp.(Connection.client_signal @@ connection xmpp)
     |> S.map Loadable.to_option
@@ -725,7 +746,7 @@ let view xmpp db =
     S.bind_s xmpp_client (fun xmpp_client ->
         match xmpp_client with
         | Some _xmpp_client ->
-            Compose.view xmpp |> return
+            Compose.view xmpp latlng |> return
             >|= S.map (fun els ->
                     El.
                       [
