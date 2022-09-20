@@ -53,7 +53,7 @@ let query_string_form query_string =
               At.
                 [
                   UIKit.Form.input;
-                  UIKit.Height.medium;
+                  UIKit.Height.large;
                   name @@ Jstr.v "query-string";
                   id @@ Jstr.v "query-string-input";
                 ]
@@ -107,18 +107,29 @@ let help =
         ul
           ~at:[ UIKit.list; UIKit.List.disc; UIKit.margin ]
           [
-            example_li "ActivityStream Notes"
+            example_li "ActivityStreams Notes"
               {datalog|# We define a predicate `note` with a single variable
-
 # This is a clause that defines when the predicate `note` holds:
 note(?s) :- triple(?s,type,<https://www.w3.org/ns/activitystreams#Note>).
 
 # We formulate a query - what are the values for ?s such that note(?s) holds:
-note(?s)?
- |datalog};
+note(?s)?|datalog};
             example_li
-              "ActivityStream activities using RFDS for type inferrence"
-              "triple-rhodf(?s,type,<https://www.w3.org/ns/activitystreams#Activity>)?";
+              "ActivityStreams activities using RFDS for type inferrence"
+              {datalog|# In this query we will be able to find all kinds of ActivityStreams activities without explicitly listing all the concrete types (i.e. as:Create, as:Like,...).
+
+# In the machine-readable format of the ActivityStreams specification classes (activities, objects and actors) are defined and are annotated with type information that specify which classes are subclasses of other classes (using the rdfs:subClassOf properties). This can be used to automatically figure out that an resource with type as:Create is also an as:Activity.
+
+# This reasoning is called type inferrence. In GeoPub we use a set of rules for type inferrence based on the RDFS schema (https://sci-hub.se/https://doi.org/10.1016/j.websem.2009.07.003).
+# The pre-defined Datalog predicate `triple-rhodf` implements exactly these rules and will return all RDF triples including inferred types.
+
+# We can use it to find all resource that are ActivityStreams activities:
+activity(?s) :- triple-rhodf(?s, type, <https://www.w3.org/ns/activitystreams#Activity>).
+
+# An interesting note is that the `triple-rhodf` predicate is itself defined by a set of Datalog clauses! See the GeoPub source code (in the GeoPub.Database.Datalog module).
+
+# We can now use this activity predicate to query for all activities:
+activity(?s)?|datalog};
             example_li "Anything that contains the word \"Hello\""
               "triple-fts(?s,?p,?o, \"Hello\")?";
             example_li
