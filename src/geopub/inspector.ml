@@ -114,7 +114,7 @@ module Inspect = struct
                  | _ -> None)
             |> Lwt_seq.of_seq |> Lwt_seq.to_list)
 
-  (* RDFS inferred types *)
+  (* RDFS infered types *)
 
   let rdfs_types database subject =
     let query =
