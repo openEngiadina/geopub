@@ -6,11 +6,9 @@ GeoPub is an Web application written in the [OCaml](https://ocaml.org/) programm
 
 ## Functional Reactive Programming
 
-TODO
+GeoPub uses the [React](https://erratique.ch/software/react) library for functional reactive programming.
 
-### Functional Relational Programming
-
-TODO
+UIs are in general not returned as static HTML elements, but as a time varying signal of HTML elements.
 
 ## Components
 
@@ -41,6 +39,10 @@ Loads initial sample data.
 ### [`User`](../src/geopub/user.ml)
 
 Manages the user session, i.e. an user interface for an XMPP connection.
+
+### [`Inspector`](../src/geopub/inspector.ml)
+
+Provides a view of RDF data.
 
 ### [`Geopub_map`](../src/geopub/geopub_map.ml)
 
