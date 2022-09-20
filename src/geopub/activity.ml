@@ -556,7 +556,7 @@ module Turtle = struct
   let example_hospitality_exchange =
     {rdf|
 @prefix vf: <https://w3id.org/valueflows#> .
-@prefix hospex: <https://example.com/hospitality-exchange#> .
+@prefix hospex: <http://w3id.org/hospex/ns#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
 
@@ -570,11 +570,10 @@ module Turtle = struct
 
 <#host>
    a vf:Intent ;
-     # we use the fictious hospex:Host action to describe that the intended action is to host somebody
-   vf:action hospex:Host ;
+   # We classify the resource that we offer as hospex:Accomodation
+   vf:resourceClassifiedAs hospex:Accommodation ;
    dc:description "You can sleep on the sofa in the living room or pitch your tent in the garden. At most 4 people. Bicyclists very welcome!" ;
    vf:provider <xmpp:lena@example.ch> .
-
 |rdf}
 
   let view ~load_example default xmpp =

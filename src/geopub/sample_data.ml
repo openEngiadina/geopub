@@ -45,11 +45,12 @@ let sample_data =
     (`Turtle, "activitystreams2.ttl");
     (`Xml, "musicontology.xml");
     (`Turtle, "rdfs.ttl");
-    (* "owl.ttl"; *)
+    (* (`Turtle, "owl.ttl"); *)
     (`Turtle, "geo.ttl");
     (`Turtle, "dublin_core_terms.ttl");
     (`Turtle, "foaf.ttl") (* "che.osm.surveillance.nt"; *);
     (`Turtle, "vf.ttl");
+    (`Turtle, "hospex.ttl");
   ]
 
 let fetch file =

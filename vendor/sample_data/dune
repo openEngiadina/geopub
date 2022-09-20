@@ -10,5 +10,6 @@
   (geo.ttl as sample_data/geo.ttl)
   (dublin_core_terms.ttl as sample_data/dublin_core_terms.ttl)
   (foaf.ttl as sample_data/foaf.ttl)
+  (hospex.ttl as sample_data/hospex.ttl)
   (vf.ttl as sample_data/vf.ttl)
   (../../tools/osm_extractor/che.osm.surveillance.nt as sample_data/che.osm.surveillance.nt)))
