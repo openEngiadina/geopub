@@ -130,6 +130,15 @@ activity(?s) :- triple-rhodf(?s, type, <https://www.w3.org/ns/activitystreams#Ac
 
 # We can now use this activity predicate to query for all activities:
 activity(?s)?|datalog};
+            example_li "Hospitality offers"
+              {datalog|# We can query for all ValueFlow proposals that offer hospitality by querying for all proposals that have an intent with resource classified as accomodation:
+hospex_proposal(?proposal) :-
+    triple(?proposal,type,<https://w3id.org/valueflows#Proposal>),
+    triple(?proposal, <https://w3id.org/valueflows#intent>, ?intent),
+    triple(?intent, <https://w3id.org/valueflows#resourceClassifiedAs>,<http://w3id.org/hospex/ns#Accommodation>).
+
+hospex_proposal(?p)?
+|datalog};
             example_li "Anything that contains the word \"Hello\""
               "triple-fts(?s,?p,?o, \"Hello\")?";
             example_li
@@ -141,7 +150,7 @@ activity(?s)?|datalog};
             txt'
               "Try composing your own query below. You can use the pre-defined \
                predicates: triple/3, triple-rhodf/3, triple-fts/4, fts/2 or \
-               geo/3. Variables are prefixed with a question mark (\"?\"), \
+               geo/2. Variables are prefixed with a question mark (\"?\"), \
                IRIs are delimited by angle brackets and strings (for full-text \
                search) with quotation marks. Geo-spatial queries have the \
                form ";
