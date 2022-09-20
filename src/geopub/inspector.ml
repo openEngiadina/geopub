@@ -8,6 +8,32 @@ open Lwt
 open Lwt.Syntax
 open Lwt_react
 
+(* History to navigate the inspector *)
+
+module History = struct
+  type t = {
+    stack : Rdf.Iri.t list signal;
+    reset : Rdf.Iri.t -> unit;
+    push : Rdf.Iri.t -> unit;
+    take : int -> unit;
+  }
+
+  let make () =
+    let e, do' = E.create () in
+    let stack = S.accum ~eq:(List.equal Rdf.Iri.equal) e [] in
+    {
+      stack;
+      reset = (fun iri -> do' (fun _ -> [ iri ]));
+      push = (fun iri -> do' (fun l -> iri :: l));
+      take =
+        (fun c ->
+          do' (fun l ->
+              List.rev l |> List.to_seq |> Seq.take c |> List.of_seq |> List.rev));
+    }
+
+  let current t = S.map (function hd :: _tail -> Some hd | [] -> None) t.stack
+end
+
 (* Offcanvas *)
 
 open Brr
@@ -133,7 +159,7 @@ module Inspect = struct
            *   ]; *)
         ])
 
-  let view database xmpp set_iri iri =
+  let view database xmpp (history : History.t) iri =
     let* description = Database.description database @@ Rdf.Term.of_iri iri in
 
     let subject_term =
@@ -145,19 +171,31 @@ module Inspect = struct
 
     let* backlinks = S.bind_s subject_term (backlinks database) in
     let* rdfs_types = S.bind_s subject_term (rdfs_types database) in
-    S.l3_s
-      (fun description backlinks rdfs_types ->
+    S.l4_s
+      (fun description backlinks rdfs_types history_stack ->
         let* ddl =
-          description_list_of_description set_iri database description
+          description_list_of_description history.push database description
         in
-        let* backlinks_el = view_backlinks set_iri database backlinks in
-        let* rdf_types_el = view_rdfs_types set_iri database rdfs_types in
-        let* title_el = title_of_description set_iri database description in
+        let* backlinks_el = view_backlinks history.push database backlinks in
+        let* rdf_types_el = view_rdfs_types history.push database rdfs_types in
+        let* title_el =
+          title_of_description history.push database description
+        in
+        let* past_els =
+          Lwt_list.mapi_s
+            (fun c iri ->
+              let* iri_el =
+                Ui_rdf.iri (fun _ -> history.take (c + 1)) database iri
+              in
+              return @@ El.(li [ iri_el ]))
+            (List.rev history_stack)
+        in
         return
         @@ El.
              [
                div ~at:[ UIKit.Offcanvas.bar ]
                  [
+                   ul ~at:[ UIKit.breadcrumb ] past_els;
                    article
                      ~at:[ UIKit.article; UIKit.margin ]
                      [
@@ -206,7 +244,7 @@ module Inspect = struct
                      ];
                  ];
              ])
-      description backlinks rdfs_types
+      description backlinks rdfs_types history.stack
 end
 
 (* Component *)
@@ -216,21 +254,22 @@ open Archi_lwt
 type t = {
   database : Database.t;
   xmpp : Xmpp.t;
-  iri_s : Rdf.Iri.t signal;
-  set_iri : Rdf.Iri.t -> unit;
+  history : History.t;
   el : El.t;
   el_s : unit signal;
 }
 
 let start _ database xmpp =
-  let iri_s, set_iri = S.create @@ Rdf.Iri.of_string "urn:hello-world" in
+  let history = History.make () in
   let el = offcanvas_bar () in
   let* el_s =
-    S.bind_s iri_s (Inspect.view database xmpp set_iri)
+    S.bind_s (History.current history) (function
+      | Some iri -> Inspect.view database xmpp history iri
+      | None -> return @@ S.const [])
     >|= Brr_react.Elr.def_children el
   in
 
-  return_ok { database; xmpp; iri_s; set_iri; el; el_s }
+  return_ok { database; xmpp; history; el; el_s }
 
 let stop _t = return_unit
 
@@ -241,7 +280,7 @@ let component =
 (* Control visibility *)
 
 let show t iri =
-  t.set_iri iri;
+  t.history.reset iri;
   UIKit.Offcanvas.show t.el
 
 (* View *)

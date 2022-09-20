@@ -174,3 +174,5 @@ let table = class' "uk-table"
 module Table = struct
   let divider = class' "uk-table-divider"
 end
+
+let breadcrumb = class' "uk-breadcrumb"
