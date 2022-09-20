@@ -12,6 +12,8 @@ The variety of this data is considerable and we need to support them all. To do 
 
 GeoPub is not bound to a fixed set of data types, instead GeoPub works with RDF and any data that can be describes as RDF is supported by GeoPub.
 
+GeoPub contains examples of how to use the [ValueFlows](https://www.valueflo.ws/) vocabulary for simple offers as well, the [OpenHospitalityNetwork](https://github.com/OpenHospitalityNetwork/ohn-solid) vocabulary for hospitality requests and offers as well as the [MusicOntology](http://musicontology.com) for sharing music. Other data types that have been successfully tested include OpenStreetMap data via the [osm2rdf](https://osm2rdf.cs.uni-freiburg.de/) project.
+
 ## Semantic Social Network
 
 We acknowledge the fact that data creation and curation is a social activity. Pieces of information are created, commented on, shared and revised collectively.
