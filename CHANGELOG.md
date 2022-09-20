@@ -1,6 +1,6 @@
 # Changelog
 
-## [UNRELEASED]
+## [0.7.0] - 2022-09-20
 
 - Use [ERIS](http://purl.org/eris) for content-addressing
 - Refactor UI with CSS library
@@ -9,9 +9,10 @@
 - Expose a Datalog interface that transparently does dictionary lookups
 - Like any RDF content
 - Publish any RDF data as RDF/Turtle
-- Publish simple ValueFlow proposals
+- Publish simple ValueFlows proposals
 - Add illustrated Datalog examples
 - Allow custom clauses to be defined when querying with Datalog
+- Add ValueFlows and OpenHospitalityNetwork examples
 
 ## [0.6.0] - 2022-07-01
 

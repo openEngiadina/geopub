@@ -5,6 +5,22 @@
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix mo: <http://purl.org/ontology/mo/> .
 
+<urn:uuid:6e45f1fc-8c4f-4971-bc48-f548a462fe16>
+  a as:Create ;
+  as:actor <xmpp:pukkamustard@jblis.xyz> ;
+  as:published "2022-09-20T14:00:00-00:00"^^xsd:dateTime ;
+  as:object <urn:uuid:6e45f1fc-8c4f-4971-bc48-f548a462fe16#note> .
+
+<urn:uuid:6e45f1fc-8c4f-4971-bc48-f548a462fe16#note>
+  a as:Note ;
+  as:content """I'm very happy to announce the release of GeoPub version 0.7.0.
+
+This release demonstrates core ideas developed as part of the openEngiadina project. This includes: the usage of RDF for local knowledge, content-addressing of small pieces of data with the Encoding for Robust Immutable Storage and the RDF serialization RDF/CBOR as well as how XMPP can be used as a transport protocol.
+
+This release also contains examples of how the ValueFlows and OpenHospitalityNetwork vocabularies can be used from GeoPub.
+
+There are still some rough-edges and performance issues. But we hope the core ideas get through and might even inspire you.""" .
+
 <urn:uuid:1da600cf-c852-469a-936f-e608d3d90d9b>
   a as:Create ;
   as:actor <xmpp:pukkamustard@jblis.xyz> ;

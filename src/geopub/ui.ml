@@ -35,7 +35,7 @@ let about =
       ~at:[ UIKit.container; UIKit.margin ]
       [
         h1 [ txt' "GeoPub" ];
-        p [ txt' "Version 0.7.0-dev" ];
+        p [ txt' "Version 0.7.0" ];
         p [ txt' "GeoPub is an experimental XMPP client for geospatial data." ];
         p
           [
