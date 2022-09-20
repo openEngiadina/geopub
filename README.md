@@ -36,6 +36,8 @@ Data is persistently stored in a local [IndexedDB](https://developer.mozilla.org
 
 In order to query data GeoPub uses Datalog, a database query language based on logic programming. See also the post [GeoPub: Datalog, RDF and IndexedDB](https://inqlab.net/2022-04-14-geopub-datalog-rdf-and-indexeddb.html).
 
+Everything created via GeoPub is content-addressed via [ERIS](http://purl.org/eris). This de-couples content from the network protocol used (i.e. XMPP) and allows content to be made available robustly.
+
 ## History
 
 GeoPub was started as a very simple JavaScript demonstrator to show how geographic information can be used over the ActivityPub protocol (see branch `initial-js-demonstrator`).
