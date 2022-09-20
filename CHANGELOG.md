@@ -9,6 +9,9 @@
 - Expose a Datalog interface that transparently does dictionary lookups
 - Like any RDF content
 - Publish any RDF data as RDF/Turtle
+- Publish simple ValueFlow proposals
+- Add illustrated Datalog examples
+- Allow custom clauses to be defined when querying with Datalog
 
 ## [0.6.0] - 2022-07-01
 
