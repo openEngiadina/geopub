@@ -23,7 +23,7 @@ let parser uri =
   | [ "user" ] -> User
   | [ "activity" ] -> Activity None
   | [ "map" ] -> Map
-  | [ "query"; query ] -> Query query
+  | [ "query"; query_b32 ] -> Query (Base32.decode_exn query_b32)
   | [ "settings" ] -> Settings
   | _ -> About
 
@@ -38,7 +38,11 @@ let to_uri route =
   | Map -> Uri.with_uri location ~fragment:(Jstr.v "map")
   | Query query ->
       Uri.with_uri location
-        ~fragment:(Jstr.concat [ Jstr.v "query="; Jstr.v query ])
+        ~fragment:
+          (Jstr.concat
+             [
+               Jstr.v "query="; Jstr.v @@ Base32.encode_string ~pad:false query;
+             ])
   | Settings -> Uri.with_uri location ~fragment:(Jstr.v "settings"))
   |> Result.value ~default:location
 

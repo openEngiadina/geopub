@@ -46,7 +46,7 @@ let view jid_opt current_route =
               [
                 entry "Activity" (Route.Activity None);
                 entry "Map" Route.Map;
-                entry "Datalog" (Route.Query "triple-fts(?s,?p,?o, \"Hello\")");
+                entry "Datalog" (Route.Query "triple-fts(?s,?p,?o, \"Hello\")?");
               ];
           ];
         (* right navigation *)
