@@ -24,13 +24,11 @@ open Archi_lwt
 
 let start status =
   status "Initializing Database...";
-  let* db = Store.init () in
-
-  let* triple_count = Store.triple_count db in
-  Log.debug (fun m -> m "Triples in database: %d" triple_count);
-
-  Log.info (fun m -> m "Database started.");
-  return_ok db
+  Store.init () |> Lwt_result.catch >>= function
+  | Ok db ->
+      Log.info (fun m -> m "Database started.");
+      return_ok db
+  | Error exn -> return_error (`Msg (Printexc.to_string exn))
 
 let stop _db =
   Log.info (fun m -> m "Database stopped.");
