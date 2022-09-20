@@ -126,6 +126,8 @@ note(?s)?|datalog};
 # We can use it to find all resource that are ActivityStreams activities:
 activity(?s) :- triple-rhodf(?s, type, <https://www.w3.org/ns/activitystreams#Activity>).
 
+# This predicate is used to find all activities that can displayed in the activity view of this application.
+
 # An interesting note is that the `triple-rhodf` predicate is itself defined by a set of Datalog clauses! See the GeoPub source code (in the GeoPub.Database.Datalog module).
 
 # We can now use this activity predicate to query for all activities:
@@ -144,20 +146,6 @@ hospex_proposal(?p)?
             example_li
               "For resources in the lower Engadin valley (geo-spatial search)"
               "geo(GeoHash(46.7965,10.2965,4), ?s)?";
-          ];
-        p
-          [
-            txt'
-              "Try composing your own query below. You can use the pre-defined \
-               predicates: triple/3, triple-rhodf/3, triple-fts/4, fts/2 or \
-               geo/2. Variables are prefixed with a question mark (\"?\"), \
-               IRIs are delimited by angle brackets and strings (for full-text \
-               search) with quotation marks. Geo-spatial queries have the \
-               form ";
-            code [ txt' "GeoHash(lat,long,precision)" ];
-            txt' " where ";
-            code [ txt' "precision" ];
-            txt' " is the precision in number of GeoHash digits.";
           ];
       ])
 
@@ -220,6 +208,29 @@ let view inspector database query_string =
                   h1 [ txt' "Datalog" ];
                   help;
                   h2 [ txt' "Query" ];
+                  p
+                    [
+                      txt'
+                        "Try composing your own query below. You can use the \
+                         pre-defined predicates: triple/3, triple-rhodf/3, \
+                         triple-fts/4, fts/2 or geo/2. Variables are prefixed \
+                         with a question mark (\"?\"), IRIs are delimited by \
+                         angle brackets and strings (for full-text search) \
+                         with quotation marks. Geo-spatial queries have the \
+                         form ";
+                      code [ txt' "GeoHash(lat,long,precision)" ];
+                      txt' " where ";
+                      code [ txt' "precision" ];
+                      txt' " is the precision in number of GeoHash digits.";
+                    ];
+                  p
+                    [
+                      txt'
+                        "Note that the current Datalog implementation has some \
+                         limitations, bugs and is in general slow. It is not \
+                         representative of what is possibe with Datalog. \
+                         Still, you can have some fun with it!";
+                    ];
                   query_string_form;
                   h2 [ txt' "Results" ];
                   result_table;
